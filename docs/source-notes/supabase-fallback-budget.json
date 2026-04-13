@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-04-13T11:23:34.281Z",
+  "totalMatches": 0,
+  "counts": {
+    "createSupabaseServiceClient": 0,
+    "getSupabaseServiceClientOrNull": 0,
+    "ENABLE_SUPABASE_FALLBACK": 0,
+    "SUPABASE_ENV": 0
+  }
+}

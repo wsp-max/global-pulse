@@ -1,0 +1,176 @@
+import { SOURCES, type ScraperResult } from "@global-pulse/shared";
+import { ClienScraper } from "./scrapers/korea/clien";
+import { DcInsideScraper } from "./scrapers/korea/dcinside";
+import { FmkoreaScraper } from "./scrapers/korea/fmkorea";
+import { RedditEuropeScraper } from "./scrapers/europe/reddit-europe";
+import { RedditMideastScraper } from "./scrapers/mideast/reddit-mideast";
+import { YoutubeScraper } from "./scrapers/sns/youtube";
+import { FourchanScraper } from "./scrapers/us/fourchan";
+import { HackernewsScraper } from "./scrapers/us/hackernews";
+import { RedditScraper } from "./scrapers/us/reddit";
+import { Logger } from "./utils/logger";
+import { persistScraperResult } from "./utils/supabase-storage";
+
+const DEFAULT_SCRAPER_TIMEOUT_MS = Number(process.env.COLLECTOR_SCRAPER_TIMEOUT_MS ?? 90_000);
+const BROWSER_SCRAPER_TIMEOUT_MS = Number(process.env.COLLECTOR_BROWSER_TIMEOUT_MS ?? 150_000);
+const MAX_COLLECTOR_RSS_MB = Number(process.env.COLLECTOR_MAX_RSS_MB ?? 1536);
+const BROWSER_SOURCE_IDS = new Set<string>(["zhihu", "dcard", "tiktok", "threads"]);
+
+function parseArg(flag: string): string | undefined {
+  const idx = process.argv.findIndex((arg) => arg === flag);
+  if (idx === -1) return undefined;
+  return process.argv[idx + 1];
+}
+
+function isBrowserLikelySource(sourceId: string): boolean {
+  if (BROWSER_SOURCE_IDS.has(sourceId)) {
+    return true;
+  }
+  return sourceId.includes("threads") || sourceId.includes("tiktok");
+}
+
+function getScraperTimeoutMs(sourceId: string): number {
+  return isBrowserLikelySource(sourceId) ? BROWSER_SCRAPER_TIMEOUT_MS : DEFAULT_SCRAPER_TIMEOUT_MS;
+}
+
+function assertCollectorMemoryBudget(sourceId: string): void {
+  const rssMb = process.memoryUsage().rss / (1024 * 1024);
+  if (rssMb > MAX_COLLECTOR_RSS_MB) {
+    throw new Error(
+      `memory_budget_exceeded before ${sourceId}: rss=${rssMb.toFixed(1)}MB limit=${MAX_COLLECTOR_RSS_MB}MB`,
+    );
+  }
+}
+
+async function scrapeWithTimeout(
+  sourceId: string,
+  runner: () => Promise<ScraperResult>,
+  timeoutMs: number,
+): Promise<ScraperResult> {
+  let timeoutRef: NodeJS.Timeout | null = null;
+  const timeoutResult = new Promise<ScraperResult>((resolve) => {
+    timeoutRef = setTimeout(() => {
+      resolve({
+        sourceId,
+        posts: [],
+        scrapedAt: new Date().toISOString(),
+        success: false,
+        error: `timeout after ${timeoutMs}ms`,
+      });
+    }, timeoutMs);
+  });
+
+  const result = await Promise.race([runner(), timeoutResult]);
+  if (timeoutRef) {
+    clearTimeout(timeoutRef);
+  }
+  return result;
+}
+
+async function run(): Promise<void> {
+  const regionFilter = parseArg("--region");
+  const typeFilterRaw = parseArg("--type");
+  const sourceArg = parseArg("--source");
+  const sourceFilter = sourceArg
+    ? sourceArg
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
+
+  const typeFilter =
+    typeFilterRaw === "community" || typeFilterRaw === "sns" ? typeFilterRaw : undefined;
+
+  if (typeFilterRaw && !typeFilter) {
+    Logger.error(`Invalid --type value "${typeFilterRaw}". Allowed: community | sns`);
+    process.exit(1);
+  }
+
+  const candidateScrapers = [
+    new DcInsideScraper(),
+    new FmkoreaScraper(),
+    new ClienScraper(),
+    new RedditScraper(),
+    new RedditScraper("reddit_worldnews"),
+    new RedditEuropeScraper(),
+    new RedditMideastScraper(),
+    new FourchanScraper(),
+    new HackernewsScraper(),
+    new YoutubeScraper("youtube_kr"),
+    new YoutubeScraper("youtube_jp"),
+    new YoutubeScraper("youtube_us"),
+  ];
+
+  if (sourceFilter.length > 0) {
+    const sourceIdSet = new Set<string>(SOURCES.map((source) => source.id));
+    const unknown = sourceFilter.filter((sourceId) => !sourceIdSet.has(sourceId));
+    if (unknown.length > 0) {
+      Logger.warn(`Unknown source IDs ignored: ${unknown.join(", ")}`);
+    }
+  }
+
+  const scrapers = candidateScrapers.filter((scraper) => {
+    const source = SOURCES.find((item) => item.id === scraper.sourceId);
+    if (!source) {
+      return false;
+    }
+
+    if (sourceFilter.length > 0 && !sourceFilter.includes(source.id)) {
+      return false;
+    }
+
+    if (regionFilter && source.regionId !== regionFilter) {
+      return false;
+    }
+
+    if (typeFilter && source.type !== typeFilter) {
+      return false;
+    }
+
+    return true;
+  });
+
+  if (scrapers.length === 0) {
+    Logger.warn("No scrapers matched the provided filters.");
+    return;
+  }
+
+  Logger.info(
+    `Filters => region: ${regionFilter ?? "all"}, type: ${typeFilter ?? "all"}, source: ${
+      sourceFilter.length > 0 ? sourceFilter.join(",") : "all"
+    }`,
+  );
+  Logger.info(`Starting collection for ${scrapers.length} source(s).`);
+
+  const results: ScraperResult[] = [];
+
+  for (const scraper of scrapers) {
+    assertCollectorMemoryBudget(scraper.sourceId);
+    const timeoutMs = getScraperTimeoutMs(scraper.sourceId);
+
+    Logger.info(`Collecting from ${scraper.sourceId}...`);
+    Logger.info(
+      `[${scraper.sourceId}] guardrails: timeout=${timeoutMs}ms, rss_limit=${MAX_COLLECTOR_RSS_MB}MB`,
+    );
+    const result = await scrapeWithTimeout(scraper.sourceId, () => scraper.scrape(), timeoutMs);
+    results.push(result);
+
+    await persistScraperResult(result);
+
+    if (!result.success) {
+      Logger.error(`[${scraper.sourceId}] failed: ${result.error ?? "unknown error"}`);
+      continue;
+    }
+
+    Logger.info(`[${scraper.sourceId}] collected ${result.posts.length} posts.`);
+  }
+
+  const successCount = results.filter((r) => r.success).length;
+  Logger.info(`Collection finished: ${successCount}/${results.length} succeeded.`);
+}
+
+run().catch((error) => {
+  Logger.error(`Collector crashed: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+});
+

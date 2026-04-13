@@ -1,0 +1,21 @@
+[Unit]
+Description=Global Pulse Collector Batch
+After=network-online.target global-pulse-web.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/srv/projects/project2/global-pulse
+Environment=NODE_ENV=production
+EnvironmentFile=-/etc/global-pulse/global-pulse.env
+ExecStart=/usr/bin/env bash -lc 'if command -v pnpm >/dev/null 2>&1; then pnpm tsx scripts/run-collector.ts; else npx tsx scripts/run-collector.ts; fi'
+StandardOutput=journal
+StandardError=journal
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

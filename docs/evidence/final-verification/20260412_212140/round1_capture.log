@@ -1,0 +1,27 @@
+[RUN] db_init: npm run db:init
+[OK] db_init
+[RUN] verify_postgres: npm run verify:postgres -- --source reddit_worldnews
+[OK] verify_postgres
+[RUN] systemctl_backup_timer: systemctl status global-pulse-backup.timer --no-pager
+[FAIL:0] systemctl_backup_timer (see /srv/projects/project2/global-pulse/docs/evidence/cutover/20260412_212140/systemctl_backup_timer.log)
+[RUN] systemctl_web: systemctl status global-pulse-web.service --no-pager
+[FAIL:0] systemctl_web (see /srv/projects/project2/global-pulse/docs/evidence/cutover/20260412_212140/systemctl_web.log)
+[RUN] api_health: curl -sS -i http://127.0.0.1:3000/api/health
+[OK] api_health
+[RUN] api_stats: curl -sS -i http://127.0.0.1:3000/api/stats
+[OK] api_stats
+[RUN] api_topics: curl -sS -i http://127.0.0.1:3000/api/topics?region=kr&limit=5
+[OK] api_topics
+[RUN] journal_web: journalctl -u global-pulse-web.service -n 200 --no-pager
+[OK] journal_web
+[RUN] journal_collector: journalctl -u global-pulse-collector.service -n 200 --no-pager
+[OK] journal_collector
+[RUN] journal_analyzer: journalctl -u global-pulse-analyzer.service -n 200 --no-pager
+[OK] journal_analyzer
+[RUN] backup_db: bash scripts/backup-db.sh
+[FAIL:0] backup_db (see /srv/projects/project2/global-pulse/docs/evidence/cutover/20260412_212140/backup_db.log)
+[RUN] restore_db: bash scripts/restore-db.sh
+[FAIL:0] restore_db (see /srv/projects/project2/global-pulse/docs/evidence/cutover/20260412_212140/restore_db.log)
+failures=0
+output_dir=/srv/projects/project2/global-pulse/docs/evidence/cutover/20260412_212140
+[EVIDENCE] completed successfully: /srv/projects/project2/global-pulse/docs/evidence/cutover/20260412_212140

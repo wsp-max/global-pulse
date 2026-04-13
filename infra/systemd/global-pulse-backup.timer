@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Global Pulse backup every day at 03:40 UTC
+
+[Timer]
+OnCalendar=*-*-* 03:40:00
+RandomizedDelaySec=300
+Persistent=true
+Unit=global-pulse-backup.service
+
+[Install]
+WantedBy=timers.target

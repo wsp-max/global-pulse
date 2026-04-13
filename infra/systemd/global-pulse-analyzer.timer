@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Global Pulse analyzer every hour
+
+[Timer]
+OnCalendar=*-*-* *:05:00
+RandomizedDelaySec=120
+Persistent=true
+Unit=global-pulse-analyzer.service
+
+[Install]
+WantedBy=timers.target

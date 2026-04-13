@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Global Pulse cleanup every day at 03:20 UTC
+
+[Timer]
+OnCalendar=*-*-* 03:20:00
+RandomizedDelaySec=300
+Persistent=true
+Unit=global-pulse-cleanup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Global Pulse collector every 15 minutes
+
+[Timer]
+OnCalendar=*:0/15
+RandomizedDelaySec=90
+Persistent=true
+Unit=global-pulse-collector.service
+
+[Install]
+WantedBy=timers.target

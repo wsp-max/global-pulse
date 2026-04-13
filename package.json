@@ -2,16 +2,59 @@
   "name": "global-pulse",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "health": "tsx scripts/health-check.ts",
+    "db:init": "tsx scripts/init-db.ts",
+    "verify:postgres": "tsx scripts/verify-postgres-e2e.ts",
+    "collect": "tsx packages/collector/src/run.ts",
+    "collect:kr": "tsx packages/collector/src/run.ts --region kr",
+    "collect:us": "tsx packages/collector/src/run.ts --region us --type community",
+    "collect:eu": "tsx packages/collector/src/run.ts --region eu --type community",
+    "collect:me": "tsx packages/collector/src/run.ts --region me --type community",
+    "collect:youtube:kr": "tsx packages/collector/src/run.ts --source youtube_kr",
+    "collect:youtube:global": "tsx packages/collector/src/run.ts --source youtube_kr,youtube_jp,youtube_us",
+    "analyze": "tsx packages/analyzer/src/run-analysis.ts",
+    "analyze:gemini": "tsx packages/analyzer/src/run-analysis.ts --with-gemini",
+    "analyze:global": "tsx packages/analyzer/src/run-global-analysis.ts",
+    "ops:collector": "tsx scripts/run-collector.ts",
+    "ops:analyzer": "tsx scripts/run-analyzer.ts",
+    "ops:snapshot": "tsx scripts/build-snapshots.ts",
+    "ops:cleanup": "tsx scripts/cleanup-old-data.ts",
+    "ops:evidence": "bash scripts/capture-cutover-evidence.sh",
+    "ops:evidence:report": "tsx scripts/generate-evidence-report.ts",
+    "ops:verify3": "bash scripts/run-final-verification-3x.sh",
+    "ops:verify3:report": "tsx scripts/generate-final-verification-report.ts",
+    "ops:verify3:apply": "tsx scripts/apply-final-verification-report.ts",
+    "ops:verify3:check": "tsx scripts/check-closure-state.ts",
+    "ops:closure:preflight": "tsx scripts/closure-preflight.ts",
+    "ops:closure:selftest": "tsx scripts/self-test-closure-tooling.ts",
+    "ops:monitor:snapshot": "bash scripts/capture-ops-snapshot.sh",
+    "ops:monitor:watch": "bash scripts/run-ops-watch-window.sh",
+    "ops:supabase:audit": "tsx scripts/audit-supabase-fallback.ts",
+    "ops:supabase:budget": "tsx scripts/check-supabase-fallback-budget.ts",
+    "ops:closure": "bash scripts/complete-closure.sh",
+    "seed:regions": "tsx scripts/seed-regions.ts",
+    "test:scraper": "tsx scripts/test-scraper.ts"
   },
   "dependencies": {
+    "@types/pg": "^8.20.0",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.8.0",
     "next": "16.2.3",
+    "pg": "^8.20.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-simple-maps": "^3.0.0",
+    "recharts": "^3.8.1",
+    "swr": "^2.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -21,6 +64,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }

@@ -1,0 +1,26 @@
+[Unit]
+Description=Global Pulse Web Server (Next.js)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/srv/projects/project2/global-pulse
+Environment=NODE_ENV=production
+Environment=PORT=3000
+EnvironmentFile=-/etc/global-pulse/global-pulse.env
+ExecStart=/usr/bin/env bash -lc 'if command -v pnpm >/dev/null 2>&1; then pnpm run start -- -p ${PORT}; else npm run start -- -p ${PORT}; fi'
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/srv/projects/project2/global-pulse
+
+[Install]
+WantedBy=multi-user.target

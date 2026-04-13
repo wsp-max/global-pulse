@@ -1,0 +1,14 @@
+Global Pulse Cutover Evidence
+timestamp=SELFTEST_1776027904047
+app_dir=/srv/projects/project2/global-pulse
+source_id=reddit_worldnews
+run_backup_restore=0
+enable_supabase_fallback=false
+
+[RUN] db_init: npm run db:init
+[OK] db_init
+[RUN] verify_postgres: npm run verify:postgres -- --source reddit_worldnews
+[OK] verify_postgres
+
+failures=0
+output_dir=/srv/projects/project2/global-pulse/docs/evidence/cutover/SELFTEST_1776027904047
