@@ -2476,3 +2476,59 @@
   - `http://3.36.83.199/pulse` -> 200
   - `http://3.36.83.199/pulse/api/health` -> 200
   - `http://3.36.83.199/` -> 404 (isolated from root)
+
+## GP-20260414-50 (YouTube API Activation + Web Port Conflict Recovery)
+### Before -> After
+- Before:
+  - `YOUTUBE_API_KEY` 미설정으로 `youtube_kr/jp/us` 수집이 모두 실패.
+  - 런타임 중 `global-pulse-web`가 내려간 사이 포트 `3000`을 다른 앱(StockPulse, `/srv/projects/project3`)이 점유하여 `/pulse` 경로가 404/오염 응답으로 흔들림.
+- After:
+  - EC2 env에 `YOUTUBE_API_KEY` 반영 완료.
+  - YouTube 수집 검증:
+    - `youtube_kr`: 20건
+    - `youtube_jp`: 20건
+    - `youtube_us`: 20건
+    - `sources.last_error`: 모두 `ok`
+  - 런타임 포트 충돌 해소:
+    - Global Pulse 웹 포트를 `3100`으로 분리(`PORT=3100` in `/etc/global-pulse/global-pulse.env`)
+    - Nginx `/pulse` 프록시를 `127.0.0.1:3100`으로 전환
+  - 경로 복구 확인:
+    - `http://3.36.83.199/pulse` -> 200
+    - `http://3.36.83.199/pulse/api/health` -> 200
+    - `http://3.36.83.199/pulse/api/stats` -> 200
+    - `http://3.36.83.199/` -> 404(분리 유지)
+
+### Main File Changes
+- [infra/nginx/global-pulse.conf](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/infra/nginx/global-pulse.conf)
+  - upstream `3000 -> 3100`
+  - `/pulse/healthz` upstream `3000 -> 3100`
+- Runtime only (not committed):
+  - `/etc/global-pulse/global-pulse.env`
+    - `YOUTUBE_API_KEY` 추가
+    - `PORT=3100` 반영
+
+### Commands / Validation
+- YouTube key apply (masked verification):
+  - `grep '^YOUTUBE_API_KEY=' /etc/global-pulse/global-pulse.env` (masked)
+- Collector run:
+  - `npm run collect -- --source youtube_kr,youtube_jp,youtube_us` -> `3/3 succeeded`
+- DB verification (EC2 postgres):
+  - `raw_posts where source_id=youtube_kr` -> 20
+  - `raw_posts where source_id=youtube_jp` -> 20
+  - `raw_posts where source_id=youtube_us` -> 20
+  - `sources.last_error` for 3 youtube sources -> `ok`
+- Runtime recovery:
+  - `global-pulse-web.service` 재기동/enable
+  - `nginx -t && systemctl reload nginx`
+  - public endpoint checks pass
+
+### Known Risks
+- StockPulse(별도 프로젝트)가 `3000`을 점유 중이므로, Global Pulse는 `3100` 고정 운영 전제를 유지해야 함.
+- 향후 deploy 스크립트 실행 시 `PORT=3100`이 env에 유지되는지 확인 필요.
+
+### Rollback Guide
+- 포트 롤백:
+  - `/etc/global-pulse/global-pulse.env`의 `PORT`를 `3000`으로 되돌리고
+  - Nginx upstream도 `3000`으로 복원 후 web/nginx 재시작
+- YouTube 키 롤백:
+  - `YOUTUBE_API_KEY` 제거/교체 후 collector 재실행

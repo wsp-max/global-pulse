@@ -1297,3 +1297,28 @@
   - `http://3.36.83.199/pulse`
   - `http://3.36.83.199/pulse/api/health`
 - Root path `http://3.36.83.199/` intentionally blocked (`404`) to avoid host collision.
+
+## YouTube + Runtime Recovery Update (2026-04-14)
+### Newly completed
+- `YOUTUBE_API_KEY` 반영 완료(EC2 runtime env).
+- YouTube collector 실증 성공:
+  - `youtube_kr/jp/us` 각각 20건 수집/적재
+  - source 상태 `ok`
+- 웹 충돌 복구:
+  - 다른 프로젝트(StockPulse)가 `3000`을 점유 중인 상태를 확인
+  - Global Pulse 웹 런타임을 `3100`으로 분리
+  - `/pulse` Nginx 프록시 upstream을 `3100`으로 전환
+- 현재 접속 상태:
+  - `http://3.36.83.199/pulse` (200)
+  - `http://3.36.83.199/pulse/api/health` (200)
+  - `http://3.36.83.199/pulse/api/stats` (200)
+
+### Current gaps (updated)
+1. Step 5C 품질 튜닝
+- 불용어/대표 토픽명/유사도 임계치 정교화
+2. 소스 하드닝
+- `reddit*`, `dcard` 403 대응
+3. 운영 관찰 마감
+- 24h watch 최종 결과를 문서에 확정 반영
+4. UI Step 6
+- 모바일 UX/장애 상태 UX 마감
