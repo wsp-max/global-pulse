@@ -1185,3 +1185,50 @@
 
 3. Step 5B 실행
 - `ptt`, `hatena`, `fivech`, `weibo` 구현 착수
+
+## Step 5B Progress Update (2026-04-13)
+### Newly completed
+- 고변동 소스 4개 구현 완료:
+  - `fivech` (`itest.5ch.io/subbacks/bbynews.json`)
+  - `hatena` (RSS)
+  - `ptt` (over18 cookie + HTML)
+  - `weibo` (hotSearch JSON)
+- collector/runtime 연결:
+  - `run.ts` 대상 소스 등록 완료
+  - `test-scraper.ts` 테스트 매핑 등록 완료
+  - `collector index` export 정렬 완료
+- 운영 설정 보정:
+  - `collect-taiwan.yml` -> `--region tw`로 변경 (PTT 포함)
+  - `constants.ts`의 `fivech/hatena` scrapeUrl을 실제 수집 엔드포인트로 정렬
+- 데이터 정합성 보정:
+  - fivech 비정상 epoch thread(`924...`)는 `postedAt` 생략 처리
+
+### Validation
+- `npm run test:scraper -- --source hatena` -> success=true, postCount=40
+- `npm run test:scraper -- --source fivech` -> success=true, postCount=50
+- `npm run test:scraper -- --source ptt` -> success=true, postCount=25
+- `npm run test:scraper -- --source weibo` -> success=true, postCount=50
+- `npm run collect -- --source hatena,fivech,ptt,weibo` -> `4/4 succeeded`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- Step 5B: 코드 구현/로컬 수집 검증 완료
+- L2 Data Plane 관점:
+  - 활성 스크래퍼 커버리지가 JP/TW/CN으로 확장됨
+- 남은 검증:
+  - DB row 증가 검증은 EC2(PostgreSQL env 설정 후)에서 final check 필요
+
+### Remaining (current)
+1. EC2 DB runtime 활성화
+- `/etc/global-pulse/global-pulse.env`에 `DATABASE_URL` 또는 `DB_*` 적용
+- `/api/health`를 `postgres_not_configured` -> 정상 상태로 전환
+
+2. 24h watch 최종 마감
+- `watch_20260413_134515/watch-summary.txt` 최종 결과를 PATCH_NOTES/DELIVERY_STATUS에 고정
+
+3. Step 5C 착수
+- analyzer 품질 튜닝(불용어/클러스터 임계치/cross-region 유사도) 및 샘플 품질 리뷰

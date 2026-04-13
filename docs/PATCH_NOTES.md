@@ -2291,3 +2291,73 @@
   - `docs/evidence/ops-monitoring_runtime_20260413_134415`에서 필요한 증적을 복원
 - 배포 롤백:
   - EC2에서 이전 commit checkout 후 deploy 스크립트 재실행
+
+---
+
+## GP-20260413-47 (Step 5B: JP/TW/CN High-Variability Source Implementation - fivech, hatena, ptt, weibo)
+### Before -> After
+- Before:
+  - `fivech`, `hatena`, `ptt`, `weibo` 스크래퍼가 모두 스텁(`return []`) 상태.
+  - collector 런타임/테스트 매핑에 4개 소스가 연결되지 않아 실제 수집 불가.
+  - Taiwan 수집 워크플로우는 `--source dcard` 단일 소스만 실행.
+- After:
+  - 4개 스크래퍼 구현 완료:
+    - `fivech`: `https://itest.5ch.io/subbacks/bbynews.json` 파싱
+    - `hatena`: `https://b.hatena.ne.jp/hotentry/all.rss` XML/RSS 파싱
+    - `ptt`: `over18=1` 쿠키 포함 Gossiping HTML 파싱
+    - `weibo`: `https://weibo.com/ajax/side/hotSearch` JSON 파싱
+  - 런타임 연결:
+    - `packages/collector/src/run.ts`에 4개 소스 등록
+    - `scripts/test-scraper.ts`에 4개 테스트 소스 등록
+    - `packages/collector/src/index.ts` export 추가
+  - 운영 상수/워크플로우 정렬:
+    - `packages/shared/src/constants.ts`
+      - `fivech.scrapeUrl` -> `https://itest.5ch.io/subbacks/bbynews.json`
+      - `hatena.scrapeUrl` -> `https://b.hatena.ne.jp/hotentry/all.rss`
+    - `.github/workflows/collect-taiwan.yml`
+      - `--source dcard` -> `--region tw` (PTT + Dcard 동시 커버)
+  - Fivech timestamp 보정:
+    - 스팸/공지성 비정상 thread id(`924...`)는 `postedAt`를 비워 미래 시각 오염 방지.
+
+### Main File Changes
+- Scrapers:
+  - `packages/collector/src/scrapers/japan/fivech.ts`
+  - `packages/collector/src/scrapers/japan/hatena.ts`
+  - `packages/collector/src/scrapers/taiwan/ptt.ts`
+  - `packages/collector/src/scrapers/china/weibo.ts`
+- Runtime/Test/Export:
+  - `packages/collector/src/run.ts`
+  - `scripts/test-scraper.ts`
+  - `packages/collector/src/index.ts`
+- Constants/Workflow:
+  - `packages/shared/src/constants.ts`
+  - `.github/workflows/collect-taiwan.yml`
+
+### Commands / Validation
+- Source tests:
+  - `npm run test:scraper -- --source hatena` -> success=true, postCount=40
+  - `npm run test:scraper -- --source fivech` -> success=true, postCount=50
+  - `npm run test:scraper -- --source ptt` -> success=true, postCount=25
+  - `npm run test:scraper -- --source weibo` -> success=true, postCount=50
+- Aggregated collector run:
+  - `npm run collect -- --source hatena,fivech,ptt,weibo` -> `4/4 succeeded`
+  - local 환경에서는 DB env 미설정으로 persistence skip 로그 출력(의도된 동작)
+- Quality/ops gates:
+  - `npm run lint` (pass)
+  - `npm run build` (pass)
+  - `npm run ops:supabase:audit` (pass, `totalMatches=0`)
+  - `npm run ops:supabase:budget -- --print-json` (pass)
+  - `npm run ops:verify3:check -- --print-json` (pass, `issues=[]`)
+
+### Known Risks
+- PTT는 공지/관리자 글이 목록에 함께 포함될 수 있어 후속 필터링(공지 제외 룰) 튜닝 여지 존재.
+- Fivech는 일부 thread token이 epoch 범위를 벗어나 `postedAt`를 비우는 방식으로 처리됨.
+- 로컬 환경에서는 PostgreSQL env 미설정 시 row 증가 검증을 수행할 수 없음(EC2에서 확인 필요).
+
+### Rollback Guide
+- 4개 스크래퍼 롤백:
+  - 해당 파일을 스텁 버전으로 복원하고 `run.ts`/`test-scraper.ts` 등록 제거
+- 워크플로우 롤백:
+  - `.github/workflows/collect-taiwan.yml`을 `--source dcard`로 복원
+- 상수 롤백:
+  - `packages/shared/src/constants.ts`의 `fivech/hatena` scrapeUrl을 이전 값으로 복원

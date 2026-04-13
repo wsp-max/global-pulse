@@ -141,7 +141,7 @@ export const SOURCES = [
     nameEn: "5ch (2channel)",
     url: "https://5ch.net",
     type: "community" as const,
-    scrapeUrl: "https://5ch.net",
+    scrapeUrl: "https://itest.5ch.io/subbacks/bbynews.json",
     scrapeIntervalMinutes: 30,
   },
   {
@@ -151,7 +151,7 @@ export const SOURCES = [
     nameEn: "Hatena Bookmark",
     url: "https://b.hatena.ne.jp",
     type: "community" as const,
-    scrapeUrl: "https://b.hatena.ne.jp/hotentry/all",
+    scrapeUrl: "https://b.hatena.ne.jp/hotentry/all.rss",
     scrapeIntervalMinutes: 30,
   },
   {

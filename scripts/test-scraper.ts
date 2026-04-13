@@ -1,12 +1,16 @@
 import { ClienScraper } from "../packages/collector/src/scrapers/korea/clien";
 import { DcInsideScraper } from "../packages/collector/src/scrapers/korea/dcinside";
 import { RedditEuropeScraper } from "../packages/collector/src/scrapers/europe/reddit-europe";
+import { FivechScraper } from "../packages/collector/src/scrapers/japan/fivech";
+import { HatenaScraper } from "../packages/collector/src/scrapers/japan/hatena";
 import { FmkoreaScraper } from "../packages/collector/src/scrapers/korea/fmkorea";
 import { RedditMideastScraper } from "../packages/collector/src/scrapers/mideast/reddit-mideast";
+import { WeiboScraper } from "../packages/collector/src/scrapers/china/weibo";
 import { BilibiliScraper } from "../packages/collector/src/scrapers/sns/bilibili";
 import { MastodonScraper } from "../packages/collector/src/scrapers/sns/mastodon";
 import { YoutubeScraper } from "../packages/collector/src/scrapers/sns/youtube";
 import { DcardScraper } from "../packages/collector/src/scrapers/taiwan/dcard";
+import { PttScraper } from "../packages/collector/src/scrapers/taiwan/ptt";
 import { FourchanScraper } from "../packages/collector/src/scrapers/us/fourchan";
 import { HackernewsScraper } from "../packages/collector/src/scrapers/us/hackernews";
 import { RedditScraper } from "../packages/collector/src/scrapers/us/reddit";
@@ -32,6 +36,10 @@ async function run(): Promise<void> {
     dcinside: new DcInsideScraper(),
     fmkorea: new FmkoreaScraper(),
     clien: new ClienScraper(),
+    fivech: new FivechScraper(),
+    hatena: new HatenaScraper(),
+    ptt: new PttScraper(),
+    weibo: new WeiboScraper(),
     reddit: new RedditScraper(),
     reddit_worldnews: new RedditScraper("reddit_worldnews"),
     reddit_europe: new RedditEuropeScraper(),

@@ -1,13 +1,17 @@
 import { SOURCES, type ScraperResult } from "@global-pulse/shared";
+import { WeiboScraper } from "./scrapers/china/weibo";
 import { ClienScraper } from "./scrapers/korea/clien";
 import { DcInsideScraper } from "./scrapers/korea/dcinside";
 import { FmkoreaScraper } from "./scrapers/korea/fmkorea";
 import { RedditEuropeScraper } from "./scrapers/europe/reddit-europe";
+import { FivechScraper } from "./scrapers/japan/fivech";
+import { HatenaScraper } from "./scrapers/japan/hatena";
 import { RedditMideastScraper } from "./scrapers/mideast/reddit-mideast";
 import { BilibiliScraper } from "./scrapers/sns/bilibili";
 import { MastodonScraper } from "./scrapers/sns/mastodon";
 import { YoutubeScraper } from "./scrapers/sns/youtube";
 import { DcardScraper } from "./scrapers/taiwan/dcard";
+import { PttScraper } from "./scrapers/taiwan/ptt";
 import { FourchanScraper } from "./scrapers/us/fourchan";
 import { HackernewsScraper } from "./scrapers/us/hackernews";
 import { RedditScraper } from "./scrapers/us/reddit";
@@ -93,6 +97,10 @@ async function run(): Promise<void> {
     new DcInsideScraper(),
     new FmkoreaScraper(),
     new ClienScraper(),
+    new FivechScraper(),
+    new HatenaScraper(),
+    new PttScraper(),
+    new WeiboScraper(),
     new RedditScraper(),
     new RedditScraper("reddit_worldnews"),
     new RedditEuropeScraper(),
