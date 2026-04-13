@@ -1290,3 +1290,10 @@
 4. Verify:
 - `http://<host>/pulse`
 - `http://<host>/pulse/api/health`
+
+### Path split runtime status (applied)
+- EC2 runtime switched to `/pulse` exposure mode.
+- Current public endpoints:
+  - `http://3.36.83.199/pulse`
+  - `http://3.36.83.199/pulse/api/health`
+- Root path `http://3.36.83.199/` intentionally blocked (`404`) to avoid host collision.

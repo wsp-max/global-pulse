@@ -2465,3 +2465,14 @@
 ### Hotfix (same step)
 - Removed Nginx `/pulse -> /pulse/` redirect to avoid Next.js 308 bounce.
 - `/pulse` is now proxied directly.
+
+### Runtime Apply Result (EC2)
+- Applied on `3.36.83.199` with commit `b770efb`.
+- Runtime env set:
+  - `NEXT_BASE_PATH=/pulse`
+  - `NEXT_PUBLIC_BASE_PATH=/pulse`
+  - `NEXT_PUBLIC_APP_URL=http://3.36.83.199/pulse`
+- Verified:
+  - `http://3.36.83.199/pulse` -> 200
+  - `http://3.36.83.199/pulse/api/health` -> 200
+  - `http://3.36.83.199/` -> 404 (isolated from root)
