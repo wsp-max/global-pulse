@@ -1,0 +1,7 @@
+● global-pulse-analyzer.timer - Run Global Pulse analyzer every hour
+     Loaded: loaded (/etc/systemd/system/global-pulse-analyzer.timer; enabled; vendor preset: enabled)
+     Active: active (waiting) since Mon 2026-04-13 13:33:14 UTC; 12min ago
+    Trigger: Mon 2026-04-13 14:05:38 UTC; 20min left
+   Triggers: ● global-pulse-analyzer.service
+
+Apr 13 13:33:14 ip-172-31-8-8 systemd[1]: Started Run Global Pulse analyzer every hour.

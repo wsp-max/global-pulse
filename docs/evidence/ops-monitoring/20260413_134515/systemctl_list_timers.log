@@ -1,0 +1,8 @@
+NEXT                        LEFT       LAST                        PASSED    UNIT                         ACTIVATES
+Mon 2026-04-13 13:45:46 UTC 30s left   Mon 2026-04-13 13:30:25 UTC 14min ago global-pulse-collector.timer global-pulse-collector.service
+Mon 2026-04-13 14:01:46 UTC 16min left Mon 2026-04-13 13:30:08 UTC 15min ago global-pulse-snapshot.timer  global-pulse-snapshot.service
+Mon 2026-04-13 14:05:38 UTC 20min left Mon 2026-04-13 13:05:31 UTC 39min ago global-pulse-analyzer.timer  global-pulse-analyzer.service
+Tue 2026-04-14 03:24:15 UTC 13h left   Mon 2026-04-13 12:49:35 UTC 55min ago global-pulse-cleanup.timer   global-pulse-cleanup.service
+Tue 2026-04-14 03:42:26 UTC 13h left   Mon 2026-04-13 12:49:35 UTC 55min ago global-pulse-backup.timer    global-pulse-backup.service
+
+5 timers listed.

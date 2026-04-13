@@ -1151,3 +1151,37 @@
 
 2. Step 5B 착수
 - `ptt`, `hatena`, `fivech`, `weibo` 구현 + 실패율 기준 수립
+
+## EC2 Pivot Progress Update (2026-04-13, Step 4E Follow-up)
+### Newly completed
+- EC2 재배포 충돌 해소:
+  - 원인: `docs/evidence/ops-monitoring/*` untracked 파일이 tracked 파일 병합을 막음
+  - 조치: evidence 디렉토리를 `ops-monitoring_runtime_20260413_134415`로 백업 이동 후 pull/deploy 재실행
+- EC2 앱 최신화 완료:
+  - deployed commit: `36a5fa7`
+- post-deploy watch 재시작:
+  - `watch_20260413_134515` (hour=1 pass, failures=0)
+- 로컬 evidence 재동기화 완료:
+  - 최신 `ops-monitoring` 로그/summary 반영
+
+### Validation
+- `git -C /srv/projects/project2/global-pulse rev-parse --short HEAD` -> `36a5fa7`
+- `systemctl is-active global-pulse-web.service ...` -> all active
+- `npm run test:scraper -- --source bilibili` (EC2) -> success
+- `npm run test:scraper -- --source mastodon` (EC2) -> success
+- `npm run test:scraper -- --source dcard` (EC2) -> 403
+
+### Current completion state
+- Step 4E: 완료(표준 배포 + follow-up 충돌 해소까지 반영)
+- Step 4F: 진행 중(24h watch 누적 중, hour1 pass)
+- Step 5A: 완료(3개 소스 코드 반영 + smoke 검증 완료)
+
+### Remaining (current)
+1. PostgreSQL env 설정
+- `/etc/global-pulse/global-pulse.env`에 DB 접속 정보 추가 필요
+
+2. 24h watch 종료 마감
+- `watch_20260413_134515/watch-summary.txt` 최종 상태 반영
+
+3. Step 5B 실행
+- `ptt`, `hatena`, `fivech`, `weibo` 구현 착수

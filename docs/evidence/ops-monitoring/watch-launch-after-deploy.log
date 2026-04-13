@@ -1,0 +1,6 @@
+
+> global-pulse@0.1.0 ops:monitor:watch
+> bash scripts/run-ops-watch-window.sh
+
+[RUN] hour=1 at 2026-04-13T13:45:15+00:00
+[OK] hour=1

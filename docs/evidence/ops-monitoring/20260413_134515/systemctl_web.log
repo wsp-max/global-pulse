@@ -1,0 +1,21 @@
+● global-pulse-web.service - Global Pulse Web Server (Next.js)
+     Loaded: loaded (/etc/systemd/system/global-pulse-web.service; enabled; vendor preset: enabled)
+     Active: active (running) since Mon 2026-04-13 13:45:08 UTC; 7s ago
+   Main PID: 120952 (bash)
+      Tasks: 26 (limit: 2266)
+     Memory: 93.3M
+        CPU: 1.677s
+     CGroup: /system.slice/global-pulse-web.service
+             ├─120952 bash -lc "if command -v pnpm >/dev/null 2>&1; then pnpm run start -- -p 3000; else npm run start -- -p 3000; fi"
+             ├─120976 "npm run start -p 3000" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+             ├─121035 sh -c "next start -p 3000"
+             └─121036 "next-server (v16.2.3)" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+
+Apr 13 13:45:08 ip-172-31-8-8 systemd[1]: Started Global Pulse Web Server (Next.js).
+Apr 13 13:45:08 ip-172-31-8-8 env[120952]: bash: /home/ubuntu/.bash_profile: Permission denied
+Apr 13 13:45:10 ip-172-31-8-8 env[120976]: > global-pulse@0.1.0 start
+Apr 13 13:45:10 ip-172-31-8-8 env[120976]: > next start -p 3000
+Apr 13 13:45:10 ip-172-31-8-8 env[121036]: ▲ Next.js 16.2.3
+Apr 13 13:45:10 ip-172-31-8-8 env[121036]: - Local:         http://localhost:3000
+Apr 13 13:45:10 ip-172-31-8-8 env[121036]: - Network:       http://172.31.8.8:3000
+Apr 13 13:45:10 ip-172-31-8-8 env[121036]: ✓ Ready in 215ms

@@ -2238,3 +2238,56 @@
   - workflow의 `--source` 변경을 이전 상태로 복원
 - 상수 롤백:
   - `packages/shared/src/constants.ts`의 `bilibili.scrapeUrl`을 이전 값으로 복원
+
+---
+
+## GP-20260413-46 (EC2 Deploy Follow-up: Untracked Evidence Merge Fix + Runtime Sync)
+### Before -> After
+- Before:
+  - EC2 `deploy-ec2.sh` 재실행 시 `git pull --ff-only`가 실패:
+    - 원인: `docs/evidence/ops-monitoring/*`가 원격 워킹트리에 untracked 상태로 존재해 tracked 파일 병합 충돌 발생
+  - EC2 앱은 직전 커밋(`d34028c`) 상태로 남아 신규 Step 5A 코드가 반영되지 않았음.
+- After:
+  - 충돌 원인을 비파괴 방식으로 해소:
+    - runtime evidence 디렉토리 백업 이동:
+      - `docs/evidence/ops-monitoring -> docs/evidence/ops-monitoring_runtime_20260413_134415`
+  - 이후 `master` fast-forward + deploy 성공:
+    - EC2 HEAD: `36a5fa7`
+  - post-deploy 스모크 확인:
+    - `bilibili` scraper success
+    - `mastodon` scraper success
+    - `dcard` scraper 403 유지(known risk)
+  - post-deploy 24h watch 재시작:
+    - `watch_20260413_134515` (hour=1, failures=0)
+  - 최신 ops evidence를 로컬로 재동기화하여 기록 일관성 유지
+
+### Main File Changes
+- 증적 갱신:
+  - `docs/evidence/ops-monitoring/*` (updated + new `20260413_134515`, `watch_20260413_134515`, `watch-launch-after-deploy.log`)
+- 문서 누적:
+  - `docs/PATCH_NOTES.md`
+  - `docs/DELIVERY_STATUS.md`
+
+### Commands / Validation
+- EC2 충돌 해소 + 재배포:
+  - `mv docs/evidence/ops-monitoring docs/evidence/ops-monitoring_runtime_<timestamp>`
+  - `git pull --ff-only origin master`
+  - `APP_DIR=/srv/projects/project2/global-pulse BRANCH=master USE_PNPM=0 bash scripts/deploy-ec2.sh`
+- 배포 확인:
+  - `git -C /srv/projects/project2/global-pulse rev-parse --short HEAD` -> `36a5fa7`
+  - `systemctl is-active global-pulse-web.service ...` -> all `active`
+  - `curl -i http://127.0.0.1:3000/api/health` -> `provider=postgres`, `postgres_not_configured`
+- 스크래퍼 smoke:
+  - `npm run test:scraper -- --source bilibili` -> success
+  - `npm run test:scraper -- --source mastodon` -> success
+  - `npm run test:scraper -- --source dcard` -> 403
+
+### Known Risks
+- watch 재시작은 되었지만 24시간 종료 증적은 아직 진행 중.
+- PostgreSQL env 미설정으로 health는 degraded(503) 상태 유지.
+
+### Rollback Guide
+- 충돌 복구 롤백:
+  - `docs/evidence/ops-monitoring_runtime_20260413_134415`에서 필요한 증적을 복원
+- 배포 롤백:
+  - EC2에서 이전 commit checkout 후 deploy 스크립트 재실행

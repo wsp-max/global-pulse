@@ -1,0 +1,132 @@
+Apr 13 13:01:01 ip-172-31-8-8 systemd[1]: Starting Global Pulse Collector Batch...
+Apr 13 13:01:05 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:05.460Z","app":"global-pulse","env":"production","scope":"collector","msg":"Filters => region: all, type: all, source: all"}
+Apr 13 13:01:05 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:05.460Z","app":"global-pulse","env":"production","scope":"collector","msg":"Starting collection for 12 source(s)."}
+Apr 13 13:01:05 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:05.460Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from dcinside..."}
+Apr 13 13:01:05 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:05.460Z","app":"global-pulse","env":"production","scope":"collector","msg":"[dcinside] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:01:07 ip-172-31-8-8 env[115780]: {"level":40,"time":"2026-04-13T13:01:07.574Z","app":"global-pulse","env":"production","scope":"collector","msg":"Supabase persistence disabled: SUPABASE_URL and SUPABASE_SERVICE_KEY are required for createSupabaseServiceClient()."}
+Apr 13 13:01:07 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:07.574Z","app":"global-pulse","env":"production","scope":"collector","msg":"[dcinside] collected 0 posts."}
+Apr 13 13:01:07 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:07.574Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from fmkorea..."}
+Apr 13 13:01:07 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:07.574Z","app":"global-pulse","env":"production","scope":"collector","msg":"[fmkorea] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:01:09 ip-172-31-8-8 env[115780]: {"level":50,"time":"2026-04-13T13:01:09.175Z","app":"global-pulse","env":"production","scope":"collector","msg":"[fmkorea] failed: Request failed with status code 430"}
+Apr 13 13:01:09 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:09.175Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from clien..."}
+Apr 13 13:01:09 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:09.175Z","app":"global-pulse","env":"production","scope":"collector","msg":"[clien] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:01:09 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:09.385Z","app":"global-pulse","env":"production","scope":"collector","msg":"[clien] collected 30 posts."}
+Apr 13 13:01:09 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:09.386Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from reddit..."}
+Apr 13 13:01:09 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:09.386Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:01:10 ip-172-31-8-8 env[115780]: {"level":50,"time":"2026-04-13T13:01:10.967Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit] failed: Request failed with status code 403"}
+Apr 13 13:01:10 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:10.968Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from reddit_worldnews..."}
+Apr 13 13:01:10 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:10.968Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_worldnews] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:01:12 ip-172-31-8-8 env[115780]: {"level":50,"time":"2026-04-13T13:01:12.557Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_worldnews] failed: Request failed with status code 403"}
+Apr 13 13:01:12 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:12.557Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from reddit_europe..."}
+Apr 13 13:01:12 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:12.557Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_europe] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:01:14 ip-172-31-8-8 env[115780]: {"level":50,"time":"2026-04-13T13:01:14.139Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_europe] failed: Request failed with status code 403"}
+Apr 13 13:01:14 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:14.140Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from reddit_mideast..."}
+Apr 13 13:01:14 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:14.140Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_mideast] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:01:15 ip-172-31-8-8 env[115780]: {"level":50,"time":"2026-04-13T13:01:15.719Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_mideast] failed: Request failed with status code 403"}
+Apr 13 13:01:15 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:15.719Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from fourchan..."}
+Apr 13 13:01:15 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:15.719Z","app":"global-pulse","env":"production","scope":"collector","msg":"[fourchan] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:01:15 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:15.900Z","app":"global-pulse","env":"production","scope":"collector","msg":"[fourchan] collected 50 posts."}
+Apr 13 13:01:15 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:15.900Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from hackernews..."}
+Apr 13 13:01:15 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:15.900Z","app":"global-pulse","env":"production","scope":"collector","msg":"[hackernews] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:01:17 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:17.674Z","app":"global-pulse","env":"production","scope":"collector","msg":"[hackernews] collected 30 posts."}
+Apr 13 13:01:17 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:17.674Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from youtube_kr..."}
+Apr 13 13:01:17 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:17.674Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_kr] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:01:17 ip-172-31-8-8 env[115780]: {"level":50,"time":"2026-04-13T13:01:17.674Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_kr] failed: YOUTUBE_API_KEY is missing."}
+Apr 13 13:01:17 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:17.675Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from youtube_jp..."}
+Apr 13 13:01:17 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:17.675Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_jp] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:01:17 ip-172-31-8-8 env[115780]: {"level":50,"time":"2026-04-13T13:01:17.675Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_jp] failed: YOUTUBE_API_KEY is missing."}
+Apr 13 13:01:17 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:17.675Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from youtube_us..."}
+Apr 13 13:01:17 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:17.675Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_us] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:01:17 ip-172-31-8-8 env[115780]: {"level":50,"time":"2026-04-13T13:01:17.675Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_us] failed: YOUTUBE_API_KEY is missing."}
+Apr 13 13:01:17 ip-172-31-8-8 env[115780]: {"level":30,"time":"2026-04-13T13:01:17.675Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collection finished: 4/12 succeeded."}
+Apr 13 13:01:17 ip-172-31-8-8 systemd[1]: global-pulse-collector.service: Deactivated successfully.
+Apr 13 13:01:17 ip-172-31-8-8 systemd[1]: Finished Global Pulse Collector Batch.
+Apr 13 13:01:17 ip-172-31-8-8 systemd[1]: global-pulse-collector.service: Consumed 6.374s CPU time.
+Apr 13 13:15:51 ip-172-31-8-8 systemd[1]: Starting Global Pulse Collector Batch...
+Apr 13 13:15:53 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:53.553Z","app":"global-pulse","env":"production","scope":"collector","msg":"Filters => region: all, type: all, source: all"}
+Apr 13 13:15:53 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:53.553Z","app":"global-pulse","env":"production","scope":"collector","msg":"Starting collection for 12 source(s)."}
+Apr 13 13:15:53 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:53.554Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from dcinside..."}
+Apr 13 13:15:53 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:53.554Z","app":"global-pulse","env":"production","scope":"collector","msg":"[dcinside] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:15:55 ip-172-31-8-8 env[116765]: {"level":40,"time":"2026-04-13T13:15:55.361Z","app":"global-pulse","env":"production","scope":"collector","msg":"Supabase persistence disabled: SUPABASE_URL and SUPABASE_SERVICE_KEY are required for createSupabaseServiceClient()."}
+Apr 13 13:15:55 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:55.361Z","app":"global-pulse","env":"production","scope":"collector","msg":"[dcinside] collected 0 posts."}
+Apr 13 13:15:55 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:55.361Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from fmkorea..."}
+Apr 13 13:15:55 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:55.361Z","app":"global-pulse","env":"production","scope":"collector","msg":"[fmkorea] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:15:57 ip-172-31-8-8 env[116765]: {"level":50,"time":"2026-04-13T13:15:57.045Z","app":"global-pulse","env":"production","scope":"collector","msg":"[fmkorea] failed: Request failed with status code 430"}
+Apr 13 13:15:57 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:57.045Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from clien..."}
+Apr 13 13:15:57 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:57.045Z","app":"global-pulse","env":"production","scope":"collector","msg":"[clien] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:15:57 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:57.228Z","app":"global-pulse","env":"production","scope":"collector","msg":"[clien] collected 30 posts."}
+Apr 13 13:15:57 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:57.229Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from reddit..."}
+Apr 13 13:15:57 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:57.229Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:15:58 ip-172-31-8-8 env[116765]: {"level":50,"time":"2026-04-13T13:15:58.816Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit] failed: Request failed with status code 403"}
+Apr 13 13:15:58 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:58.816Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from reddit_worldnews..."}
+Apr 13 13:15:58 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:15:58.816Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_worldnews] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:16:00 ip-172-31-8-8 env[116765]: {"level":50,"time":"2026-04-13T13:16:00.394Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_worldnews] failed: Request failed with status code 403"}
+Apr 13 13:16:00 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:00.395Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from reddit_europe..."}
+Apr 13 13:16:00 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:00.395Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_europe] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:16:02 ip-172-31-8-8 env[116765]: {"level":50,"time":"2026-04-13T13:16:02.001Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_europe] failed: Request failed with status code 403"}
+Apr 13 13:16:02 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:02.001Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from reddit_mideast..."}
+Apr 13 13:16:02 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:02.002Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_mideast] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:16:03 ip-172-31-8-8 env[116765]: {"level":50,"time":"2026-04-13T13:16:03.591Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_mideast] failed: Request failed with status code 403"}
+Apr 13 13:16:03 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:03.591Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from fourchan..."}
+Apr 13 13:16:03 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:03.591Z","app":"global-pulse","env":"production","scope":"collector","msg":"[fourchan] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:16:03 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:03.964Z","app":"global-pulse","env":"production","scope":"collector","msg":"[fourchan] collected 50 posts."}
+Apr 13 13:16:03 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:03.964Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from hackernews..."}
+Apr 13 13:16:03 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:03.964Z","app":"global-pulse","env":"production","scope":"collector","msg":"[hackernews] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:16:05 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:05.163Z","app":"global-pulse","env":"production","scope":"collector","msg":"[hackernews] collected 30 posts."}
+Apr 13 13:16:05 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:05.164Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from youtube_kr..."}
+Apr 13 13:16:05 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:05.164Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_kr] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:16:05 ip-172-31-8-8 env[116765]: {"level":50,"time":"2026-04-13T13:16:05.164Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_kr] failed: YOUTUBE_API_KEY is missing."}
+Apr 13 13:16:05 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:05.164Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from youtube_jp..."}
+Apr 13 13:16:05 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:05.164Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_jp] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:16:05 ip-172-31-8-8 env[116765]: {"level":50,"time":"2026-04-13T13:16:05.164Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_jp] failed: YOUTUBE_API_KEY is missing."}
+Apr 13 13:16:05 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:05.164Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from youtube_us..."}
+Apr 13 13:16:05 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:05.165Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_us] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:16:05 ip-172-31-8-8 env[116765]: {"level":50,"time":"2026-04-13T13:16:05.165Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_us] failed: YOUTUBE_API_KEY is missing."}
+Apr 13 13:16:05 ip-172-31-8-8 env[116765]: {"level":30,"time":"2026-04-13T13:16:05.165Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collection finished: 4/12 succeeded."}
+Apr 13 13:16:05 ip-172-31-8-8 systemd[1]: global-pulse-collector.service: Deactivated successfully.
+Apr 13 13:16:05 ip-172-31-8-8 systemd[1]: Finished Global Pulse Collector Batch.
+Apr 13 13:16:05 ip-172-31-8-8 systemd[1]: global-pulse-collector.service: Consumed 5.030s CPU time.
+Apr 13 13:30:25 ip-172-31-8-8 systemd[1]: Starting Global Pulse Collector Batch...
+Apr 13 13:30:27 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:27.273Z","app":"global-pulse","env":"production","scope":"collector","msg":"Filters => region: all, type: all, source: all"}
+Apr 13 13:30:27 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:27.274Z","app":"global-pulse","env":"production","scope":"collector","msg":"Starting collection for 12 source(s)."}
+Apr 13 13:30:27 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:27.274Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from dcinside..."}
+Apr 13 13:30:27 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:27.274Z","app":"global-pulse","env":"production","scope":"collector","msg":"[dcinside] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:30:29 ip-172-31-8-8 env[117700]: {"level":40,"time":"2026-04-13T13:30:29.352Z","app":"global-pulse","env":"production","scope":"collector","msg":"Supabase persistence disabled: SUPABASE_URL and SUPABASE_SERVICE_KEY are required for createSupabaseServiceClient()."}
+Apr 13 13:30:29 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:29.352Z","app":"global-pulse","env":"production","scope":"collector","msg":"[dcinside] collected 0 posts."}
+Apr 13 13:30:29 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:29.352Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from fmkorea..."}
+Apr 13 13:30:29 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:29.352Z","app":"global-pulse","env":"production","scope":"collector","msg":"[fmkorea] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:30:30 ip-172-31-8-8 env[117700]: {"level":50,"time":"2026-04-13T13:30:30.971Z","app":"global-pulse","env":"production","scope":"collector","msg":"[fmkorea] failed: Request failed with status code 430"}
+Apr 13 13:30:30 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:30.971Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from clien..."}
+Apr 13 13:30:30 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:30.971Z","app":"global-pulse","env":"production","scope":"collector","msg":"[clien] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:30:31 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:31.358Z","app":"global-pulse","env":"production","scope":"collector","msg":"[clien] collected 30 posts."}
+Apr 13 13:30:31 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:31.359Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from reddit..."}
+Apr 13 13:30:31 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:31.359Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:30:32 ip-172-31-8-8 env[117700]: {"level":50,"time":"2026-04-13T13:30:32.949Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit] failed: Request failed with status code 403"}
+Apr 13 13:30:32 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:32.950Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from reddit_worldnews..."}
+Apr 13 13:30:32 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:32.950Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_worldnews] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:30:34 ip-172-31-8-8 env[117700]: {"level":50,"time":"2026-04-13T13:30:34.540Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_worldnews] failed: Request failed with status code 403"}
+Apr 13 13:30:34 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:34.540Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from reddit_europe..."}
+Apr 13 13:30:34 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:34.540Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_europe] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:30:36 ip-172-31-8-8 env[117700]: {"level":50,"time":"2026-04-13T13:30:36.122Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_europe] failed: Request failed with status code 403"}
+Apr 13 13:30:36 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:36.122Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from reddit_mideast..."}
+Apr 13 13:30:36 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:36.122Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_mideast] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:30:37 ip-172-31-8-8 env[117700]: {"level":50,"time":"2026-04-13T13:30:37.702Z","app":"global-pulse","env":"production","scope":"collector","msg":"[reddit_mideast] failed: Request failed with status code 403"}
+Apr 13 13:30:37 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:37.702Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from fourchan..."}
+Apr 13 13:30:37 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:37.702Z","app":"global-pulse","env":"production","scope":"collector","msg":"[fourchan] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:30:37 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:37.883Z","app":"global-pulse","env":"production","scope":"collector","msg":"[fourchan] collected 50 posts."}
+Apr 13 13:30:37 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:37.883Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from hackernews..."}
+Apr 13 13:30:37 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:37.883Z","app":"global-pulse","env":"production","scope":"collector","msg":"[hackernews] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:30:39 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:39.052Z","app":"global-pulse","env":"production","scope":"collector","msg":"[hackernews] collected 30 posts."}
+Apr 13 13:30:39 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:39.052Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from youtube_kr..."}
+Apr 13 13:30:39 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:39.053Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_kr] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:30:39 ip-172-31-8-8 env[117700]: {"level":50,"time":"2026-04-13T13:30:39.053Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_kr] failed: YOUTUBE_API_KEY is missing."}
+Apr 13 13:30:39 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:39.053Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from youtube_jp..."}
+Apr 13 13:30:39 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:39.053Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_jp] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:30:39 ip-172-31-8-8 env[117700]: {"level":50,"time":"2026-04-13T13:30:39.053Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_jp] failed: YOUTUBE_API_KEY is missing."}
+Apr 13 13:30:39 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:39.053Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collecting from youtube_us..."}
+Apr 13 13:30:39 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:39.053Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_us] guardrails: timeout=90000ms, rss_limit=1536MB"}
+Apr 13 13:30:39 ip-172-31-8-8 env[117700]: {"level":50,"time":"2026-04-13T13:30:39.053Z","app":"global-pulse","env":"production","scope":"collector","msg":"[youtube_us] failed: YOUTUBE_API_KEY is missing."}
+Apr 13 13:30:39 ip-172-31-8-8 env[117700]: {"level":30,"time":"2026-04-13T13:30:39.053Z","app":"global-pulse","env":"production","scope":"collector","msg":"Collection finished: 4/12 succeeded."}
+Apr 13 13:30:39 ip-172-31-8-8 systemd[1]: global-pulse-collector.service: Deactivated successfully.
+Apr 13 13:30:39 ip-172-31-8-8 systemd[1]: Finished Global Pulse Collector Batch.
+Apr 13 13:30:39 ip-172-31-8-8 systemd[1]: global-pulse-collector.service: Consumed 4.700s CPU time.
