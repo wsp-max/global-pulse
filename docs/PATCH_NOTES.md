@@ -2461,3 +2461,7 @@
   - `NEXT_BASE_PATH=/pulse`
   - `NEXT_PUBLIC_BASE_PATH=/pulse`
 - Build must run after env update because Next.js base path is build-time effective.
+
+### Hotfix (same step)
+- Removed Nginx `/pulse -> /pulse/` redirect to avoid Next.js 308 bounce.
+- `/pulse` is now proxied directly.
