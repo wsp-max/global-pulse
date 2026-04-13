@@ -7,33 +7,128 @@ interface MapperOptions {
 
 interface TopicNode {
   topic: Topic;
+  normalizedName: string;
+  primaryNameToken: string | null;
+  nameTokens: Set<string>;
+  keywordTokens: Set<string>;
   tokens: Set<string>;
 }
 
-function normalizeToken(value: string): string {
-  return value.trim().toLowerCase();
+interface SimilarityMetrics {
+  tokenJaccard: number;
+  keywordJaccard: number;
+  nameDice: number;
+  sharedTokens: number;
+  hasExactKeywordPhrase: boolean;
+  hasStrongNameContainment: boolean;
+  hasPrimaryNameTokenMatch: boolean;
+  score: number;
 }
 
-function toTokens(topic: Topic): Set<string> {
-  const bag = new Set<string>();
+const GENERIC_STOPWORDS = new Set([
+  "news",
+  "issue",
+  "topic",
+  "update",
+  "official",
+  "breaking",
+  "video",
+  "shorts",
+  "reddit",
+  "youtube",
+  "today",
+  "latest",
+  "summary",
+  "report",
+  "analysis",
+  "discussion",
+  "reaction",
+  "관련",
+  "이슈",
+  "논란",
+  "반응",
+  "현황",
+  "요약",
+  "速報",
+  "まとめ",
+  "热搜",
+  "话题",
+  "新闻",
+]);
 
-  const nameTokens = `${topic.nameEn} ${topic.nameKo}`
-    .split(/[\s/|,_\-:()[\]{}"'.!?]+/g)
-    .map(normalizeToken)
-    .filter((token) => token.length >= 2);
+const DIGIT_ONLY_REGEX = /^\d+$/;
 
-  for (const token of nameTokens) {
-    bag.add(token);
+function normalizeToken(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+}
+
+function splitIntoScriptSegments(value: string): string[] {
+  return (
+    value.match(
+      /[\p{Script=Hangul}]+|[\p{Script=Han}]+|[\p{Script=Hiragana}]+|[\p{Script=Katakana}]+|[a-z0-9][a-z0-9._-]*/giu,
+    ) ?? []
+  );
+}
+
+function shouldKeepToken(token: string): boolean {
+  if (!token) {
+    return false;
   }
 
-  for (const keyword of topic.keywords) {
-    const normalized = normalizeToken(keyword);
-    if (normalized.length >= 2) {
-      bag.add(normalized);
+  if (DIGIT_ONLY_REGEX.test(token)) {
+    return false;
+  }
+
+  if (token.length < 2 || token.length > 48) {
+    return false;
+  }
+
+  if (GENERIC_STOPWORDS.has(token)) {
+    return false;
+  }
+
+  return true;
+}
+
+function tokenizeText(input: string): string[] {
+  const rawTokens = input
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, " ")
+    .split(/[\s/|,_\-:()[\]{}"'.!?]+/g);
+
+  const tokens: string[] = [];
+  for (const rawToken of rawTokens) {
+    if (!rawToken) {
+      continue;
+    }
+
+    for (const segment of splitIntoScriptSegments(rawToken)) {
+      const normalized = normalizeToken(segment);
+      if (!shouldKeepToken(normalized)) {
+        continue;
+      }
+      tokens.push(normalized);
     }
   }
 
-  return bag;
+  return tokens;
+}
+
+function buildTokenSet(values: string[]): Set<string> {
+  return new Set(values.filter((value) => shouldKeepToken(value)));
+}
+
+function setIntersectionCount(a: Set<string>, b: Set<string>): number {
+  let intersection = 0;
+  for (const token of a) {
+    if (b.has(token)) {
+      intersection += 1;
+    }
+  }
+  return intersection;
 }
 
 function jaccard(a: Set<string>, b: Set<string>): number {
@@ -41,19 +136,109 @@ function jaccard(a: Set<string>, b: Set<string>): number {
     return 0;
   }
 
-  let intersection = 0;
-  for (const token of a) {
-    if (b.has(token)) {
-      intersection += 1;
-    }
-  }
-
+  const intersection = setIntersectionCount(a, b);
   const union = a.size + b.size - intersection;
   if (union <= 0) {
     return 0;
   }
-
   return intersection / union;
+}
+
+function diceCoefficient(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) {
+    return 0;
+  }
+
+  const intersection = setIntersectionCount(a, b);
+  return (2 * intersection) / (a.size + b.size);
+}
+
+function toNode(topic: Topic): TopicNode {
+  const normalizedName = normalizeToken(`${topic.nameEn} ${topic.nameKo}`.replace(/\s+/g, " "));
+  const englishNameTokens = tokenizeText(topic.nameEn);
+  const nameTokens = buildTokenSet([...englishNameTokens, ...tokenizeText(topic.nameKo)]);
+  const primaryNameToken = englishNameTokens.find((token) => token.length >= 4) ?? null;
+
+  const keywordTokens = new Set<string>();
+  const keywordPhraseTokens = new Set<string>();
+  for (const keyword of topic.keywords) {
+    const normalizedKeyword = normalizeToken(keyword);
+    if (normalizedKeyword && shouldKeepToken(normalizedKeyword)) {
+      keywordPhraseTokens.add(normalizedKeyword);
+    }
+
+    for (const token of tokenizeText(keyword)) {
+      keywordTokens.add(token);
+    }
+  }
+
+  const tokens = new Set<string>([...nameTokens, ...keywordTokens, ...keywordPhraseTokens]);
+
+  return {
+    topic,
+    normalizedName,
+    primaryNameToken,
+    nameTokens,
+    keywordTokens: new Set([...keywordTokens, ...keywordPhraseTokens]),
+    tokens,
+  };
+}
+
+function computeSimilarity(a: TopicNode, b: TopicNode): SimilarityMetrics {
+  const tokenJaccard = jaccard(a.tokens, b.tokens);
+  const keywordJaccard = jaccard(a.keywordTokens, b.keywordTokens);
+  const nameDice = diceCoefficient(a.nameTokens, b.nameTokens);
+  const sharedTokens = setIntersectionCount(a.tokens, b.tokens);
+
+  const hasStrongNameContainment =
+    a.normalizedName.length >= 6 &&
+    b.normalizedName.length >= 6 &&
+    (a.normalizedName.includes(b.normalizedName) || b.normalizedName.includes(a.normalizedName));
+  const hasPrimaryNameTokenMatch =
+    Boolean(a.primaryNameToken) &&
+    Boolean(b.primaryNameToken) &&
+    a.primaryNameToken === b.primaryNameToken;
+
+  let hasExactKeywordPhrase = false;
+  for (const token of a.keywordTokens) {
+    if (token.includes(" ") && b.keywordTokens.has(token)) {
+      hasExactKeywordPhrase = true;
+      break;
+    }
+  }
+
+  let score = tokenJaccard * 0.45 + keywordJaccard * 0.35 + nameDice * 0.2;
+  if (hasStrongNameContainment) {
+    score += 0.2;
+  }
+  if (hasPrimaryNameTokenMatch) {
+    score += 0.18;
+  }
+  if (hasExactKeywordPhrase) {
+    score += 0.15;
+  }
+
+  if (
+    sharedTokens < 2 &&
+    !hasExactKeywordPhrase &&
+    !hasStrongNameContainment &&
+    !hasPrimaryNameTokenMatch
+  ) {
+    score *= 0.4;
+  }
+
+  score = Math.max(0, Math.min(1, Number(score.toFixed(4))));
+
+  return {
+    tokenJaccard,
+    keywordJaccard,
+    nameDice,
+    sharedTokens,
+    hasExactKeywordPhrase,
+    hasStrongNameContainment,
+    hasPrimaryNameTokenMatch,
+    score,
+  };
 }
 
 function areTopicsSimilar(a: TopicNode, b: TopicNode, threshold: number): boolean {
@@ -61,14 +246,35 @@ function areTopicsSimilar(a: TopicNode, b: TopicNode, threshold: number): boolea
     return false;
   }
 
-  const nameA = normalizeToken(a.topic.nameEn);
-  const nameB = normalizeToken(b.topic.nameEn);
+  const metrics = computeSimilarity(a, b);
 
-  if (nameA && nameB && (nameA.includes(nameB) || nameB.includes(nameA))) {
+  if (metrics.hasStrongNameContainment && metrics.score >= Math.max(0.22, threshold * 0.75)) {
     return true;
   }
 
-  return jaccard(a.tokens, b.tokens) >= threshold;
+  if (metrics.hasPrimaryNameTokenMatch && metrics.score >= Math.max(0.2, threshold * 0.65)) {
+    return true;
+  }
+
+  if (
+    metrics.hasExactKeywordPhrase &&
+    (metrics.keywordJaccard >= 0.16 || metrics.tokenJaccard >= 0.2) &&
+    metrics.score >= Math.max(0.2, threshold * 0.75)
+  ) {
+    return true;
+  }
+
+  if (
+    metrics.sharedTokens < 2 &&
+    !metrics.hasExactKeywordPhrase &&
+    metrics.nameDice < 0.42 &&
+    !metrics.hasStrongNameContainment &&
+    !metrics.hasPrimaryNameTokenMatch
+  ) {
+    return false;
+  }
+
+  return metrics.score >= threshold;
 }
 
 function buildAdjacency(nodes: TopicNode[], threshold: number): number[][] {
@@ -181,14 +387,10 @@ export function mapCrossRegionTopics(
     return [];
   }
 
-  const similarityThreshold = options.similarityThreshold ?? 0.3;
+  const similarityThreshold = options.similarityThreshold ?? 0.32;
   const minRegions = options.minRegions ?? 2;
 
-  const nodes: TopicNode[] = topics.map((topic) => ({
-    topic,
-    tokens: toTokens(topic),
-  }));
-
+  const nodes: TopicNode[] = topics.map((topic) => toNode(topic));
   const adjacency = buildAdjacency(nodes, similarityThreshold);
   const components = collectComponents(nodes, adjacency);
 
@@ -197,4 +399,8 @@ export function mapCrossRegionTopics(
     .filter((item): item is GlobalTopic => Boolean(item))
     .filter((topic) => topic.regions.length >= minRegions)
     .sort((a, b) => b.totalHeatScore - a.totalHeatScore);
+}
+
+export function debugCrossRegionSimilarity(a: Topic, b: Topic): SimilarityMetrics {
+  return computeSimilarity(toNode(a), toNode(b));
 }

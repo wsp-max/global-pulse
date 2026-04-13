@@ -1,7 +1,12 @@
 import type { Topic } from "@global-pulse/shared";
 import { analyzeSentiment } from "./sentiment-analyzer";
 import { calculateHeatScore } from "./heat-score-calculator";
-import type { AnalysisPostInput, KeywordScore } from "./keyword-extractor";
+import {
+  buildTitlePhrases,
+  tokenizeForAnalysis,
+  type AnalysisPostInput,
+  type KeywordScore,
+} from "./keyword-extractor";
 
 interface ClusterOptions {
   periodStart: string;
@@ -12,6 +17,17 @@ const SOURCE_WEIGHT_MAP: Record<string, number> = {
   dcinside: 1.2,
   reddit: 1.3,
 };
+
+const TOPIC_NAME_BLACKLIST = new Set([
+  "news",
+  "issue",
+  "topic",
+  "update",
+  "video",
+  "shorts",
+  "official",
+  "breaking",
+]);
 
 function normalizeText(text: string): string {
   return text.toLowerCase().replace(/\s+/g, " ").trim();
@@ -29,6 +45,144 @@ function parsePostTimestamp(postedAt: string | undefined): Date | null {
 
 function sourceWeight(sourceId: string): number {
   return SOURCE_WEIGHT_MAP[sourceId] ?? 1;
+}
+
+function getEngagementWeight(post: AnalysisPostInput): number {
+  return (
+    1 +
+    post.viewCount * 0.0005 +
+    post.likeCount * 0.02 +
+    post.commentCount * 0.015 +
+    post.dislikeCount * 0.005
+  );
+}
+
+function normalizeTopicLabel(value: string): string {
+  return value
+    .replace(/\[[^\]]+\]/g, " ")
+    .replace(/\([^)]+\)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isMeaningfulTopicLabel(value: string): boolean {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = normalizeTopicLabel(value);
+  if (!normalized) {
+    return false;
+  }
+
+  const compact = normalized.replace(/\s+/g, "");
+  if (compact.length < 3 || compact.length > 42) {
+    return false;
+  }
+
+  if (/^\d+$/u.test(compact)) {
+    return false;
+  }
+
+  if (TOPIC_NAME_BLACKLIST.has(normalized.toLowerCase())) {
+    return false;
+  }
+
+  const letterCount = (compact.match(/\p{L}/gu) ?? []).length;
+  if (letterCount < 2) {
+    return false;
+  }
+
+  if (/^[a-z0-9._-]+$/u.test(compact) && compact.length < 5) {
+    return false;
+  }
+
+  return true;
+}
+
+function scoreCandidate(
+  map: Map<string, number>,
+  label: string,
+  score: number,
+): void {
+  const normalized = normalizeTopicLabel(label);
+  if (!normalized || !isMeaningfulTopicLabel(normalized)) {
+    return;
+  }
+  map.set(normalized, (map.get(normalized) ?? 0) + score);
+}
+
+function buildFallbackTopicName(
+  clusterKeywords: string[],
+  keywordOriginalMap: Map<string, string>,
+  keywordScoreMap: Map<string, number>,
+): string {
+  const candidates = [...new Set(clusterKeywords)]
+    .map((normalizedKeyword) => ({
+      label: keywordOriginalMap.get(normalizedKeyword) ?? normalizedKeyword,
+      score: keywordScoreMap.get(normalizedKeyword) ?? 0,
+    }))
+    .filter((item) => isMeaningfulTopicLabel(item.label))
+    .sort((a, b) => b.score - a.score);
+
+  if (candidates.length === 0) {
+    return "topic signal";
+  }
+
+  if (candidates.length === 1) {
+    return normalizeTopicLabel(candidates[0]!.label);
+  }
+
+  const combined = `${candidates[0]!.label} · ${candidates[1]!.label}`;
+  if (combined.replace(/\s+/g, "").length <= 42) {
+    return combined;
+  }
+  return normalizeTopicLabel(candidates[0]!.label);
+}
+
+function buildRepresentativeTopicName(params: {
+  regionId: string;
+  relatedPosts: AnalysisPostInput[];
+  clusterKeywords: string[];
+  keywordOriginalMap: Map<string, string>;
+  keywordScoreMap: Map<string, number>;
+}): string {
+  const { regionId, relatedPosts, clusterKeywords, keywordOriginalMap, keywordScoreMap } = params;
+  const candidateScores = new Map<string, number>();
+
+  for (const post of relatedPosts) {
+    const weight = getEngagementWeight(post);
+    const titleTokens = tokenizeForAnalysis(post.title, regionId);
+    const phrases = buildTitlePhrases(titleTokens, regionId);
+
+    for (const token of titleTokens.slice(0, 8)) {
+      scoreCandidate(candidateScores, token, weight * 0.75);
+    }
+
+    for (const phrase of phrases) {
+      scoreCandidate(candidateScores, phrase, weight * 1.35);
+    }
+  }
+
+  for (const clusterKeyword of clusterKeywords) {
+    const original = keywordOriginalMap.get(clusterKeyword) ?? clusterKeyword;
+    const baseScore = keywordScoreMap.get(clusterKeyword) ?? 1;
+    const phraseBoost = original.includes(" ") ? 2.4 : 1.2;
+    scoreCandidate(candidateScores, original, baseScore * phraseBoost);
+  }
+
+  const ranked = [...candidateScores.entries()].sort((a, b) => {
+    const aBoost = a[0].includes(" ") ? 0.35 : 0;
+    const bBoost = b[0].includes(" ") ? 0.35 : 0;
+    return b[1] + bBoost - (a[1] + aBoost);
+  });
+
+  const best = ranked.find(([label]) => isMeaningfulTopicLabel(label));
+  if (best) {
+    return normalizeTopicLabel(best[0]);
+  }
+
+  return buildFallbackTopicName(clusterKeywords, keywordOriginalMap, keywordScoreMap);
 }
 
 export async function clusterTopics(
@@ -54,9 +208,11 @@ export async function clusterTopics(
   }
 
   const keywordOriginalMap = new Map<string, string>();
+  const keywordScoreMap = new Map<string, number>();
   const keywordList = keywords.map((item) => {
     const normalized = item.keyword.toLowerCase();
     keywordOriginalMap.set(normalized, item.keyword);
+    keywordScoreMap.set(normalized, item.score);
     return normalized;
   });
 
@@ -75,6 +231,9 @@ export async function clusterTopics(
 
   const usedKeywords = new Set<string>();
   const clusteredTopics: Topic[] = [];
+  const topKeywordScore = keywords[0]?.score ?? 0;
+  const singlePostScoreThreshold = topKeywordScore * 0.35;
+  let singlePostTopicCount = 0;
 
   for (const seed of keywords) {
     const seedKeyword = seed.keyword.toLowerCase();
@@ -87,7 +246,17 @@ export async function clusterTopics(
       continue;
     }
 
+    const isPhraseSeed = seed.keyword.includes(" ");
+    if (!isPhraseSeed && seedPosts.size < 2 && keywords.length >= 12) {
+      continue;
+    }
+
+    if (seedPosts.size < 2 && seed.score < singlePostScoreThreshold) {
+      continue;
+    }
+
     const clusterKeywords = [seedKeyword];
+    const requiredOverlap = seedPosts.size >= 20 ? 3 : 2;
 
     for (const candidate of keywords) {
       const candidateKeyword = candidate.keyword.toLowerCase();
@@ -107,7 +276,7 @@ export async function clusterTopics(
         }
       }
 
-      if (overlap >= 2) {
+      if (overlap >= requiredOverlap) {
         clusterKeywords.push(candidateKeyword);
       }
 
@@ -131,6 +300,10 @@ export async function clusterTopics(
     const relatedPosts = [...relatedPostIds]
       .map((id) => normalizedPostMap.get(id)?.post)
       .filter((post): post is AnalysisPostInput => Boolean(post));
+
+    if (relatedPosts.length < 2 && singlePostTopicCount >= 4) {
+      continue;
+    }
 
     const now = new Date();
     const heatInputs = relatedPosts.map((post) => {
@@ -161,12 +334,20 @@ export async function clusterTopics(
         : 0;
 
     const sourceIds = [...new Set(relatedPosts.map((post) => post.sourceId))];
+    const topicKeywords = [...new Set(clusterKeywords.map((keyword) => keywordOriginalMap.get(keyword) ?? keyword))];
+    const topicName = buildRepresentativeTopicName({
+      regionId,
+      relatedPosts,
+      clusterKeywords,
+      keywordOriginalMap,
+      keywordScoreMap,
+    });
 
     clusteredTopics.push({
       regionId,
-      nameKo: seed.keyword,
-      nameEn: seed.keyword,
-      keywords: clusterKeywords.map((keyword) => keywordOriginalMap.get(keyword) ?? keyword),
+      nameKo: topicName,
+      nameEn: topicName,
+      keywords: topicKeywords,
       sentiment: Number(avgSentiment.toFixed(3)),
       heatScore: calculateHeatScore(heatInputs),
       postCount: relatedPosts.length,
@@ -178,15 +359,42 @@ export async function clusterTopics(
       periodEnd: options.periodEnd,
     });
 
+    if (relatedPosts.length < 2) {
+      singlePostTopicCount += 1;
+    }
+
     clusterKeywords.forEach((keyword) => usedKeywords.add(keyword));
   }
 
-  return clusteredTopics
-    .sort((a, b) => b.heatScore - a.heatScore)
-    .slice(0, 15)
-    .map((topic, index) => ({
-      ...topic,
-      rank: index + 1,
-    }));
-}
+  const ranked = clusteredTopics.sort((a, b) => b.heatScore - a.heatScore);
+  const deduped: Topic[] = [];
 
+  for (const topic of ranked) {
+    const normalized = topic.nameEn.toLowerCase().replace(/\s+/g, " ").trim();
+    const isDuplicate = deduped.some((existing) => {
+      const existingNormalized = existing.nameEn.toLowerCase().replace(/\s+/g, " ").trim();
+      if (existingNormalized === normalized) {
+        return true;
+      }
+      const shorterLength = Math.min(existingNormalized.length, normalized.length);
+      if (shorterLength < 5) {
+        return false;
+      }
+      return existingNormalized.includes(normalized) || normalized.includes(existingNormalized);
+    });
+
+    if (isDuplicate) {
+      continue;
+    }
+
+    deduped.push(topic);
+    if (deduped.length >= 15) {
+      break;
+    }
+  }
+
+  return deduped.map((topic, index) => ({
+    ...topic,
+    rank: index + 1,
+  }));
+}

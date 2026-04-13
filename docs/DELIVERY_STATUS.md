@@ -1322,3 +1322,77 @@
 - 24h watch 최종 결과를 문서에 확정 반영
 4. UI Step 6
 - 모바일 UX/장애 상태 UX 마감
+
+## Step 5C Progress Update (2026-04-14, Slice 1)
+### Newly completed
+- Analyzer 품질 튜닝 1차 반영:
+  - `keyword-extractor`를 유니코드 기반 수동 TF-IDF로 전환
+  - 지역별 스크립트 가중치(`kr/jp/cn`)와 stopword 강화
+  - 제목 phrase(2~3-gram) 추출 및 중복 키워드 억제
+  - `topic-clusterer` 대표 토픽명 생성 로직(관련 제목/키워드 점수 기반) 도입
+  - 약한 seed 스킵 + single-post 토픽 상한 + 유사 토픽 dedupe 적용
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- 로컬 스모크에서 토픽 결과가 단편 단어 중심에서 구문형(`관세 협상`, `한미 관세`) 중심으로 개선됨을 확인
+
+### Current completion state
+- Step 5C: **진행 중 (1차 튜닝 완료)**
+- 남은 작업은 cross-region 매핑 임계치/대표명 안정화, 실데이터(EC2) 샘플 리뷰 기반 미세조정
+
+### Remaining (current)
+1. Step 5C quality tuning (slice 2)
+- cross-region 유사도 임계치/오탐 튜닝
+- 리전별 샘플(kr/jp/cn/us) 20개 이상 수동 리뷰 후 stopword 보정
+2. Source hardening
+- `reddit*`, `dcard` 403 대응 전략 확정 및 적용
+3. Ops closeout
+- 24h watch 최종 요약 고정
+4. UI Step 6
+- 모바일 UX/장애 상태 UX 마감
+
+## Step 5C Progress Update (2026-04-14, Slice 2)
+### Newly completed
+- cross-region 매핑 품질 정밀화:
+  - 단순 Jaccard 기반에서 복합 점수 기반(token/keyword/name)으로 전환
+  - generic stopword 및 토큰 정규화 강화
+  - strong-name / exact-keyword-phrase / primary-name-token 가드 추가
+- global analyzer 기본 similarity를 `0.32`로 상향해 기본 오탐 완화
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run analyze:global -- --hours 24 --min-regions 2` -> pass (로컬 DB 미설정 skip)
+- 로컬 smoke에서 KR/JP 관세 이슈는 매핑되고, 무관한 US 스포츠 이슈는 분리됨을 확인
+
+### Current completion state
+- Step 5C: **진행 중 (Slice 1~2 완료)**
+- 남은 핵심은 EC2 실데이터 기준 threshold 미세조정과 수동 샘플 리뷰 결과 반영
+
+### Remaining (current)
+1. Step 5C quality tuning (slice 3)
+- EC2 DB 실데이터(최근 24h topics/global_topics) 샘플 리뷰 기반 threshold/stopword 최종 튜닝
+2. Source hardening
+- `reddit*`, `dcard` 403 대응
+3. Ops closeout
+- 24h watch 최종 결과 문서 고정
+4. UI Step 6
+- 모바일 UX/장애 상태 UX 마감
+
+## UI/Encoding Stability Update (2026-04-14)
+### Newly completed
+- 화면 `??` 노출 보완:
+  - `HeatBadge` placeholder 문자열 제거, heat level 아이콘 기반으로 교체
+  - `RegionFlag` fallback 개선 + `regionId` 정규화
+- 인코딩 재발 방지 가드 추가:
+  - `.editorconfig` (UTF-8/LF)
+  - `.gitattributes` (text eol=lf)
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Blocking info (next step)
+- Step 5C Slice 3(EC2 실데이터 튜닝) 진행을 위해 SSH 키 필요
+  - 시도 결과: `ubuntu@3.36.83.199: Permission denied (publickey)`

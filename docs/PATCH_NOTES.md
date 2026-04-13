@@ -29,6 +29,9 @@
 | GP-20260412-10 | 2026-04-12 | Step 5 검증 마감: 추가 소스 실주행 확인 + 남은 범위 정리 | Done |
 | GP-20260412-11 | 2026-04-12 | Step 5 연계: 글로벌 토픽 자동생성 실행기 + 워크플로우 연결 | Done |
 | GP-20260412-12 | 2026-04-12 | Step 5 확장 4차: Fourchan + EU/ME Reddit 수집 연결 | Done |
+| GP-20260414-51 | 2026-04-14 | Step 5C 분석 품질 1차 튜닝 (단편 키워드/토픽명 개선) | Done |
+| GP-20260414-52 | 2026-04-14 | Step 5C 분석 품질 2차 튜닝 (cross-region 매핑 정밀화) | Done |
+| GP-20260414-53 | 2026-04-14 | UI `??` 노출 제거 + UTF-8 저장 규칙 고정 | Done |
 
 ---
 
@@ -2532,3 +2535,131 @@
   - Nginx upstream도 `3000`으로 복원 후 web/nginx 재시작
 - YouTube 키 롤백:
   - `YOUTUBE_API_KEY` 제거/교체 후 collector 재실행
+
+---
+
+## GP-20260414-51 (Step 5C: Analysis Quality Tuning Slice 1 - keyword/topic quality)
+### Before -> After
+- Before:
+  - `natural.TfIdf` 내부 토크나이저 한계로 한글/일본어/중국어 키워드가 약하게 반영되거나 누락될 수 있었음.
+  - 토픽명이 seed 단어 1개 기반이라 단편 단어가 그대로 제목으로 노출되는 케이스가 많았음.
+  - 단일 게시글에서 파생된 단어들이 다수 독립 토픽으로 분리되어 의미 해석이 어려웠음.
+- After:
+  - `keyword-extractor`를 유니코드 대응 수동 TF-IDF 계산으로 전환하여 다국어 토큰을 직접 점수화.
+  - 지역별 script 가중치(`kr/jp/cn`)를 적용해 해당 리전 언어 신호를 우선 반영.
+  - 제목 phrase(2~3-gram) 추출 + 불용어/노이즈 필터를 강화하고, 중복 키워드 억제 로직을 추가.
+  - 토픽명 생성 로직을 seed 단어 고정에서 “관련 게시글 제목 + 키워드 점수” 기반 대표 phrase 선택 방식으로 변경.
+  - 클러스터 결과 후처리(약한 single-post seed 제한, 유사 토픽명 dedupe)로 단편 토픽 난립을 완화.
+
+### Main File Changes
+- [keyword-extractor.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/keyword-extractor.ts)
+  - `natural.TfIdf` 제거, 수동 TF-IDF 계산 구현
+  - `tokenizeForAnalysis`, `buildTitlePhrases` 공개 유틸 추가
+  - 지역별 stopword/script multiplier, 한국어 조사 suffix 정리 로직 추가
+  - phrase boost + near-duplicate keyword 제거 로직 추가
+- [topic-clusterer.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/topic-clusterer.ts)
+  - 대표 토픽명 생성기(`buildRepresentativeTopicName`) 추가
+  - 약한 seed 스킵 기준(coverage/score) 추가
+  - single-post 토픽 상한 제어 및 최종 토픽명 dedupe 추가
+
+### Commands / Validation
+- 품질 게이트:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+- 로컬 스모크:
+  - `npx tsx tmp/analyzer-smoke.ts`(임시 스크립트)로 키워드/토픽명 출력 확인 후 파일 정리
+  - 결과: 단일 영어 동사 중심 키워드 대신 `관세`, `자동차`, `관세 협상`, `한미 관세` 등 구문형 토픽 신호 확인
+
+### Known Risks
+- 현재 튜닝은 1차로, 리전별 형태소 분석기 미도입 상태라 JP/CN 문장 분해 품질은 추가 개선 여지가 있음.
+- 극저볼륨 구간(게시글 수 적음)에서는 single-post 기반 토픽이 일부 남을 수 있음.
+
+### Rollback Guide
+- 분석 품질 튜닝 롤백:
+  - `packages/analyzer/src/keyword-extractor.ts`
+  - `packages/analyzer/src/topic-clusterer.ts`
+  - 위 두 파일을 GP-20260414-50 시점 커밋으로 되돌리면 이전 토픽 생성 방식으로 즉시 복귀 가능.
+
+---
+
+## GP-20260414-52 (Step 5C: Analysis Quality Tuning Slice 2 - cross-region mapping quality)
+### Before -> After
+- Before:
+  - cross-region 매핑이 단순 Jaccard 위주라, 리전 언어가 다를 때(예: KR/JP) 같은 이슈도 묶이지 않는 누락 가능성이 있었음.
+  - 반대로 generic token 기반으로 오탐될 여지도 있어, 묶임 기준의 정밀도가 부족했음.
+- After:
+  - `cross-region-mapper`를 복합 스코어 기반으로 재구성:
+    - token Jaccard + keyword Jaccard + name Dice + name containment/primary token 보정
+  - generic stopword 필터/토큰 정규화 강화로 의미 없는 공통 단어 영향 축소
+  - 유사도 판단을 다중 가드로 분리:
+    - 강한 이름 포함 매칭
+    - exact keyword phrase 매칭
+    - primary name token 매칭
+    - 일반 score-threshold 매칭
+  - `run-global-analysis` 기본 similarity를 `0.30 -> 0.32`로 상향해 기본 오탐을 완화
+
+### Main File Changes
+- [cross-region-mapper.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/cross-region-mapper.ts)
+  - 토큰화/정규화/불용어 처리 강화
+  - `computeSimilarity` 기반 복합 점수 계산 도입
+  - 매핑 의사결정 가드(정밀 조건) 재설계
+  - 디버그용 `debugCrossRegionSimilarity` 유틸 추가
+- [run-global-analysis.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/run-global-analysis.ts)
+  - default similarity 인자 상향 (`0.32`)
+
+### Commands / Validation
+- 품질 게이트:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+- 실행 경로:
+  - `npm run analyze:global -- --hours 24 --min-regions 2` -> 로컬 DB 미설정으로 skip(정상)
+- 로컬 smoke:
+  - KR/JP 관세 이슈 + US NBA 이슈 샘플에서 KR/JP만 매핑되고 US는 분리되는 시나리오 확인
+
+### Known Risks
+- 다국어 완전 의미 매칭은 번역/임베딩 계층 없이 규칙 기반으로만 처리하므로, 일부 케이스는 여전히 누락 가능.
+- 실제 운영 데이터에서 threshold(`0.32`)는 추가 샘플 리뷰 후 미세 조정 필요.
+
+### Rollback Guide
+- cross-region 튜닝 롤백:
+  - `packages/analyzer/src/cross-region-mapper.ts`
+  - `packages/analyzer/src/run-global-analysis.ts`
+  - 위 파일을 GP-20260414-51 시점으로 되돌리면 기존 매핑 로직으로 즉시 복귀 가능.
+
+---
+
+## GP-20260414-53 (UI placeholder cleanup + encoding guardrails)
+### Before -> After
+- Before:
+  - 일부 화면에서 실제 텍스트로 `??`가 표시될 수 있는 하드코딩 fallback이 존재.
+  - 에디터/OS에 따라 파일 인코딩/줄바꿈이 흔들릴 수 있어 한글 깨짐 재발 위험이 있었음.
+- After:
+  - `HeatBadge`의 `?? {score}` 제거, 열기 레벨별 아이콘으로 교체.
+  - `RegionFlag`의 `?? Unknown` 제거, `regionId` 정규화(`trim + lower`) 후 미확인 fallback 개선.
+  - 저장 규칙 고정:
+    - `.editorconfig` 추가(UTF-8, LF, newline)
+    - `.gitattributes` 추가(text eol=lf + binary 확장자 지정)
+
+### Main File Changes
+- [HeatBadge.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/shared/HeatBadge.tsx)
+- [RegionFlag.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/shared/RegionFlag.tsx)
+- [.editorconfig](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/.editorconfig)
+- [.gitattributes](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/.gitattributes)
+
+### Commands / Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `ssh -o BatchMode=yes ubuntu@3.36.83.199 "echo connected"` -> fail (`Permission denied (publickey)`)
+  - EC2 실데이터 튜닝(Step 5C Slice 3)은 SSH 키 제공 후 진행 가능
+
+### Known Risks
+- EC2 직접 접속 권한 부재로, 운영 데이터 기준 최종 튜닝은 아직 미착수.
+- `docs/source-notes/supabase-fallback-audit.md`는 audit 실행 시 자동 갱신되어 변경분이 누적될 수 있음.
+
+### Rollback Guide
+- UI/인코딩 가드 롤백:
+  - `components/shared/HeatBadge.tsx`
+  - `components/shared/RegionFlag.tsx`
+  - `.editorconfig`
+  - `.gitattributes`
+  - 위 파일을 GP-20260414-52 시점으로 되돌리면 이전 상태로 복귀 가능.

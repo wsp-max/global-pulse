@@ -1,10 +1,11 @@
 import { getRegionById } from "@global-pulse/shared";
 
 export function RegionFlag({ regionId }: { regionId: string }) {
-  const region = getRegionById(regionId);
+  const normalizedRegionId = regionId.trim().toLowerCase();
+  const region = getRegionById(normalizedRegionId);
 
   if (!region) {
-    return <span>?? Unknown</span>;
+    return <span>🌐 미확인 지역</span>;
   }
 
   return (
