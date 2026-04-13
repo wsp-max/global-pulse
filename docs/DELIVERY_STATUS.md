@@ -1232,3 +1232,61 @@
 
 3. Step 5C 착수
 - analyzer 품질 튜닝(불용어/클러스터 임계치/cross-region 유사도) 및 샘플 품질 리뷰
+
+## EC2 Runtime Status Update (2026-04-14)
+### Newly completed
+- EC2 target host confirmed: `3.36.83.199`
+- Local PostgreSQL runtime activated for app use:
+  - role `global_pulse`, database `global_pulse`
+- Runtime env configured at `/etc/global-pulse/global-pulse.env` with DB + Gemini + Telegram values.
+- DB bootstrap completed on EC2:
+  - `npm run db:init` (2 migrations applied)
+  - `npm run seed:regions` (regions/sources seeded)
+- End-to-end runtime checks passed:
+  - `http://127.0.0.1:3000/api/health` -> 200
+  - `http://3.36.83.199/api/health` -> 200
+  - web + collector/analyzer/snapshot/cleanup/backup timers active
+- Data plane verified with live data:
+  - `raw_posts=353`, `topics=97`, `global_topics=8`
+  - `/api/stats` returns `configured=true`, `provider=postgres`
+
+### Current state by layer
+- L0 Governance: unchanged (single prompt + patch-note flow maintained)
+- L1 Runtime Infra: active on EC2 (Nginx + systemd + PostgreSQL local)
+- L2 Data Plane: active (collector/analyzer/snapshot working against PostgreSQL)
+- L3 API/UI Plane: active (`/api/health`, `/api/stats`, `/api/topics` verified)
+- L4 Observability: active (timers + journald + evidence directories)
+
+### Known runtime gaps
+- Source-level partial failures still expected:
+  - `reddit`, `reddit_worldnews`, `reddit_europe`, `reddit_mideast` => HTTP 403
+  - `dcard` => HTTP 403
+  - `youtube_kr/jp/us` => missing `YOUTUBE_API_KEY`
+
+### Remaining next steps (strict order)
+1. Step 5C quality tuning
+- Improve keyword stopwords/topic naming/similarity thresholds and review sample outputs.
+2. Source hardening
+- Apply fallback paths or API strategy for 403-prone sources (Reddit family, Dcard).
+3. Operations closeout
+- Continue 24h observation window and freeze final watch summary into docs.
+4. UI polish (Step 6)
+- Mobile/reporting quality pass and failure-state UX checks.
+
+## Path Split Update (2026-04-14)
+### Newly completed
+- `/pulse` path-split mode implemented in codebase for shared-host coexistence.
+- Base-path aware runtime support added:
+  - `NEXT_BASE_PATH`
+  - `NEXT_PUBLIC_BASE_PATH`
+- Nginx route design updated to isolate Global Pulse behind `/pulse` only.
+
+### Next runtime apply steps (EC2)
+1. Set env values in `/etc/global-pulse/global-pulse.env`:
+- `NEXT_BASE_PATH=/pulse`
+- `NEXT_PUBLIC_BASE_PATH=/pulse`
+2. Rebuild with updated env (`npm run build`).
+3. Reload nginx and restart web service.
+4. Verify:
+- `http://<host>/pulse`
+- `http://<host>/pulse/api/health`

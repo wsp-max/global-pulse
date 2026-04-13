@@ -2361,3 +2361,103 @@
   - `.github/workflows/collect-taiwan.yml`을 `--source dcard`로 복원
 - 상수 롤백:
   - `packages/shared/src/constants.ts`의 `fivech/hatena` scrapeUrl을 이전 값으로 복원
+
+---
+
+## GP-20260414-48 (EC2 Runtime Activation: PostgreSQL + Env + Live Validation)
+### Before -> After
+- Before:
+  - EC2 runtime had PostgreSQL service installed but application env was not configured for DB.
+  - `/api/health` was previously observed as degraded with `postgres_not_configured`.
+  - `db:init` and `seed:regions` were skipped in runtime due missing DB env.
+- After:
+  - Local PostgreSQL runtime was activated on EC2 with dedicated app role/database:
+    - role: `global_pulse`
+    - database: `global_pulse`
+  - `/etc/global-pulse/global-pulse.env` was updated with runtime-only secrets and DB config:
+    - `DATABASE_URL` + `DB_*`
+    - `GEMINI_API_KEY`
+    - `TELEGRAM_BOT_TOKEN`
+    - `TELEGRAM_CHAT_ID`
+    - file permission hardened to `640` (`root:ubuntu`)
+  - Schema + seed applied on EC2:
+    - `npm run db:init` -> applied `0001`, `0002`
+    - `npm run seed:regions` -> regions/sources seeded
+  - Runtime validation now PASS:
+    - `/api/health` -> `200`, `provider=postgres`, `phase=postgres-runtime-active`
+    - external `http://3.36.83.199/api/health` via Nginx -> `200`
+    - full collector/analyzer systemd runs succeed (with expected source-level partial failures)
+
+### Main File / Runtime Changes
+- Runtime host changes (EC2 only, not committed):
+  - `/etc/global-pulse/global-pulse.env` (created/updated, secrets included)
+  - PostgreSQL role/database created on EC2 instance
+- Repository docs updated:
+  - `docs/PATCH_NOTES.md`
+  - `docs/DELIVERY_STATUS.md`
+
+### Commands / Validation
+- DB bootstrap:
+  - `npm run db:init`
+  - `npm run seed:regions`
+- Runtime checks:
+  - `systemctl is-active global-pulse-web.service global-pulse-collector.timer global-pulse-analyzer.timer global-pulse-snapshot.timer global-pulse-cleanup.timer global-pulse-backup.timer`
+  - `systemctl list-timers 'global-pulse-*' --no-pager`
+  - `curl -i http://127.0.0.1:3000/api/health`
+  - `curl -i http://3.36.83.199/api/health`
+- Data checks (EC2 postgres):
+  - `raw_posts=353`
+  - `topics=97`
+  - `global_topics=8`
+  - `/api/stats` returned `configured=true`, `provider=postgres`
+- 3x health verification:
+  - 3 consecutive calls to `/api/health` all returned `200`.
+
+### Observed Runtime Notes
+- `reddit*` sources currently return `403` on EC2 in direct JSON fetch path.
+- `dcard` currently returns `403` (known risk from prior steps).
+- `youtube_*` sources fail when `YOUTUBE_API_KEY` is unset (expected behavior).
+
+### Rollback Guide
+- Env rollback:
+  - restore previous `/etc/global-pulse/global-pulse.env` backup or rewrite with prior values
+  - restart `global-pulse-web.service` and related timers
+- DB rollback:
+  - restore from backup (`scripts/backup-db.sh` / `scripts/restore-db.sh`) if needed
+  - or drop/recreate `global_pulse` DB and rerun `npm run db:init && npm run seed:regions`
+
+## GP-20260414-49 (Path Split Mode: /pulse for shared-host coexistence)
+### Before -> After
+- Before:
+  - Global Pulse root routing (`/`) could conflict with another website hosted on the same EC2/Nginx.
+  - Access intent was to expose Global Pulse as a separate path without purchasing a new domain.
+- After:
+  - Global Pulse runtime was made base-path aware using `/pulse`.
+  - Nginx route contract changed to proxy only `/pulse` traffic to Next.js and keep non-`/pulse` paths isolated.
+  - API client paths now honor configurable public base path (`NEXT_PUBLIC_BASE_PATH`).
+
+### Main File Changes
+- [next.config.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/next.config.ts)
+  - Added env-driven `basePath` via `NEXT_BASE_PATH`.
+- [lib/api.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/lib/api.ts)
+  - API base now computed from `NEXT_PUBLIC_BASE_PATH`.
+- [app/search/page.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/search/page.tsx)
+  - Search endpoint path switched to base-path aware API URL.
+- [infra/nginx/global-pulse.conf](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/infra/nginx/global-pulse.conf)
+  - Added `/pulse` -> `/pulse/` redirect.
+  - Added `/pulse/` reverse proxy to `127.0.0.1:3000`.
+  - Added `/pulse/healthz` to `/pulse/api/health`.
+  - Non-`/pulse` requests now return `404` in this server block.
+- [.env.example](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/.env.example)
+  - Added `NEXT_BASE_PATH`, `NEXT_PUBLIC_BASE_PATH` examples.
+
+### Validation
+- Local quality gates:
+  - `npm run lint` PASS
+  - `npm run build` PASS
+
+### Runtime Notes
+- For this mode, EC2 runtime env must include:
+  - `NEXT_BASE_PATH=/pulse`
+  - `NEXT_PUBLIC_BASE_PATH=/pulse`
+- Build must run after env update because Next.js base path is build-time effective.

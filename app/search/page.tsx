@@ -10,6 +10,13 @@ interface SearchResponse {
   total: number;
 }
 
+const rawBasePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim() ?? "";
+const normalizedBasePath = rawBasePath
+  ? rawBasePath.startsWith("/")
+    ? rawBasePath.replace(/\/+$/, "")
+    : `/${rawBasePath.replace(/\/+$/, "")}`
+  : "";
+
 const fetcher = async (url: string): Promise<SearchResponse> => {
   const response = await fetch(url);
   if (!response.ok) {
@@ -26,7 +33,7 @@ export default function SearchPage() {
     if (!submittedQuery.trim()) {
       return null;
     }
-    return `/api/search?q=${encodeURIComponent(submittedQuery.trim())}`;
+    return `${normalizedBasePath}/api/search?q=${encodeURIComponent(submittedQuery.trim())}`;
   }, [submittedQuery]);
 
   const { data, isLoading, error } = useSWR(endpoint, fetcher);
