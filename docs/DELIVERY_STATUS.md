@@ -941,3 +941,50 @@
 
 2. 관찰 결과 문서 반영
 - `docs/PATCH_NOTES.md`, `docs/DELIVERY_STATUS.md`에 운영 관찰 결과 요약 추가
+
+## EC2 Pivot Progress Update (2026-04-13, Step 4B)
+### Newly completed
+- Local git snapshot commit completed:
+  - commit hash: `06fbbc0`
+  - scope: PostgreSQL-only runtime + ops monitoring automation
+- EC2 systemd activation completed on `3.36.83.199`:
+  - installed/enabled:
+    - `global-pulse-web.service`
+    - `global-pulse-collector.timer`
+    - `global-pulse-analyzer.timer`
+    - `global-pulse-snapshot.timer`
+    - `global-pulse-cleanup.timer`
+    - `global-pulse-backup.timer`
+- PM2 overlap removed to prevent scheduler/web duplication:
+  - `pm2 stop all`
+  - `pm2 delete all`
+- Ops snapshot script hardening applied and validated:
+  - fail-code capture fix (`[FAIL:0]` bug removed)
+  - systemd unit detection fix (pipefail false-skip removed)
+- 24h watch process re-launched with fixed scripts:
+  - old watch PID `111445` replaced
+  - active watch PID `115007`
+  - launch log:
+    - `/srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/watch-launch-20260413_125324.log`
+
+### Validation
+- Local:
+  - `git commit` (pass)
+- EC2:
+  - `npm ci` (pass)
+  - `npm run build` (pass)
+  - systemd units/timers `active` 확인
+  - `bash scripts/capture-ops-snapshot.sh` (pass, failures `0`)
+
+### Current completion state
+- systemd 기반 운영 루프: 활성화 완료
+- 24h 관찰 루프: 진행 중
+- local code snapshot: 커밋 완료
+
+### Remaining (current)
+1. Remote Git push finalization
+- local repo has no configured remote (`git remote -v` empty)
+- push target URL/권한 필요
+
+2. 24h watch completion review
+- watch 종료 후 `watch-summary.txt` 기반으로 운영 결과 요약/이슈 반영

@@ -1969,3 +1969,63 @@
   - `npm run build`
   - `npm run ops:supabase:audit`
   - `npm run ops:supabase:budget -- --print-json`
+
+---
+
+## GP-20260413-41 (EC2 Pivot Step 4B: Git Snapshot Commit + EC2 systemd Activation and Watch Stabilization)
+### Before -> After
+- Before:
+  - Local workspace changes were not snapshot-committed.
+  - EC2 host (`3.36.83.199`) had no `global-pulse-*` systemd units installed.
+  - Web app was running under PM2 (`stockpulse`) and conflicted with systemd web service on port `3000`.
+  - `capture-ops-snapshot.sh` had two operational bugs:
+    - failure exit code logging could show `[FAIL:0]`
+    - unit detection under `pipefail` could incorrectly enter skip path.
+- After:
+  - Local git snapshot committed:
+    - commit: `06fbbc0`
+    - message: `feat: finalize postgres-only runtime and ops monitoring automation`
+  - EC2 systemd units installed and enabled:
+    - `global-pulse-web.service`
+    - `global-pulse-{collector,analyzer,snapshot,cleanup,backup}.timer`
+  - PM2 workload stopped/removed to avoid duplicate schedulers and web port conflict:
+    - `pm2 stop all`
+    - `pm2 delete all`
+  - Ops snapshot scripts hardened:
+    - fixed fail status capture in `run_capture()` (`capture-ops-snapshot.sh`, `capture-cutover-evidence.sh`)
+    - fixed systemd unit detection logic in `capture-ops-snapshot.sh` (no false skip under `pipefail`)
+  - 24h monitoring watch restarted with corrected script and systemd-aware checks:
+    - previous watch PID: `111445` (replaced)
+    - active watch PID: `115007`
+    - launch log: `/srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/watch-launch-20260413_125324.log`
+
+### Main File Changes
+- `scripts/capture-ops-snapshot.sh`
+- `scripts/capture-cutover-evidence.sh`
+- `docs/PATCH_NOTES.md`
+- `docs/DELIVERY_STATUS.md`
+
+### Commands / Validation
+- Local:
+  - `git add -A`
+  - `git commit -m "feat: finalize postgres-only runtime and ops monitoring automation"` (pass)
+- EC2 (`ubuntu@3.36.83.199`):
+  - `npm ci` (pass)
+  - `npm run build` (pass)
+  - install/enable systemd units + timers (pass)
+  - `pm2 stop all && pm2 delete all` (pass)
+  - `bash scripts/capture-ops-snapshot.sh` (pass, failures `0`, unit checks included)
+  - 24h watch restart (pass, PID `115007`)
+
+### Known Risks
+- This EC2 path is not currently a git checkout (`.git` absent), so `git pull` deployment flow is not available yet.
+- Health endpoint on this host currently reports degraded DB check (`provider: supabase`, `not_configured`) due host runtime/env state; ops snapshot still records this as HTTP success.
+
+### Rollback Guide
+- To roll back EC2 service model:
+  - stop/disable `global-pulse-*` systemd units
+  - re-register PM2 processes if needed
+- To roll back script hardening:
+  - restore previous versions of:
+    - `scripts/capture-ops-snapshot.sh`
+    - `scripts/capture-cutover-evidence.sh`

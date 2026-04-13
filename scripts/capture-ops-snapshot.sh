@@ -71,7 +71,8 @@ FAILURES=0
 
 run_capture "systemctl_list_timers" systemctl list-timers "global-pulse-*" --all --no-pager || FAILURES=$((FAILURES + 1))
 
-if systemctl list-unit-files | grep -q "^global-pulse-web.service"; then
+UNIT_FILE_OUTPUT="$(systemctl list-unit-files "global-pulse-web.service" --no-pager 2>/dev/null || true)"
+if [[ "${UNIT_FILE_OUTPUT}" == *"global-pulse-web.service"* ]]; then
   run_capture "systemctl_web" systemctl status global-pulse-web.service --no-pager || FAILURES=$((FAILURES + 1))
   run_capture "systemctl_collector_timer" systemctl status global-pulse-collector.timer --no-pager || FAILURES=$((FAILURES + 1))
   run_capture "systemctl_analyzer_timer" systemctl status global-pulse-analyzer.timer --no-pager || FAILURES=$((FAILURES + 1))
