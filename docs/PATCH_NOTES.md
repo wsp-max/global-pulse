@@ -2029,3 +2029,45 @@
   - restore previous versions of:
     - `scripts/capture-ops-snapshot.sh`
     - `scripts/capture-cutover-evidence.sh`
+
+---
+
+## GP-20260413-42 (EC2 Pivot Step 4C: Prompt Consolidation to Single Master + UTF-8 Guard)
+### Before -> After
+- Before:
+  - 프롬프트 문서가 분산(`INITIAL_PROMPT_GLOBAL_PULSE.md`, `INITIAL_PROMPT_GLOBAL_PULSE_EC2.md`)되어 실행 기준이 중복/충돌될 여지가 있었음.
+  - 작업 지시(아키텍처, 검증, 기록 규칙)가 여러 문서에 흩어져 있어 운영자가 "어느 문서를 기준으로 실행할지" 매번 판단해야 했음.
+- After:
+  - 단일 마스터 프롬프트로 통합:
+    - `docs/INITIAL_PROMPT_GLOBAL_PULSE.md`
+  - EC2 프롬프트 문서는 레거시 포인터로 전환:
+    - `docs/INITIAL_PROMPT_GLOBAL_PULSE_EC2.md`
+  - 마스터 문서에 다음 내용을 통합 반영:
+    - 단일 EC2/PostgreSQL-only 아키텍처
+    - 수집/분석/API/UI/운영 검증 기준
+    - Step 단위 기록 규칙(Patch-note style)
+    - 현재 상태 및 다음 우선순위
+    - UTF-8 인코딩 품질 체크리스트
+
+### Main File Changes
+- `docs/INITIAL_PROMPT_GLOBAL_PULSE.md` (full rewrite, unified master prompt)
+- `docs/INITIAL_PROMPT_GLOBAL_PULSE_EC2.md` (deprecated pointer)
+- `docs/PATCH_NOTES.md`
+- `docs/DELIVERY_STATUS.md`
+
+### Commands / Validation
+- UTF-8 읽기 검증:
+  - `Get-Content -Encoding utf8 docs/INITIAL_PROMPT_GLOBAL_PULSE.md`
+  - `Get-Content -Encoding utf8 docs/INITIAL_PROMPT_GLOBAL_PULSE_EC2.md`
+- 변경사항 점검:
+  - `git status --short`
+  - `git diff -- docs/INITIAL_PROMPT_GLOBAL_PULSE.md docs/INITIAL_PROMPT_GLOBAL_PULSE_EC2.md docs/PATCH_NOTES.md docs/DELIVERY_STATUS.md`
+
+### Known Risks
+- 기존 자동화/문서에서 `INITIAL_PROMPT_GLOBAL_PULSE_EC2.md`의 상세 본문을 직접 참조하던 경우, 이제는 마스터 문서 참조로 갱신이 필요함.
+
+### Rollback Guide
+- 이전 구조로 되돌리려면:
+  - `docs/INITIAL_PROMPT_GLOBAL_PULSE.md`를 Step 4C 이전 버전으로 복원
+  - `docs/INITIAL_PROMPT_GLOBAL_PULSE_EC2.md`에 기존 상세 본문 재적용
+  - 본 GP-20260413-42 항목을 `PATCH_NOTES`/`DELIVERY_STATUS`에서 제거

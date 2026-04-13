@@ -988,3 +988,37 @@
 
 2. 24h watch completion review
 - watch 종료 후 `watch-summary.txt` 기반으로 운영 결과 요약/이슈 반영
+
+## EC2 Pivot Progress Update (2026-04-13, Step 4C)
+### Newly completed
+- 프롬프트 단일화 완료:
+  - 마스터 문서로 `docs/INITIAL_PROMPT_GLOBAL_PULSE.md` 확정
+  - `docs/INITIAL_PROMPT_GLOBAL_PULSE_EC2.md`는 레거시 포인터 문서로 전환
+- 마스터 프롬프트에 통합 반영:
+  - 단일 EC2/PostgreSQL-only 아키텍처 기준
+  - Step 단위 실행/기록/검증 규칙
+  - 수집/분석/API/UI/운영 요구사항
+  - 현재 상태 요약 + 다음 실행 우선순위
+  - UTF-8 인코딩 체크리스트
+- 문서 운영 규칙 고정:
+  - 앞으로 프롬프트 갱신은 마스터 문서 1곳만 업데이트
+
+### Validation
+- `Get-Content -Encoding utf8 docs/INITIAL_PROMPT_GLOBAL_PULSE.md` (한글/구조 확인)
+- `Get-Content -Encoding utf8 docs/INITIAL_PROMPT_GLOBAL_PULSE_EC2.md` (포인터 전환 확인)
+- `git diff`로 문서 변경 범위 확인
+
+### Current completion state
+- Prompt source-of-truth: 단일화 완료
+- PostgreSQL-only 운영 원칙: 유지
+- 기록 체계(PATCH_NOTES/DELIVERY_STATUS 누적): 유지
+
+### Remaining (current)
+1. Remote Git push finalization
+- local repo remote 미설정 상태 해결 필요(`git remote add origin ...`)
+
+2. EC2 배포 경로 git checkout 전환
+- `/srv/projects/project2/global-pulse`를 git clone 기반으로 정리
+
+3. 24h 운영 관찰 결과 마감
+- `docs/evidence/ops-monitoring/*` 요약을 패치노트/상태문서에 최종 반영
