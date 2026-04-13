@@ -1396,3 +1396,22 @@
 ### Blocking info (next step)
 - Step 5C Slice 3(EC2 실데이터 튜닝) 진행을 위해 SSH 키 필요
   - 시도 결과: `ubuntu@3.36.83.199: Permission denied (publickey)`
+
+## Source Hardening Update (2026-04-14, Slice 1)
+### Newly completed
+- Reddit 계열(`reddit`, `reddit_worldnews`, `reddit_europe`, `reddit_mideast`) 403 완화 로직 적용:
+  - OAuth 우선 + 공개 endpoint fallback 다중 경로
+  - 헤더/에러 처리 강화
+- Dcard endpoint fallback(2개 경로) 적용
+
+### Validation
+- `npm run test:scraper -- --source reddit_worldnews` -> success=true, 30 posts
+- `npm run collect -- --source reddit,reddit_worldnews,reddit_europe,reddit_mideast` -> `4/4 succeeded`
+- `npm run test:scraper -- --source dcard` -> 403 유지(known)
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Current completion state
+- Source hardening: **부분 완료**
+  - Reddit 계열: 개선 완료
+  - Dcard: Cloudflare 정책 이슈로 추가 대응 필요

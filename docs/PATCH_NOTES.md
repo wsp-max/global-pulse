@@ -32,6 +32,7 @@
 | GP-20260414-51 | 2026-04-14 | Step 5C 분석 품질 1차 튜닝 (단편 키워드/토픽명 개선) | Done |
 | GP-20260414-52 | 2026-04-14 | Step 5C 분석 품질 2차 튜닝 (cross-region 매핑 정밀화) | Done |
 | GP-20260414-53 | 2026-04-14 | UI `??` 노출 제거 + UTF-8 저장 규칙 고정 | Done |
+| GP-20260414-54 | 2026-04-14 | Source Hardening 1차 (Reddit 403 완화 + Dcard fallback 보강) | Done |
 
 ---
 
@@ -2663,3 +2664,44 @@
   - `.editorconfig`
   - `.gitattributes`
   - 위 파일을 GP-20260414-52 시점으로 되돌리면 이전 상태로 복귀 가능.
+
+---
+
+## GP-20260414-54 (Source hardening slice 1: Reddit + Dcard)
+### Before -> After
+- Before:
+  - EC2에서 `reddit*` 소스가 403으로 실패하는 케이스가 잦았음.
+  - `dcard`는 단일 endpoint 의존이라 403 시 즉시 실패.
+- After:
+  - Reddit 스크래퍼 하드닝:
+    - OAuth credentials(`REDDIT_CLIENT_ID/SECRET`) 존재 시 OAuth API 우선 호출
+    - 공개 JSON endpoint 다중 fallback(`www`, `old`, `/.json`) 추가
+    - Reddit 정책형 `User-Agent`/헤더 적용 및 오류 집계 메시지 강화
+  - Dcard 스크래퍼 하드닝:
+    - endpoint fallback(`service/api/v2` + `_api`) 추가
+    - challenge/redirect 시 원인 노출이 가능한 에러 메시지로 개선
+
+### Main File Changes
+- [reddit.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/collector/src/scrapers/us/reddit.ts)
+- [dcard.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/collector/src/scrapers/taiwan/dcard.ts)
+
+### Commands / Validation
+- 스크래퍼 단위:
+  - `npm run test:scraper -- --source reddit_worldnews` -> success=true, postCount=30
+  - `npm run test:scraper -- --source dcard` -> 403 유지(known risk)
+- 수집기 실주행:
+  - `npm run collect -- --source reddit,reddit_worldnews,reddit_europe,reddit_mideast`
+  - 결과: `4/4 succeeded` (로컬 DB env 미설정으로 persistence skip은 정상)
+- 회귀:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+
+### Known Risks
+- Dcard는 현재 네트워크/IP 조건에서 Cloudflare 403이 지속되어 완전 복구 미완.
+- Reddit OAuth 미설정 환경에서는 공개 endpoint fallback 품질에 여전히 의존.
+
+### Rollback Guide
+- source hardening 롤백:
+  - `packages/collector/src/scrapers/us/reddit.ts`
+  - `packages/collector/src/scrapers/taiwan/dcard.ts`
+  - 위 파일을 GP-20260414-53 시점으로 되돌리면 이전 동작으로 복귀 가능.
