@@ -1022,3 +1022,30 @@
 
 3. 24h 운영 관찰 결과 마감
 - `docs/evidence/ops-monitoring/*` 요약을 패치노트/상태문서에 최종 반영
+## EC2 Pivot Progress Update (2026-04-13, Step 4D)
+### Newly completed
+- GitHub 신규 저장소 생성 완료:
+  - `https://github.com/wsp-max/global-pulse`
+- 로컬 원격 연결 완료:
+  - `origin = https://github.com/wsp-max/global-pulse.git`
+- 최초 업로드 완료:
+  - `git push -u origin master` 성공
+  - upstream 추적 설정 완료
+
+### Validation
+- `git remote -v` 확인
+- `git push -u origin master` 성공 로그 확인
+
+### Current completion state
+- 원격 저장소 연결: 완료
+- 코드/문서 백업 경로: GitHub origin으로 확정
+
+### Remaining (current)
+1. EC2 배포 경로 git checkout 전환
+- `/srv/projects/project2/global-pulse`를 tar/scp 반영 방식에서 `git clone/pull` 기반으로 전환
+
+2. 24h 운영 관찰 결과 마감
+- `docs/evidence/ops-monitoring/*` 요약/이상 징후를 `PATCH_NOTES`/`DELIVERY_STATUS`에 최종 반영
+
+3. 브랜치 정책 정리(선택)
+- 필요 시 `master -> main` 표준화

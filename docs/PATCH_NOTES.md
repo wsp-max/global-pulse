@@ -2071,3 +2071,44 @@
   - `docs/INITIAL_PROMPT_GLOBAL_PULSE.md`를 Step 4C 이전 버전으로 복원
   - `docs/INITIAL_PROMPT_GLOBAL_PULSE_EC2.md`에 기존 상세 본문 재적용
   - 본 GP-20260413-42 항목을 `PATCH_NOTES`/`DELIVERY_STATUS`에서 제거
+---
+
+## GP-20260413-43 (EC2 Pivot Step 4D: GitHub Repository Provisioning + Origin Push)
+### Before -> After
+- Before:
+  - 로컬 저장소에 원격(remote) 설정이 없어서 `git push` 불가 상태였음.
+  - EC2 운영/문서 기준은 정리되었지만, 원격 백업/협업 저장소가 미연결 상태였음.
+- After:
+  - GitHub 계정 `wsp-max` 하위에 신규 저장소 생성:
+    - `https://github.com/wsp-max/global-pulse`
+  - 로컬 저장소 원격 연결:
+    - `origin -> https://github.com/wsp-max/global-pulse.git`
+  - 현재 브랜치(`master`) 최초 push 완료 및 upstream 설정 완료.
+
+### Main File Changes
+- `docs/PATCH_NOTES.md`
+- `docs/DELIVERY_STATUS.md`
+
+### Commands / Validation
+- 계정/원격 준비 확인:
+  - `git config --global user.name`
+  - `git config --global user.email`
+  - `git remote -v`
+- 기존 GitHub 계정 탐지(로컬 기존 저장소 remotes):
+  - `rg`/`.git/config` 조회로 `wsp-max` 확인
+- GitHub repo 생성:
+  - `Invoke-RestMethod POST https://api.github.com/user/repos` (git credential-manager 토큰 사용)
+- 원격 연결/푸시:
+  - `git remote add origin https://github.com/wsp-max/global-pulse.git`
+  - `git push -u origin master`
+- 결과:
+  - `CREATED wsp-max/global-pulse`
+  - `PUSHED branch=master`
+
+### Known Risks
+- 기본 브랜치명이 현재 `master`임. 조직 표준이 `main`이면 후속 단계에서 브랜치명 정리 필요.
+
+### Rollback Guide
+- 원격 연결 해제/변경:
+  - `git remote remove origin` 또는 `git remote set-url origin <other-url>`
+- 원격 저장소 롤백이 필요하면 GitHub에서 `wsp-max/global-pulse` 삭제 후 재생성.
