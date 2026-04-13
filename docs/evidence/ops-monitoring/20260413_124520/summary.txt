@@ -1,0 +1,43 @@
+Global Pulse Ops Snapshot
+timestamp=20260413_124520
+host=ip-172-31-8-8
+app_dir=/srv/projects/project2/global-pulse
+env_file=/etc/global-pulse/global-pulse.env
+postgres_config_mode=unset
+
+[RUN] systemctl_list_timers: systemctl list-timers global-pulse-* --all --no-pager
+[OK] systemctl_list_timers
+[RUN] systemctl_web: systemctl status global-pulse-web.service --no-pager
+[FAIL:4] systemctl_web (see /srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/20260413_124520/systemctl_web.log)
+[RUN] systemctl_collector_timer: systemctl status global-pulse-collector.timer --no-pager
+[FAIL:4] systemctl_collector_timer (see /srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/20260413_124520/systemctl_collector_timer.log)
+[RUN] systemctl_analyzer_timer: systemctl status global-pulse-analyzer.timer --no-pager
+[FAIL:4] systemctl_analyzer_timer (see /srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/20260413_124520/systemctl_analyzer_timer.log)
+[RUN] systemctl_snapshot_timer: systemctl status global-pulse-snapshot.timer --no-pager
+[FAIL:4] systemctl_snapshot_timer (see /srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/20260413_124520/systemctl_snapshot_timer.log)
+[RUN] systemctl_cleanup_timer: systemctl status global-pulse-cleanup.timer --no-pager
+[FAIL:4] systemctl_cleanup_timer (see /srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/20260413_124520/systemctl_cleanup_timer.log)
+[RUN] systemctl_backup_timer: systemctl status global-pulse-backup.timer --no-pager
+[FAIL:4] systemctl_backup_timer (see /srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/20260413_124520/systemctl_backup_timer.log)
+[RUN] api_health: curl -sS -i http://127.0.0.1:3000/api/health
+[OK] api_health
+[RUN] api_stats: curl -sS -i http://127.0.0.1:3000/api/stats
+[OK] api_stats
+[RUN] api_topics: curl -sS -i http://127.0.0.1:3000/api/topics?region=kr&limit=5
+[OK] api_topics
+[RUN] journal_web: journalctl -u global-pulse-web.service -n 200 --no-pager
+[OK] journal_web
+[RUN] journal_collector: journalctl -u global-pulse-collector.service -n 200 --no-pager
+[OK] journal_collector
+[RUN] journal_analyzer: journalctl -u global-pulse-analyzer.service -n 200 --no-pager
+[OK] journal_analyzer
+[RUN] journal_snapshot: journalctl -u global-pulse-snapshot.service -n 200 --no-pager
+[OK] journal_snapshot
+[RUN] journal_cleanup: journalctl -u global-pulse-cleanup.service -n 200 --no-pager
+[OK] journal_cleanup
+[RUN] journal_backup: journalctl -u global-pulse-backup.service -n 200 --no-pager
+[OK] journal_backup
+[SKIP] db_table_counts (psql missing or postgres env unset)
+
+failures=6
+output_dir=/srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/20260413_124520

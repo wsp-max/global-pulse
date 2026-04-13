@@ -2112,3 +2112,129 @@
 - 원격 연결 해제/변경:
   - `git remote remove origin` 또는 `git remote set-url origin <other-url>`
 - 원격 저장소 롤백이 필요하면 GitHub에서 `wsp-max/global-pulse` 삭제 후 재생성.
+
+---
+
+## GP-20260413-44 (EC2 Pivot Step 4E~4F: Git-based EC2 Deploy Standardization + Ops Watch Evidence Handoff)
+### Before -> After
+- Before:
+  - EC2 운영 경로(`/srv/projects/project2/global-pulse`)에 `.git`이 없어 `git pull` 기반 배포가 불가능했음.
+  - 24h watch/ops 증적은 legacy 디렉토리에 분산되어 있고, 신규 배포 경로에는 동기화되지 않은 상태였음.
+  - `/api/health`는 `provider=supabase` 상태로 노출되어 최신 PostgreSQL-only 코드와 불일치했음.
+- After:
+  - EC2 앱 경로를 git checkout 기반으로 재구성:
+    - 기존 경로 백업: `/srv/projects/project2/global-pulse_legacy_20260413_133224`
+    - 신규 clone: `/srv/projects/project2/global-pulse` (`master`, `origin=https://github.com/wsp-max/global-pulse.git`)
+  - 표준 배포 체인 고정:
+    - `bash scripts/deploy-ec2.sh` (BRANCH=master)로 build + systemd unit/timer 재적용
+  - 런타임 확인:
+    - `global-pulse-web.service` 및 주요 timer `active`
+    - `/api/health` 응답이 최신 코드 기준(`provider=postgres`)으로 전환됨
+  - 운영 관찰 증적 이관/재시작:
+    - legacy `docs/evidence/ops-monitoring/*`를 신규 경로/로컬로 동기화
+    - 신규 watch 시작: `watch_20260413_133512` (hour=1 pass, failures=0)
+
+### Main File Changes
+- 운영 증적 동기화:
+  - `docs/evidence/ops-monitoring/*` (new, legacy + post-cutover evidence)
+- 배포 기본 브랜치 정렬:
+  - `scripts/deploy-ec2.sh` (`BRANCH` default: `main -> master`)
+- 문서 누적:
+  - `docs/PATCH_NOTES.md`
+  - `docs/DELIVERY_STATUS.md`
+
+### Commands / Validation
+- EC2 cutover:
+  - backup + clone + deploy:
+    - `/srv/projects/project2/global-pulse -> /srv/projects/project2/global-pulse_legacy_20260413_133224`
+    - `git clone --branch master https://github.com/wsp-max/global-pulse.git /srv/projects/project2/global-pulse`
+    - `APP_DIR=/srv/projects/project2/global-pulse BRANCH=master USE_PNPM=0 bash scripts/deploy-ec2.sh`
+- EC2 runtime checks:
+  - `systemctl status global-pulse-web.service`
+  - `systemctl list-timers 'global-pulse-*' --no-pager`
+  - `curl -i http://127.0.0.1:3000/api/health`
+  - result:
+    - web/timers active
+    - health = `503 degraded` with `provider=postgres`, `error=postgres_not_configured` (의도 상태: DB env 미설정)
+- Ops evidence:
+  - `npm run ops:monitor:snapshot` (pass, failures=0, output `20260413_133512`)
+  - `HOURS=24 INTERVAL_SECONDS=3600 MAX_FAILURES=3 npm run ops:monitor:watch` (running, first hour pass)
+
+### Known Risks
+- `/etc/global-pulse/global-pulse.env`에 PostgreSQL 접속 정보(`DATABASE_URL` 또는 `DB_*`)가 없어 health가 degraded(503) 상태임.
+- 24h watch는 현재 진행 중이며 아직 최종 종료 summary가 생성되지 않음.
+
+### Rollback Guide
+- EC2 경로 롤백:
+  - 신규 경로 중지 후 legacy 경로로 서비스 WorkingDirectory를 되돌리거나, legacy 디렉토리에서 재배포 수행
+- 배포 기본 브랜치 롤백:
+  - `scripts/deploy-ec2.sh`의 `BRANCH` 기본값을 `main`으로 복원
+- 증적 롤백:
+  - `docs/evidence/ops-monitoring/*` 신규 동기화분 삭제 가능 (legacy 원본은 EC2 backup 경로에 유지)
+
+---
+
+## GP-20260413-45 (Step 5A: Collector Expansion Slice 1 - bilibili, mastodon, dcard)
+### Before -> After
+- Before:
+  - `bilibili`, `mastodon`, `dcard` 스크래퍼가 모두 스텁(`return []`) 상태.
+  - collector 실행기와 테스트 엔트리에서 해당 소스가 운영 대상에 포함되지 않았음.
+  - SNS/TW 워크플로우가 region 단위 실행이라 소스 단위 제어가 불명확했음.
+- After:
+  - 3개 스크래퍼 구현:
+    - `bilibili`: `https://s.search.bilibili.com/main/hotword` 파싱
+    - `mastodon`: `https://mastodon.social/api/v1/trends/statuses` 파싱
+    - `dcard`: 인기글 API 파싱 + Cloudflare 차단 시 명시적 실패 처리
+  - collector 실행기 확장:
+    - `run.ts` 후보 스크래퍼에 `BilibiliScraper`, `MastodonScraper`, `DcardScraper` 추가
+  - 테스트 엔트리 확장:
+    - `scripts/test-scraper.ts`에 `bilibili/mastodon/dcard` 등록
+  - 워크플로우 소스 단위 고정:
+    - `collect-sns-bilibili.yml` -> `--source bilibili`
+    - `collect-sns-mastodon.yml` -> `--source mastodon`
+    - `collect-taiwan.yml` -> `--source dcard`
+  - 공유 상수 정렬:
+    - `bilibili.scrapeUrl`을 hotword endpoint로 교체
+
+### Main File Changes
+- Scrapers:
+  - `packages/collector/src/scrapers/sns/bilibili.ts`
+  - `packages/collector/src/scrapers/sns/mastodon.ts`
+  - `packages/collector/src/scrapers/taiwan/dcard.ts`
+- Runtime/Test:
+  - `packages/collector/src/run.ts`
+  - `packages/collector/src/index.ts`
+  - `scripts/test-scraper.ts`
+- Constants/Workflow:
+  - `packages/shared/src/constants.ts`
+  - `.github/workflows/collect-sns-bilibili.yml`
+  - `.github/workflows/collect-sns-mastodon.yml`
+  - `.github/workflows/collect-taiwan.yml`
+
+### Commands / Validation
+- Source tests:
+  - `npm run test:scraper -- --source bilibili` -> success=true, postCount=10
+  - `npm run test:scraper -- --source mastodon` -> success=true, postCount=29
+  - `npm run test:scraper -- --source dcard` -> success=false, HTTP 403 (Cloudflare 차단)
+- Aggregated collector run:
+  - `npm run collect -- --source bilibili,mastodon,dcard`
+  - result: `2/3 succeeded` (`dcard` blocked)
+- Quality/ops gates:
+  - `npm run lint` (pass)
+  - `npm run build` (pass)
+  - `npm run ops:supabase:audit` (pass, `totalMatches=0`)
+  - `npm run ops:supabase:budget -- --print-json` (pass)
+  - `npm run ops:verify3:check -- --print-json` (pass, `issues=[]`)
+  - `npm run verify:postgres -- --source reddit_worldnews` (skip: local DB env missing)
+
+### Known Risks
+- `dcard`는 현재 Cloudflare 403으로 직접 수집 실패(네트워크/IP 환경 의존성 높음).
+- `bilibili`는 기존 ranking API가 `-352` 응답을 반환하여 hotword endpoint 기반으로 우회 구현함(추후 endpoint 정책 변화 모니터링 필요).
+
+### Rollback Guide
+- 3개 소스 확장 롤백:
+  - 위 스크래퍼 파일을 스텁 버전으로 복원
+  - `run.ts`/`test-scraper.ts` 신규 소스 등록 제거
+  - workflow의 `--source` 변경을 이전 상태로 복원
+- 상수 롤백:
+  - `packages/shared/src/constants.ts`의 `bilibili.scrapeUrl`을 이전 값으로 복원

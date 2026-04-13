@@ -1,0 +1,23 @@
+● global-pulse-web.service - Global Pulse Web Server (Next.js)
+     Loaded: loaded (/etc/systemd/system/global-pulse-web.service; enabled; vendor preset: enabled)
+     Active: active (running) since Mon 2026-04-13 12:51:37 UTC; 1min 46s ago
+   Main PID: 114174 (bash)
+      Tasks: 26 (limit: 2266)
+     Memory: 64.6M
+        CPU: 1.809s
+     CGroup: /system.slice/global-pulse-web.service
+             ├─114174 bash -lc "if command -v pnpm >/dev/null 2>&1; then pnpm run start -- -p 3000; else npm run start -- -p 3000; fi"
+             ├─114181 "npm run start -p 3000" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+             ├─114192 sh -c "next start -p 3000"
+             └─114193 "next-server (v16.2.3)" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+
+Apr 13 12:52:49 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:52:49.175Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776084769175-9igs83ft","query":{},"msg":"api_request_start"}
+Apr 13 12:52:49 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:52:49.176Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776084769175-9igs83ft","status":200,"durationMs":1,"msg":"api_request_end"}
+Apr 13 12:52:49 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:52:49.195Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776084769195-q6hqy859","query":{"region":"kr","limit":"5"},"msg":"api_request_start"}
+Apr 13 12:52:49 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:52:49.196Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776084769195-q6hqy859","status":200,"durationMs":1,"msg":"api_request_end"}
+Apr 13 12:53:13 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:13.378Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776084793377-d4vljpqv","query":{},"msg":"api_request_start"}
+Apr 13 12:53:13 ip-172-31-8-8 env[114193]: {"level":50,"time":"2026-04-13T12:53:13.378Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776084793377-d4vljpqv","status":503,"durationMs":1,"msg":"api_request_end"}
+Apr 13 12:53:13 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:13.394Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776084793394-5czzv4do","query":{},"msg":"api_request_start"}
+Apr 13 12:53:13 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:13.396Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776084793394-5czzv4do","status":200,"durationMs":2,"msg":"api_request_end"}
+Apr 13 12:53:13 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:13.414Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776084793414-88ohbezy","query":{"region":"kr","limit":"5"},"msg":"api_request_start"}
+Apr 13 12:53:13 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:13.415Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776084793414-88ohbezy","status":200,"durationMs":1,"msg":"api_request_end"}

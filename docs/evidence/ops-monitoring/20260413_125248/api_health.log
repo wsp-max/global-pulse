@@ -1,0 +1,10 @@
+HTTP/1.1 503 Service Unavailable
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+content-type: application/json
+x-request-id: 1776084769155-kfp2b72f
+Date: Mon, 13 Apr 2026 12:52:49 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+
+{"status":"degraded","service":"global-pulse","timestamp":"2026-04-13T12:52:49.155Z","uptimeSec":71,"checks":{"app":{"ok":true},"database":{"ok":false,"provider":"supabase","latencyMs":0,"error":"not_configured"}},"migration":{"target":"single-ec2-postgresql","phase":"infra-bootstrap"}}

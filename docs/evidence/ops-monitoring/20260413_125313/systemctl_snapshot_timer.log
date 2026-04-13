@@ -1,0 +1,10 @@
+● global-pulse-snapshot.timer - Run Global Pulse snapshot builder every 30 minutes
+     Loaded: loaded (/etc/systemd/system/global-pulse-snapshot.timer; enabled; vendor preset: enabled)
+     Active: active (waiting) since Mon 2026-04-13 12:51:37 UTC; 1min 35s ago
+    Trigger: Mon 2026-04-13 13:00:09 UTC; 6min left
+   Triggers: ● global-pulse-snapshot.service
+
+Apr 13 12:51:37 ip-172-31-8-8 systemd[1]: global-pulse-snapshot.timer: Deactivated successfully.
+Apr 13 12:51:37 ip-172-31-8-8 systemd[1]: Stopped Run Global Pulse snapshot builder every 30 minutes.
+Apr 13 12:51:37 ip-172-31-8-8 systemd[1]: Stopping Run Global Pulse snapshot builder every 30 minutes...
+Apr 13 12:51:37 ip-172-31-8-8 systemd[1]: Started Run Global Pulse snapshot builder every 30 minutes.

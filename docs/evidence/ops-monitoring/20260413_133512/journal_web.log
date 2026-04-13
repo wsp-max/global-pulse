@@ -1,0 +1,200 @@
+Apr 13 12:51:04 ip-172-31-8-8 env[113819]:   address: '::',
+Apr 13 12:51:04 ip-172-31-8-8 env[113819]:   port: 3000
+Apr 13 12:51:04 ip-172-31-8-8 env[113819]: }
+Apr 13 12:51:04 ip-172-31-8-8 env[113807]: npm notice
+Apr 13 12:51:04 ip-172-31-8-8 env[113807]: npm notice New major version of npm available! 10.8.2 -> 11.12.1
+Apr 13 12:51:04 ip-172-31-8-8 env[113807]: npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.12.1
+Apr 13 12:51:04 ip-172-31-8-8 env[113807]: npm notice To update run: npm install -g npm@11.12.1
+Apr 13 12:51:04 ip-172-31-8-8 env[113807]: npm notice
+Apr 13 12:51:04 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Main process exited, code=exited, status=1/FAILURE
+Apr 13 12:51:04 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Failed with result 'exit-code'.
+Apr 13 12:51:09 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Scheduled restart job, restart counter is at 15.
+Apr 13 12:51:09 ip-172-31-8-8 systemd[1]: Stopped Global Pulse Web Server (Next.js).
+Apr 13 12:51:09 ip-172-31-8-8 systemd[1]: Started Global Pulse Web Server (Next.js).
+Apr 13 12:51:09 ip-172-31-8-8 env[113893]: bash: /home/ubuntu/.bash_profile: Permission denied
+Apr 13 12:51:10 ip-172-31-8-8 env[113897]: > global-pulse@0.1.0 start
+Apr 13 12:51:10 ip-172-31-8-8 env[113897]: > next start -p 3000
+Apr 13 12:51:10 ip-172-31-8-8 env[113909]: ⨯ Failed to start server
+Apr 13 12:51:10 ip-172-31-8-8 env[113909]: Error: listen EADDRINUSE: address already in use :::3000
+Apr 13 12:51:10 ip-172-31-8-8 env[113909]:     at <unknown> (Error: listen EADDRINUSE: address already in use :::3000)
+Apr 13 12:51:10 ip-172-31-8-8 env[113909]:     at new Promise (<anonymous>) {
+Apr 13 12:51:10 ip-172-31-8-8 env[113909]:   code: 'EADDRINUSE',
+Apr 13 12:51:10 ip-172-31-8-8 env[113909]:   errno: -98,
+Apr 13 12:51:10 ip-172-31-8-8 env[113909]:   syscall: 'listen',
+Apr 13 12:51:10 ip-172-31-8-8 env[113909]:   address: '::',
+Apr 13 12:51:10 ip-172-31-8-8 env[113909]:   port: 3000
+Apr 13 12:51:10 ip-172-31-8-8 env[113909]: }
+Apr 13 12:51:10 ip-172-31-8-8 env[113897]: npm notice
+Apr 13 12:51:10 ip-172-31-8-8 env[113897]: npm notice New major version of npm available! 10.8.2 -> 11.12.1
+Apr 13 12:51:10 ip-172-31-8-8 env[113897]: npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.12.1
+Apr 13 12:51:10 ip-172-31-8-8 env[113897]: npm notice To update run: npm install -g npm@11.12.1
+Apr 13 12:51:10 ip-172-31-8-8 env[113897]: npm notice
+Apr 13 12:51:10 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Main process exited, code=exited, status=1/FAILURE
+Apr 13 12:51:10 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Failed with result 'exit-code'.
+Apr 13 12:51:15 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Scheduled restart job, restart counter is at 16.
+Apr 13 12:51:15 ip-172-31-8-8 systemd[1]: Stopped Global Pulse Web Server (Next.js).
+Apr 13 12:51:15 ip-172-31-8-8 systemd[1]: Started Global Pulse Web Server (Next.js).
+Apr 13 12:51:15 ip-172-31-8-8 env[113922]: bash: /home/ubuntu/.bash_profile: Permission denied
+Apr 13 12:51:15 ip-172-31-8-8 env[113926]: > global-pulse@0.1.0 start
+Apr 13 12:51:15 ip-172-31-8-8 env[113926]: > next start -p 3000
+Apr 13 12:51:16 ip-172-31-8-8 env[113938]: ⨯ Failed to start server
+Apr 13 12:51:16 ip-172-31-8-8 env[113938]: Error: listen EADDRINUSE: address already in use :::3000
+Apr 13 12:51:16 ip-172-31-8-8 env[113938]:     at <unknown> (Error: listen EADDRINUSE: address already in use :::3000)
+Apr 13 12:51:16 ip-172-31-8-8 env[113938]:     at new Promise (<anonymous>) {
+Apr 13 12:51:16 ip-172-31-8-8 env[113938]:   code: 'EADDRINUSE',
+Apr 13 12:51:16 ip-172-31-8-8 env[113938]:   errno: -98,
+Apr 13 12:51:16 ip-172-31-8-8 env[113938]:   syscall: 'listen',
+Apr 13 12:51:16 ip-172-31-8-8 env[113938]:   address: '::',
+Apr 13 12:51:16 ip-172-31-8-8 env[113938]:   port: 3000
+Apr 13 12:51:16 ip-172-31-8-8 env[113938]: }
+Apr 13 12:51:16 ip-172-31-8-8 env[113926]: npm notice
+Apr 13 12:51:16 ip-172-31-8-8 env[113926]: npm notice New major version of npm available! 10.8.2 -> 11.12.1
+Apr 13 12:51:16 ip-172-31-8-8 env[113926]: npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.12.1
+Apr 13 12:51:16 ip-172-31-8-8 env[113926]: npm notice To update run: npm install -g npm@11.12.1
+Apr 13 12:51:16 ip-172-31-8-8 env[113926]: npm notice
+Apr 13 12:51:16 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Main process exited, code=exited, status=1/FAILURE
+Apr 13 12:51:16 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Failed with result 'exit-code'.
+Apr 13 12:51:21 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Scheduled restart job, restart counter is at 17.
+Apr 13 12:51:21 ip-172-31-8-8 systemd[1]: Stopped Global Pulse Web Server (Next.js).
+Apr 13 12:51:21 ip-172-31-8-8 systemd[1]: Started Global Pulse Web Server (Next.js).
+Apr 13 12:51:21 ip-172-31-8-8 env[114008]: bash: /home/ubuntu/.bash_profile: Permission denied
+Apr 13 12:51:21 ip-172-31-8-8 env[114012]: > global-pulse@0.1.0 start
+Apr 13 12:51:21 ip-172-31-8-8 env[114012]: > next start -p 3000
+Apr 13 12:51:22 ip-172-31-8-8 env[114024]: ⨯ Failed to start server
+Apr 13 12:51:22 ip-172-31-8-8 env[114024]: Error: listen EADDRINUSE: address already in use :::3000
+Apr 13 12:51:22 ip-172-31-8-8 env[114024]:     at <unknown> (Error: listen EADDRINUSE: address already in use :::3000)
+Apr 13 12:51:22 ip-172-31-8-8 env[114024]:     at new Promise (<anonymous>) {
+Apr 13 12:51:22 ip-172-31-8-8 env[114024]:   code: 'EADDRINUSE',
+Apr 13 12:51:22 ip-172-31-8-8 env[114024]:   errno: -98,
+Apr 13 12:51:22 ip-172-31-8-8 env[114024]:   syscall: 'listen',
+Apr 13 12:51:22 ip-172-31-8-8 env[114024]:   address: '::',
+Apr 13 12:51:22 ip-172-31-8-8 env[114024]:   port: 3000
+Apr 13 12:51:22 ip-172-31-8-8 env[114024]: }
+Apr 13 12:51:22 ip-172-31-8-8 env[114012]: npm notice
+Apr 13 12:51:22 ip-172-31-8-8 env[114012]: npm notice New major version of npm available! 10.8.2 -> 11.12.1
+Apr 13 12:51:22 ip-172-31-8-8 env[114012]: npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.12.1
+Apr 13 12:51:22 ip-172-31-8-8 env[114012]: npm notice To update run: npm install -g npm@11.12.1
+Apr 13 12:51:22 ip-172-31-8-8 env[114012]: npm notice
+Apr 13 12:51:22 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Main process exited, code=exited, status=1/FAILURE
+Apr 13 12:51:22 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Failed with result 'exit-code'.
+Apr 13 12:51:27 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Scheduled restart job, restart counter is at 18.
+Apr 13 12:51:27 ip-172-31-8-8 systemd[1]: Stopped Global Pulse Web Server (Next.js).
+Apr 13 12:51:27 ip-172-31-8-8 systemd[1]: Started Global Pulse Web Server (Next.js).
+Apr 13 12:51:27 ip-172-31-8-8 env[114037]: bash: /home/ubuntu/.bash_profile: Permission denied
+Apr 13 12:51:27 ip-172-31-8-8 env[114041]: > global-pulse@0.1.0 start
+Apr 13 12:51:27 ip-172-31-8-8 env[114041]: > next start -p 3000
+Apr 13 12:51:28 ip-172-31-8-8 env[114053]: ⨯ Failed to start server
+Apr 13 12:51:28 ip-172-31-8-8 env[114053]: Error: listen EADDRINUSE: address already in use :::3000
+Apr 13 12:51:28 ip-172-31-8-8 env[114053]:     at <unknown> (Error: listen EADDRINUSE: address already in use :::3000)
+Apr 13 12:51:28 ip-172-31-8-8 env[114053]:     at new Promise (<anonymous>) {
+Apr 13 12:51:28 ip-172-31-8-8 env[114053]:   code: 'EADDRINUSE',
+Apr 13 12:51:28 ip-172-31-8-8 env[114053]:   errno: -98,
+Apr 13 12:51:28 ip-172-31-8-8 env[114053]:   syscall: 'listen',
+Apr 13 12:51:28 ip-172-31-8-8 env[114053]:   address: '::',
+Apr 13 12:51:28 ip-172-31-8-8 env[114053]:   port: 3000
+Apr 13 12:51:28 ip-172-31-8-8 env[114053]: }
+Apr 13 12:51:28 ip-172-31-8-8 env[114041]: npm notice
+Apr 13 12:51:28 ip-172-31-8-8 env[114041]: npm notice New major version of npm available! 10.8.2 -> 11.12.1
+Apr 13 12:51:28 ip-172-31-8-8 env[114041]: npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.12.1
+Apr 13 12:51:28 ip-172-31-8-8 env[114041]: npm notice To update run: npm install -g npm@11.12.1
+Apr 13 12:51:28 ip-172-31-8-8 env[114041]: npm notice
+Apr 13 12:51:28 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Main process exited, code=exited, status=1/FAILURE
+Apr 13 12:51:28 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Failed with result 'exit-code'.
+Apr 13 12:51:33 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Scheduled restart job, restart counter is at 19.
+Apr 13 12:51:33 ip-172-31-8-8 systemd[1]: Stopped Global Pulse Web Server (Next.js).
+Apr 13 12:51:33 ip-172-31-8-8 systemd[1]: Started Global Pulse Web Server (Next.js).
+Apr 13 12:51:33 ip-172-31-8-8 env[114066]: bash: /home/ubuntu/.bash_profile: Permission denied
+Apr 13 12:51:33 ip-172-31-8-8 env[114070]: > global-pulse@0.1.0 start
+Apr 13 12:51:33 ip-172-31-8-8 env[114070]: > next start -p 3000
+Apr 13 12:51:33 ip-172-31-8-8 env[114082]: ⨯ Failed to start server
+Apr 13 12:51:33 ip-172-31-8-8 env[114082]: Error: listen EADDRINUSE: address already in use :::3000
+Apr 13 12:51:33 ip-172-31-8-8 env[114082]:     at <unknown> (Error: listen EADDRINUSE: address already in use :::3000)
+Apr 13 12:51:33 ip-172-31-8-8 env[114082]:     at new Promise (<anonymous>) {
+Apr 13 12:51:33 ip-172-31-8-8 env[114082]:   code: 'EADDRINUSE',
+Apr 13 12:51:33 ip-172-31-8-8 env[114082]:   errno: -98,
+Apr 13 12:51:33 ip-172-31-8-8 env[114082]:   syscall: 'listen',
+Apr 13 12:51:33 ip-172-31-8-8 env[114082]:   address: '::',
+Apr 13 12:51:33 ip-172-31-8-8 env[114082]:   port: 3000
+Apr 13 12:51:33 ip-172-31-8-8 env[114082]: }
+Apr 13 12:51:33 ip-172-31-8-8 env[114070]: npm notice
+Apr 13 12:51:33 ip-172-31-8-8 env[114070]: npm notice New major version of npm available! 10.8.2 -> 11.12.1
+Apr 13 12:51:33 ip-172-31-8-8 env[114070]: npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.12.1
+Apr 13 12:51:33 ip-172-31-8-8 env[114070]: npm notice To update run: npm install -g npm@11.12.1
+Apr 13 12:51:33 ip-172-31-8-8 env[114070]: npm notice
+Apr 13 12:51:33 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Main process exited, code=exited, status=1/FAILURE
+Apr 13 12:51:33 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Failed with result 'exit-code'.
+Apr 13 12:51:37 ip-172-31-8-8 systemd[1]: Stopped Global Pulse Web Server (Next.js).
+Apr 13 12:51:37 ip-172-31-8-8 systemd[1]: Started Global Pulse Web Server (Next.js).
+Apr 13 12:51:37 ip-172-31-8-8 env[114174]: bash: /home/ubuntu/.bash_profile: Permission denied
+Apr 13 12:51:37 ip-172-31-8-8 env[114181]: > global-pulse@0.1.0 start
+Apr 13 12:51:37 ip-172-31-8-8 env[114181]: > next start -p 3000
+Apr 13 12:51:38 ip-172-31-8-8 env[114193]: ▲ Next.js 16.2.3
+Apr 13 12:51:38 ip-172-31-8-8 env[114193]: - Local:         http://localhost:3000
+Apr 13 12:51:38 ip-172-31-8-8 env[114193]: - Network:       http://172.31.8.8:3000
+Apr 13 12:51:38 ip-172-31-8-8 env[114193]: ✓ Ready in 171ms
+Apr 13 12:51:40 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:51:40.736Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776084700736-cj8vc15o","query":{},"msg":"api_request_start"}
+Apr 13 12:51:40 ip-172-31-8-8 env[114193]: {"level":50,"time":"2026-04-13T12:51:40.740Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776084700736-cj8vc15o","status":503,"durationMs":3,"msg":"api_request_end"}
+Apr 13 12:51:53 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:51:53.191Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776084713190-yjhgopku","query":{},"msg":"api_request_start"}
+Apr 13 12:51:53 ip-172-31-8-8 env[114193]: {"level":50,"time":"2026-04-13T12:51:53.191Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776084713190-yjhgopku","status":503,"durationMs":1,"msg":"api_request_end"}
+Apr 13 12:51:53 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:51:53.211Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776084713210-yu2gkttq","query":{},"msg":"api_request_start"}
+Apr 13 12:51:53 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:51:53.211Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776084713210-yu2gkttq","status":200,"durationMs":1,"msg":"api_request_end"}
+Apr 13 12:51:53 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:51:53.229Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776084713229-zecdqmr6","query":{"region":"kr","limit":"5"},"msg":"api_request_start"}
+Apr 13 12:51:53 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:51:53.230Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776084713229-zecdqmr6","status":200,"durationMs":1,"msg":"api_request_end"}
+Apr 13 12:52:49 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:52:49.155Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776084769155-kfp2b72f","query":{},"msg":"api_request_start"}
+Apr 13 12:52:49 ip-172-31-8-8 env[114193]: {"level":50,"time":"2026-04-13T12:52:49.156Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776084769155-kfp2b72f","status":503,"durationMs":1,"msg":"api_request_end"}
+Apr 13 12:52:49 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:52:49.175Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776084769175-9igs83ft","query":{},"msg":"api_request_start"}
+Apr 13 12:52:49 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:52:49.176Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776084769175-9igs83ft","status":200,"durationMs":1,"msg":"api_request_end"}
+Apr 13 12:52:49 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:52:49.195Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776084769195-q6hqy859","query":{"region":"kr","limit":"5"},"msg":"api_request_start"}
+Apr 13 12:52:49 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:52:49.196Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776084769195-q6hqy859","status":200,"durationMs":1,"msg":"api_request_end"}
+Apr 13 12:53:13 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:13.378Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776084793377-d4vljpqv","query":{},"msg":"api_request_start"}
+Apr 13 12:53:13 ip-172-31-8-8 env[114193]: {"level":50,"time":"2026-04-13T12:53:13.378Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776084793377-d4vljpqv","status":503,"durationMs":1,"msg":"api_request_end"}
+Apr 13 12:53:13 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:13.394Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776084793394-5czzv4do","query":{},"msg":"api_request_start"}
+Apr 13 12:53:13 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:13.396Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776084793394-5czzv4do","status":200,"durationMs":2,"msg":"api_request_end"}
+Apr 13 12:53:13 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:13.414Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776084793414-88ohbezy","query":{"region":"kr","limit":"5"},"msg":"api_request_start"}
+Apr 13 12:53:13 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:13.415Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776084793414-88ohbezy","status":200,"durationMs":1,"msg":"api_request_end"}
+Apr 13 12:53:24 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:24.481Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776084804481-zwvflv8p","query":{},"msg":"api_request_start"}
+Apr 13 12:53:24 ip-172-31-8-8 env[114193]: {"level":50,"time":"2026-04-13T12:53:24.481Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776084804481-zwvflv8p","status":503,"durationMs":0,"msg":"api_request_end"}
+Apr 13 12:53:24 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:24.498Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776084804498-e2vifuyj","query":{},"msg":"api_request_start"}
+Apr 13 12:53:24 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:24.499Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776084804498-e2vifuyj","status":200,"durationMs":1,"msg":"api_request_end"}
+Apr 13 12:53:24 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:24.514Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776084804514-lo6clury","query":{"region":"kr","limit":"5"},"msg":"api_request_start"}
+Apr 13 12:53:24 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T12:53:24.515Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776084804514-lo6clury","status":200,"durationMs":1,"msg":"api_request_end"}
+Apr 13 13:31:40 ip-172-31-8-8 env[114193]: {"level":30,"time":"2026-04-13T13:31:40.425Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776087100425-olj1grwt","query":{},"msg":"api_request_start"}
+Apr 13 13:31:40 ip-172-31-8-8 env[114193]: {"level":50,"time":"2026-04-13T13:31:40.425Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776087100425-olj1grwt","status":503,"durationMs":0,"msg":"api_request_end"}
+Apr 13 13:32:24 ip-172-31-8-8 systemd[1]: Stopping Global Pulse Web Server (Next.js)...
+Apr 13 13:32:24 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Deactivated successfully.
+Apr 13 13:32:24 ip-172-31-8-8 systemd[1]: Stopped Global Pulse Web Server (Next.js).
+Apr 13 13:32:24 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Consumed 1.869s CPU time.
+Apr 13 13:33:13 ip-172-31-8-8 systemd[1]: Started Global Pulse Web Server (Next.js).
+Apr 13 13:33:13 ip-172-31-8-8 env[118398]: bash: /home/ubuntu/.bash_profile: Permission denied
+Apr 13 13:33:14 ip-172-31-8-8 env[118405]: > global-pulse@0.1.0 start
+Apr 13 13:33:14 ip-172-31-8-8 env[118405]: > next start -p 3000
+Apr 13 13:33:15 ip-172-31-8-8 env[118531]: ▲ Next.js 16.2.3
+Apr 13 13:33:15 ip-172-31-8-8 env[118531]: - Local:         http://localhost:3000
+Apr 13 13:33:15 ip-172-31-8-8 env[118531]: - Network:       http://172.31.8.8:3000
+Apr 13 13:33:15 ip-172-31-8-8 env[118531]: ✓ Ready in 399ms
+Apr 13 13:33:15 ip-172-31-8-8 systemd[1]: Stopping Global Pulse Web Server (Next.js)...
+Apr 13 13:33:15 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Deactivated successfully.
+Apr 13 13:33:15 ip-172-31-8-8 systemd[1]: Stopped Global Pulse Web Server (Next.js).
+Apr 13 13:33:15 ip-172-31-8-8 systemd[1]: global-pulse-web.service: Consumed 1.466s CPU time.
+Apr 13 13:33:15 ip-172-31-8-8 systemd[1]: Started Global Pulse Web Server (Next.js).
+Apr 13 13:33:15 ip-172-31-8-8 env[118577]: bash: /home/ubuntu/.bash_profile: Permission denied
+Apr 13 13:33:15 ip-172-31-8-8 env[118586]: > global-pulse@0.1.0 start
+Apr 13 13:33:15 ip-172-31-8-8 env[118586]: > next start -p 3000
+Apr 13 13:33:16 ip-172-31-8-8 env[118598]: ▲ Next.js 16.2.3
+Apr 13 13:33:16 ip-172-31-8-8 env[118598]: - Local:         http://localhost:3000
+Apr 13 13:33:16 ip-172-31-8-8 env[118598]: - Network:       http://172.31.8.8:3000
+Apr 13 13:33:16 ip-172-31-8-8 env[118598]: ✓ Ready in 177ms
+Apr 13 13:33:28 ip-172-31-8-8 env[118598]: {"level":30,"time":"2026-04-13T13:33:28.970Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776087208969-y2zn288o","query":{},"msg":"api_request_start"}
+Apr 13 13:33:28 ip-172-31-8-8 env[118598]: {"level":50,"time":"2026-04-13T13:33:28.973Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776087208969-y2zn288o","status":503,"durationMs":4,"msg":"api_request_end"}
+Apr 13 13:35:12 ip-172-31-8-8 env[118598]: {"level":30,"time":"2026-04-13T13:35:12.363Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776087312363-kfk54rku","query":{},"msg":"api_request_start"}
+Apr 13 13:35:12 ip-172-31-8-8 env[118598]: {"level":50,"time":"2026-04-13T13:35:12.364Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776087312363-kfk54rku","status":503,"durationMs":1,"msg":"api_request_end"}
+Apr 13 13:35:12 ip-172-31-8-8 env[118598]: {"level":30,"time":"2026-04-13T13:35:12.372Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776087312372-1kf9yi6j","query":{},"msg":"api_request_start"}
+Apr 13 13:35:12 ip-172-31-8-8 env[118598]: {"level":50,"time":"2026-04-13T13:35:12.373Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776087312372-1kf9yi6j","status":503,"durationMs":2,"msg":"api_request_end"}
+Apr 13 13:35:12 ip-172-31-8-8 env[118598]: {"level":30,"time":"2026-04-13T13:35:12.393Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776087312393-fnx2vygi","query":{},"msg":"api_request_start"}
+Apr 13 13:35:12 ip-172-31-8-8 env[118598]: {"level":30,"time":"2026-04-13T13:35:12.395Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776087312393-fnx2vygi","status":200,"durationMs":2,"msg":"api_request_end"}
+Apr 13 13:35:12 ip-172-31-8-8 env[118598]: {"level":30,"time":"2026-04-13T13:35:12.402Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776087312402-t1mgy9sj","query":{},"msg":"api_request_start"}
+Apr 13 13:35:12 ip-172-31-8-8 env[118598]: {"level":30,"time":"2026-04-13T13:35:12.402Z","app":"global-pulse","env":"production","scope":"api","route":"/api/stats","method":"GET","requestId":"1776087312402-t1mgy9sj","status":200,"durationMs":0,"msg":"api_request_end"}
+Apr 13 13:35:12 ip-172-31-8-8 env[118598]: {"level":30,"time":"2026-04-13T13:35:12.427Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776087312427-6iy4jipw","query":{"region":"kr","limit":"5"},"msg":"api_request_start"}
+Apr 13 13:35:12 ip-172-31-8-8 env[118598]: {"level":30,"time":"2026-04-13T13:35:12.428Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776087312427-6iy4jipw","status":200,"durationMs":1,"msg":"api_request_end"}
+Apr 13 13:35:12 ip-172-31-8-8 env[118598]: {"level":30,"time":"2026-04-13T13:35:12.439Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776087312439-akc2oiw9","query":{"region":"kr","limit":"5"},"msg":"api_request_start"}
+Apr 13 13:35:12 ip-172-31-8-8 env[118598]: {"level":30,"time":"2026-04-13T13:35:12.442Z","app":"global-pulse","env":"production","scope":"api","route":"/api/topics","method":"GET","requestId":"1776087312439-akc2oiw9","status":200,"durationMs":3,"msg":"api_request_end"}

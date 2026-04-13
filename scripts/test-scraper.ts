@@ -3,7 +3,10 @@ import { DcInsideScraper } from "../packages/collector/src/scrapers/korea/dcinsi
 import { RedditEuropeScraper } from "../packages/collector/src/scrapers/europe/reddit-europe";
 import { FmkoreaScraper } from "../packages/collector/src/scrapers/korea/fmkorea";
 import { RedditMideastScraper } from "../packages/collector/src/scrapers/mideast/reddit-mideast";
+import { BilibiliScraper } from "../packages/collector/src/scrapers/sns/bilibili";
+import { MastodonScraper } from "../packages/collector/src/scrapers/sns/mastodon";
 import { YoutubeScraper } from "../packages/collector/src/scrapers/sns/youtube";
+import { DcardScraper } from "../packages/collector/src/scrapers/taiwan/dcard";
 import { FourchanScraper } from "../packages/collector/src/scrapers/us/fourchan";
 import { HackernewsScraper } from "../packages/collector/src/scrapers/us/hackernews";
 import { RedditScraper } from "../packages/collector/src/scrapers/us/reddit";
@@ -38,6 +41,9 @@ async function run(): Promise<void> {
     youtube_kr: new YoutubeScraper(),
     youtube_jp: new YoutubeScraper("youtube_jp"),
     youtube_us: new YoutubeScraper("youtube_us"),
+    bilibili: new BilibiliScraper(),
+    mastodon: new MastodonScraper(),
+    dcard: new DcardScraper(),
   } as const;
 
   const scraper = map[sourceId as keyof typeof map];

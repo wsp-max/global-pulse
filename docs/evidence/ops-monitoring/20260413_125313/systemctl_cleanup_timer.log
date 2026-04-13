@@ -1,0 +1,10 @@
+● global-pulse-cleanup.timer - Run Global Pulse cleanup every day at 03:20 UTC
+     Loaded: loaded (/etc/systemd/system/global-pulse-cleanup.timer; enabled; vendor preset: enabled)
+     Active: active (waiting) since Mon 2026-04-13 12:51:37 UTC; 1min 35s ago
+    Trigger: Tue 2026-04-14 03:22:47 UTC; 14h left
+   Triggers: ● global-pulse-cleanup.service
+
+Apr 13 12:51:37 ip-172-31-8-8 systemd[1]: global-pulse-cleanup.timer: Deactivated successfully.
+Apr 13 12:51:37 ip-172-31-8-8 systemd[1]: Stopped Run Global Pulse cleanup every day at 03:20 UTC.
+Apr 13 12:51:37 ip-172-31-8-8 systemd[1]: Stopping Run Global Pulse cleanup every day at 03:20 UTC...
+Apr 13 12:51:37 ip-172-31-8-8 systemd[1]: Started Run Global Pulse cleanup every day at 03:20 UTC.

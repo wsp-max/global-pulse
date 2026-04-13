@@ -1,0 +1,10 @@
+HTTP/1.1 200 OK
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+content-type: application/json
+x-request-id: 1776087312402-t1mgy9sj
+Date: Mon, 13 Apr 2026 13:35:12 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+
+{"totalPosts":0,"totalTopics":0,"totalGlobalTopics":0,"activeRegions":0,"collectedSources":0,"configured":false,"provider":"none","timestamp":"2026-04-13T13:35:12.402Z"}

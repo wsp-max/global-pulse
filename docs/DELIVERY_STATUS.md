@@ -1049,3 +1049,105 @@
 
 3. 브랜치 정책 정리(선택)
 - 필요 시 `master -> main` 표준화
+
+## EC2 Pivot Progress Update (2026-04-13, Step 4E)
+### Newly completed
+- EC2 앱 경로를 git 기반 배포 구조로 전환 완료:
+  - 기존 경로 백업:
+    - `/srv/projects/project2/global-pulse_legacy_20260413_133224`
+  - 신규 경로 clone:
+    - `/srv/projects/project2/global-pulse` (`master`)
+  - remote:
+    - `origin=https://github.com/wsp-max/global-pulse.git`
+- 배포 루틴 표준화:
+  - `scripts/deploy-ec2.sh` 실행으로 build + systemd unit/timer 재적용
+  - `scripts/deploy-ec2.sh` default branch를 `master`로 정렬
+- 런타임 상태 확인:
+  - web service `active`
+  - collector/analyzer/snapshot/cleanup/backup timer `active`
+  - `/api/health` 최신 런타임 응답 확인 (`provider=postgres`)
+
+### Validation
+- EC2:
+  - `git -C /srv/projects/project2/global-pulse rev-parse --abbrev-ref HEAD` -> `master`
+  - `git -C /srv/projects/project2/global-pulse remote -v` 확인
+  - `systemctl status global-pulse-web.service`
+  - `systemctl list-timers 'global-pulse-*' --no-pager`
+  - `curl -i http://127.0.0.1:3000/api/health`
+
+### Current completion state
+- EC2 deploy path: git checkout 기반으로 전환 완료
+- 반복 배포 루틴: `git pull + build + systemd`로 고정
+
+### Remaining (current)
+1. EC2 PostgreSQL runtime env 설정
+- `/etc/global-pulse/global-pulse.env`에 `DATABASE_URL` 또는 `DB_*` 추가 필요
+- 현재 health는 `postgres_not_configured`로 `503` 상태
+
+2. 24h watch 결과 마감
+- 새 watch 종료 후 최종 summary를 문서에 반영
+
+## EC2 Pivot Progress Update (2026-04-13, Step 4F)
+### Newly completed
+- ops monitoring evidence를 신규 경로/로컬로 동기화:
+  - `docs/evidence/ops-monitoring/*`
+- post-cutover snapshot 1회 성공:
+  - `20260413_133512/summary.txt` (failures=0)
+- 24h watch 재시작:
+  - `watch_20260413_133512/watch-summary.txt`
+  - hour=1 pass, failures=0
+
+### Validation
+- `npm run ops:monitor:snapshot` (EC2, pass)
+- `npm run ops:monitor:watch` (EC2, 백그라운드 실행 중)
+- watch summary에서 hour=1 성공 확인
+
+### Current completion state
+- 관찰 증적 이관: 완료
+- post-cutover watch: 진행 중
+
+### Remaining (current)
+1. watch 종료 결과 반영
+- `watch-summary.txt` 최종 `failures` 값과 중단 사유(있는 경우) 문서화
+
+2. DB table count 활성화
+- PostgreSQL env 설정 후 snapshot의 `db_table_counts` SKIP 해소
+
+## Step 5A Progress Update (2026-04-13)
+### Newly completed
+- 수집기 확장 1차 구현:
+  - `bilibili` scraper 구현
+  - `mastodon` scraper 구현
+  - `dcard` scraper 구현(차단 시 graceful failure)
+- collector/runtime 반영:
+  - `packages/collector/src/run.ts` 대상 소스 추가
+  - `scripts/test-scraper.ts` 테스트 소스 추가
+  - `packages/collector/src/index.ts` export 추가
+- 워크플로우 소스 단위 정렬:
+  - `collect-sns-bilibili.yml` -> `--source bilibili`
+  - `collect-sns-mastodon.yml` -> `--source mastodon`
+  - `collect-taiwan.yml` -> `--source dcard`
+
+### Validation
+- `npm run test:scraper -- --source bilibili` -> success=true, postCount=10
+- `npm run test:scraper -- --source mastodon` -> success=true, postCount=29
+- `npm run test:scraper -- --source dcard` -> success=false, HTTP 403
+- `npm run collect -- --source bilibili,mastodon,dcard` -> `2/3 succeeded`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- Step 5A 목표(신규 3개 소스 도입): 코드 반영 완료
+- 운영 가용성:
+  - bilibili/mastodon: 동작 확인
+  - dcard: Cloudflare 403로 실패 처리(예상 리스크 명시)
+
+### Remaining (current)
+1. Dcard 안정화 경로 결정
+- API 차단 우회(프록시/브라우저 기반/대체 소스) 전략 필요
+
+2. Step 5B 착수
+- `ptt`, `hatena`, `fivech`, `weibo` 구현 + 실패율 기준 수립

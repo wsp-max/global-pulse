@@ -1,0 +1,7 @@
+● global-pulse-backup.timer - Run Global Pulse backup every day at 03:40 UTC
+     Loaded: loaded (/etc/systemd/system/global-pulse-backup.timer; enabled; vendor preset: enabled)
+     Active: active (waiting) since Mon 2026-04-13 13:33:15 UTC; 1min 56s ago
+    Trigger: Tue 2026-04-14 03:43:50 UTC; 14h left
+   Triggers: ● global-pulse-backup.service
+
+Apr 13 13:33:15 ip-172-31-8-8 systemd[1]: Started Run Global Pulse backup every day at 03:40 UTC.

@@ -22,7 +22,7 @@ jobs:
         run: npm ci
 
       - name: Execute job
-        run: npx tsx packages/collector/src/run.ts --region eu
+        run: npx tsx packages/collector/src/run.ts --source mastodon
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}

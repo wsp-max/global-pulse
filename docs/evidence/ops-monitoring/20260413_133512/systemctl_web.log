@@ -1,0 +1,23 @@
+● global-pulse-web.service - Global Pulse Web Server (Next.js)
+     Loaded: loaded (/etc/systemd/system/global-pulse-web.service; enabled; vendor preset: enabled)
+     Active: active (running) since Mon 2026-04-13 13:33:15 UTC; 1min 56s ago
+   Main PID: 118577 (bash)
+      Tasks: 26 (limit: 2266)
+     Memory: 59.8M
+        CPU: 1.691s
+     CGroup: /system.slice/global-pulse-web.service
+             ├─118577 bash -lc "if command -v pnpm >/dev/null 2>&1; then pnpm run start -- -p 3000; else npm run start -- -p 3000; fi"
+             ├─118586 "npm run start -p 3000" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+             ├─118597 sh -c "next start -p 3000"
+             └─118598 "next-server (v16.2.3)" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+
+Apr 13 13:33:15 ip-172-31-8-8 systemd[1]: Started Global Pulse Web Server (Next.js).
+Apr 13 13:33:15 ip-172-31-8-8 env[118577]: bash: /home/ubuntu/.bash_profile: Permission denied
+Apr 13 13:33:15 ip-172-31-8-8 env[118586]: > global-pulse@0.1.0 start
+Apr 13 13:33:15 ip-172-31-8-8 env[118586]: > next start -p 3000
+Apr 13 13:33:16 ip-172-31-8-8 env[118598]: ▲ Next.js 16.2.3
+Apr 13 13:33:16 ip-172-31-8-8 env[118598]: - Local:         http://localhost:3000
+Apr 13 13:33:16 ip-172-31-8-8 env[118598]: - Network:       http://172.31.8.8:3000
+Apr 13 13:33:16 ip-172-31-8-8 env[118598]: ✓ Ready in 177ms
+Apr 13 13:33:28 ip-172-31-8-8 env[118598]: {"level":30,"time":"2026-04-13T13:33:28.970Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776087208969-y2zn288o","query":{},"msg":"api_request_start"}
+Apr 13 13:33:28 ip-172-31-8-8 env[118598]: {"level":50,"time":"2026-04-13T13:33:28.973Z","app":"global-pulse","env":"production","scope":"api","route":"/api/health","method":"GET","requestId":"1776087208969-y2zn288o","status":503,"durationMs":4,"msg":"api_request_end"}

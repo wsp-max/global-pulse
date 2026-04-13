@@ -4,7 +4,10 @@ import { DcInsideScraper } from "./scrapers/korea/dcinside";
 import { FmkoreaScraper } from "./scrapers/korea/fmkorea";
 import { RedditEuropeScraper } from "./scrapers/europe/reddit-europe";
 import { RedditMideastScraper } from "./scrapers/mideast/reddit-mideast";
+import { BilibiliScraper } from "./scrapers/sns/bilibili";
+import { MastodonScraper } from "./scrapers/sns/mastodon";
 import { YoutubeScraper } from "./scrapers/sns/youtube";
+import { DcardScraper } from "./scrapers/taiwan/dcard";
 import { FourchanScraper } from "./scrapers/us/fourchan";
 import { HackernewsScraper } from "./scrapers/us/hackernews";
 import { RedditScraper } from "./scrapers/us/reddit";
@@ -99,6 +102,9 @@ async function run(): Promise<void> {
     new YoutubeScraper("youtube_kr"),
     new YoutubeScraper("youtube_jp"),
     new YoutubeScraper("youtube_us"),
+    new BilibiliScraper(),
+    new MastodonScraper(),
+    new DcardScraper(),
   ];
 
   if (sourceFilter.length > 0) {

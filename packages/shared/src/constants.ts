@@ -201,7 +201,7 @@ export const SOURCES = [
     nameEn: "Bilibili Trending",
     url: "https://www.bilibili.com",
     type: "sns" as const,
-    scrapeUrl: "https://api.bilibili.com/x/web-interface/ranking/v2",
+    scrapeUrl: "https://s.search.bilibili.com/main/hotword",
     scrapeIntervalMinutes: 60,
   },
   {

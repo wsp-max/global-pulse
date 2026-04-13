@@ -1,0 +1,10 @@
+HTTP/1.1 200 OK
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+content-type: application/json
+x-request-id: 1776084804514-lo6clury
+Date: Mon, 13 Apr 2026 12:53:24 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+
+{"topics":[],"total":0,"region":{"id":"kr","nameKo":"한국","nameEn":"South Korea","flagEmoji":"🇰🇷","timezone":"Asia/Seoul","color":"#3B82F6","isActive":true,"sortOrder":1},"snapshot":null,"meta":{"limit":5,"offset":0,"sort":"heat","period":"24h"},"lastUpdated":"2026-04-13T12:53:24.515Z","configured":false,"provider":"none"}

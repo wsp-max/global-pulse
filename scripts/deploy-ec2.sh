@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 APP_DIR="${APP_DIR:-/srv/projects/project2/global-pulse}"
 REPO_URL="${REPO_URL:-}"
-BRANCH="${BRANCH:-main}"
+BRANCH="${BRANCH:-master}"
 ENV_FILE="${ENV_FILE:-/etc/global-pulse/global-pulse.env}"
 USE_PNPM="${USE_PNPM:-1}"
 
