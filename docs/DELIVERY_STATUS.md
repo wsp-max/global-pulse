@@ -1488,3 +1488,42 @@
 
 3. UI Step 6 마감
 - 모바일 레이아웃, 장애/빈 데이터 UX 최종 정리
+
+## Step 4F Closure Update (2026-04-14, single-run)
+### Newly completed
+- EC2에서 보정된 watch 단일 런 완료:
+  - command: `HOURS=1 INTERVAL_SECONDS=0 MAX_FAILURES=1 npm run ops:monitor:watch`
+  - evidence: `/srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/watch_20260414_121813/watch-summary.txt`
+  - result: `failures=0`
+- watch 내부 API 점검이 `/pulse` + `3100` runtime에 맞게 반영됨:
+  - `http://127.0.0.1:3100/pulse/api/health` -> 200
+  - `http://127.0.0.1:3100/pulse/api/stats` -> 200
+  - `http://127.0.0.1:3100/pulse/api/topics?region=kr&limit=5` -> 200
+
+### Current completion state
+- Step 4F: **single-run 기준 완료**
+- L4 Observability: 실운영 경로(`/pulse`) 기준 검증 일관성 확보
+
+## Source Hardening Update (2026-04-14, Slice 2)
+### Newly completed
+- Dcard scraper에 browser fallback 추가:
+  - API endpoint fallback 실패 시 headless browser로 동일 endpoint 재시도
+  - 실패 시 endpoint별 HTTP status/body snippet까지 에러에 포함해 원인 파악 가능
+
+### Validation
+- Local:
+  - `npm run test:scraper -- --source dcard` -> fail (로컬 Chromium 실행파일 부재), fallback 호출 확인
+- EC2:
+  - `npm run test:scraper -- --source dcard` -> fail (403 유지), browser fallback 경로 및 상세 진단 메시지 확인
+
+### Current completion state
+- Source hardening: **진행 중**
+  - Reddit 계열: fallback 개선 완료
+  - Dcard: 진단성 강화 완료, 수집 성공까지는 추가 우회 전략 필요
+
+### Remaining (updated)
+1. Dcard 운영 전략 결정
+- 필요 의사결정: `프록시` vs `쿠키 세션` vs `대체 소스` 중 1개 선택
+
+2. UI Step 6 마감
+- 모바일 레이아웃, 장애/빈 데이터 UX 최종 정리

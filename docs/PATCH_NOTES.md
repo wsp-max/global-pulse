@@ -38,6 +38,7 @@
 | GP-20260414-57 | 2026-04-14 | Step 5C 분석 품질 3차-마감 (최신 배치 기준 글로벌 매핑) | Done |
 | GP-20260414-58 | 2026-04-14 | 운영 문서 동기화 + SSH/런타임 검증 정리 | Done |
 | GP-20260414-59 | 2026-04-14 | Ops 스냅샷 검증 정확도 보정(HTTP 상태코드/민감정보 마스킹) | Done |
+| GP-20260414-60 | 2026-04-14 | Step 4F 단일런 마감 + Dcard 브라우저 폴백 보강 | Done |
 
 ---
 
@@ -2868,3 +2869,38 @@
 
 ### Rollback Guide
 - `scripts/capture-ops-snapshot.sh`를 GP-20260414-58 시점으로 복구하면 기존 방식으로 되돌아감.
+
+---
+
+## GP-20260414-60 (Step 4F single-run closure + Dcard hardening slice 2)
+### Before -> After
+- Before:
+  - Step 4F 운영 관찰은 과거 장기 watch 기록이 있었지만, 보정된 스냅샷 스크립트 기준 단일 런 증적이 없었음.
+  - Dcard는 API endpoint fallback만 존재했고, Cloudflare 403에서 추가 시도가 불가했음.
+- After:
+  - EC2에서 보정된 watch를 `HOURS=1`로 재실행해 단일 런 마감 증적을 확보:
+    - `watch_20260414_121813`, `failures=0`
+    - API 검증 URL이 `http://127.0.0.1:3100/pulse/api/*`로 정확히 반영됨
+  - Dcard scraper 2차 하드닝:
+    - API 실패 시 headless browser fallback 추가
+    - fallback 실패 시 endpoint별 status/body snippet을 포함한 원인 로그 제공
+
+### Main File Changes
+- [dcard.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/collector/src/scrapers/taiwan/dcard.ts)
+- 운영 증적(EC2 runtime):
+  - `/srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/watch_20260414_121813/watch-summary.txt`
+
+### Commands / Validation
+- Local:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+  - `npm run test:scraper -- --source dcard` -> fail(로컬 Chromium 부재), fallback 경로 동작 확인
+- EC2:
+  - `HOURS=1 INTERVAL_SECONDS=0 MAX_FAILURES=1 npm run ops:monitor:watch` -> pass (`failures=0`)
+  - `npm run test:scraper -- --source dcard` -> fail(403 유지), browser_fallback 상세 원인 출력 확인
+
+### Known Risks
+- Dcard는 브라우저 경로까지 포함해도 Cloudflare 403이 유지될 수 있으며, 안정 수집을 위해 프록시/세션 쿠키/대체소스 전략 중 하나가 추가로 필요함.
+
+### Rollback Guide
+- `packages/collector/src/scrapers/taiwan/dcard.ts`를 GP-20260414-59 시점으로 복구하면 API fallback-only 상태로 되돌아감.
