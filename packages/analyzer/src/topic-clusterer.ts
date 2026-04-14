@@ -52,6 +52,33 @@ const TOPIC_NAME_BLACKLIST = new Set([
   "where",
   "why",
   "how",
+  "오늘",
+  "어제",
+  "지금",
+  "뉴스",
+  "영상",
+  "사진",
+  "짤",
+  "댓글",
+  "조회수",
+  "추천",
+  "비추",
+  "근황",
+  "이슈",
+  "공식",
+  "速報",
+  "まとめ",
+  "画像",
+  "動画",
+  "コメント",
+  "人気",
+  "話題",
+  "热搜",
+  "话题",
+  "视频",
+  "图片",
+  "评论",
+  "网友",
 ]);
 
 function normalizeText(text: string): string {
@@ -127,11 +154,48 @@ function isMeaningfulTopicLabel(value: string): boolean {
     return false;
   }
 
+  if (isSingleTokenLabel(normalized) && /^[\p{Script=Hangul}]+$/u.test(compact) && compact.length < 3) {
+    return false;
+  }
+
+  if (
+    isSingleTokenLabel(normalized) &&
+    /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]+$/u.test(compact) &&
+    compact.length < 2
+  ) {
+    return false;
+  }
+
   if (isSingleTokenLabel(normalized) && /^[a-z0-9._-]+$/u.test(compact) && compact.length < 7) {
     return false;
   }
 
   return true;
+}
+
+function combineTopicLabels(primary: string, secondary: string): string | null {
+  const normalizedPrimary = normalizeTopicLabel(primary);
+  const normalizedSecondary = normalizeTopicLabel(secondary);
+  if (!normalizedPrimary || !normalizedSecondary) {
+    return null;
+  }
+
+  const lowerPrimary = normalizedPrimary.toLowerCase();
+  const lowerSecondary = normalizedSecondary.toLowerCase();
+  if (lowerPrimary === lowerSecondary) {
+    return null;
+  }
+
+  if (lowerPrimary.includes(lowerSecondary) || lowerSecondary.includes(lowerPrimary)) {
+    return null;
+  }
+
+  const combined = `${normalizedPrimary} · ${normalizedSecondary}`;
+  if (combined.replace(/\s+/g, "").length > 42) {
+    return null;
+  }
+
+  return combined;
 }
 
 function scoreCandidate(
@@ -224,7 +288,19 @@ function buildRepresentativeTopicName(params: {
     ([label]) => isSingleTokenLabel(label) && isMeaningfulTopicLabel(label),
   );
   if (bestSingle) {
-    return normalizeTopicLabel(bestSingle[0]);
+    const primary = normalizeTopicLabel(bestSingle[0]);
+    const secondary = ranked
+      .map(([label]) => normalizeTopicLabel(label))
+      .find((label) => label && label !== primary && isMeaningfulTopicLabel(label));
+
+    if (secondary) {
+      const combined = combineTopicLabels(primary, secondary);
+      if (combined) {
+        return combined;
+      }
+    }
+
+    return primary;
   }
 
   return buildFallbackTopicName(clusterKeywords, keywordOriginalMap, keywordScoreMap);

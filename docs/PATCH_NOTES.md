@@ -3144,3 +3144,41 @@
   - `package.json`
   - `docs/operations.md`
   - `docs/deployment-ec2.md`
+
+---
+
+## GP-20260414-66 (Step 5C analysis quality tuning round 1)
+### Before -> After
+- Before:
+  - 토픽명이 단일 단어로 남는 경우가 일부 존재했고, 의미가 약한 잡음 토큰(반복 감탄사/플랫폼 메타어)이 키워드 후보에 섞일 여지가 있었음.
+- After:
+  - 키워드 정제 강화:
+    - `packages/analyzer/src/keyword-extractor.ts`
+    - 영문/한글/일문/중문 불용어 확장
+    - 반복 웃음/감탄/짧은 잡음 토큰 필터 패턴 추가
+  - 토픽 대표명 규칙 강화:
+    - `packages/analyzer/src/topic-clusterer.ts`
+    - 단일 토큰 대표명일 때 보조 후보를 결합(`A · B`)해 맥락 보강
+    - 단일 토큰 길이 기준 강화(Hangul/CJK/Latin)
+    - KR/JP/CN 공통 메타 단어 블랙리스트 확대
+
+### Main File Changes
+- [keyword-extractor.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/keyword-extractor.ts)
+- [topic-clusterer.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/topic-clusterer.ts)
+- [supabase-fallback-audit.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/source-notes/supabase-fallback-audit.md)
+
+### Commands / Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Known Risks
+- 단일 토큰 억제 규칙으로 일부 정상 단일 키워드 토픽이 제외될 수 있음(특히 약어/이니셜).
+- 불용어 확장은 리전별 밸런스에 영향을 줄 수 있으므로, EC2 실데이터 1회 분석 후 키워드 샘플 검토가 필요함.
+
+### Rollback Guide
+- 분석 튜닝 롤백:
+  - `packages/analyzer/src/keyword-extractor.ts`
+  - `packages/analyzer/src/topic-clusterer.ts`

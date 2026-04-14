@@ -100,6 +100,20 @@ const BASE_STOPWORDS = new Set([
   "how",
   "not",
   "just",
+  "lol",
+  "lmao",
+  "omg",
+  "wow",
+  "pls",
+  "please",
+  "im",
+  "ive",
+  "dont",
+  "cant",
+  "didnt",
+  "isnt",
+  "arent",
+  "wont",
 ]);
 
 const REGION_STOPWORDS: Record<string, Set<string>> = {
@@ -133,6 +147,18 @@ const REGION_STOPWORDS: Record<string, Set<string>> = {
     "예고",
     "티저",
     "공식영상",
+    "베스트",
+    "인기",
+    "조회수",
+    "추천",
+    "비추",
+    "댓글",
+    "짤",
+    "썸네일",
+    "ㅋㅋ",
+    "ㅎㅎ",
+    "ㅠㅠ",
+    "ㅜㅜ",
   ]),
   jp: new Set([
     "これ",
@@ -156,6 +182,13 @@ const REGION_STOPWORDS: Record<string, Set<string>> = {
     "公開",
     "配信",
     "発売",
+    "人気",
+    "話題",
+    "画像",
+    "動画",
+    "コメント",
+    "笑",
+    "www",
   ]),
   cn: new Set([
     "这个",
@@ -180,6 +213,12 @@ const REGION_STOPWORDS: Record<string, Set<string>> = {
     "发布",
     "更新",
     "视频号",
+    "图片",
+    "话题",
+    "评论区",
+    "热议",
+    "网友们",
+    "哈哈",
   ]),
 };
 
@@ -187,7 +226,7 @@ const HANGUL_ONLY_REGEX = /^[\p{Script=Hangul}]+$/u;
 const LATIN_TOKEN_REGEX = /^[a-z][a-z0-9._-]*$/;
 const DIGIT_ONLY_REGEX = /^\d+$/;
 const YEAR_LIKE_REGEX = /^(?:19|20)\d{2}$/;
-const NOISE_TOKEN_REGEX = /^(?:img|jpg|jpeg|png|gif|webp|v\d+|fyp)$/;
+const NOISE_TOKEN_REGEX = /^(?:img|jpg|jpeg|png|gif|webp|v\d+|fyp|lol+|lmao|haha+|www+|ㅋ+|ㅎ+|ㅠ+|ㅜ+)$/u;
 const KOREAN_SUFFIXES = [
   "에서는",
   "으로는",

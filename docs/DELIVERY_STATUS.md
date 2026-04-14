@@ -1674,3 +1674,35 @@
 
 3. 선택 과제 (권장)
 - 실기기 캡처(스크린샷) 1세트 추가 후 UI smoke 증적과 함께 보관
+
+## Step 5C Update (2026-04-14, Analysis Quality Tuning Round 1)
+### Newly completed
+- `keyword-extractor` 품질 필터 강화:
+  - KR/JP/CN/EN 불용어 확장
+  - 반복 감탄/웃음/플랫폼 메타성 잡음 토큰 제거 패턴 추가
+- `topic-clusterer` 대표명 규칙 강화:
+  - 단일 토픽명 편향 감소를 위해 보조 후보 결합(`A · B`) 로직 추가
+  - 단일 토큰 최소 길이 기준 강화
+  - KR/JP/CN 메타 단어 블랙리스트 추가
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- Step 5C: **진행 중 (Round 1 완료)**
+- 토픽명 가독성과 키워드 잡음 억제 규칙은 코드 기준으로 반영 완료
+
+### Remaining (updated)
+1. Step 5C Round 2 (EC2 실데이터 캘리브레이션)
+- EC2에서 `npm run analyze -- --hours 6` 1회 실행 후 상위 토픽 샘플(kr/jp/us) 검토
+- 과소필터/과다필터 여부에 따라 stopword/블랙리스트 미세 조정
+
+2. 소스 확장 우선순위 실행
+- 무비용 정책 전제에서 안정형 소스(`bilibili`, `mastodon`) 운영 투입 확대
+
+3. 선택 과제 (권장)
+- 실기기 캡처(스크린샷) 1세트 추가 후 UI smoke 증적과 함께 보관
