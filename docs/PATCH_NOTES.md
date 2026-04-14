@@ -3685,3 +3685,32 @@
   - `components/dashboard/HotTopicTicker.tsx`
   - `app/page.tsx`
   - `app/global-issues/page.tsx`
+
+---
+
+## GP-20260415-80 (Deploy chain fix: avoid dropping devDependencies before build)
+### Before -> After
+- Before:
+  - `deploy-ec2.sh` sourced `/etc/global-pulse/global-pulse.env` before `npm ci`.
+  - when `NODE_ENV=production` existed in the env file, npm omitted devDependencies and `next build` failed on EC2.
+- After:
+  - dependency install runs first.
+  - env file is loaded only after install and immediately before build.
+  - this preserves build-time `NEXT_PUBLIC_*` values without stripping build dependencies.
+
+### Main File Changes
+- [deploy-ec2.sh](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/scripts/deploy-ec2.sh)
+
+### Commands / Validation
+- runtime failure analyzed from EC2 deploy log:
+  - missing `@tailwindcss/postcss`
+  - missing `prop-types`
+  - missing `react-is`
+- script order updated so the next deploy can install full deps, then build with env.
+
+### Known Risks
+- if host policy explicitly forces production-only install elsewhere, manual deploy commands must still keep dev deps for the build phase.
+
+### Rollback Guide
+- rollback deploy-chain fix:
+  - `scripts/deploy-ec2.sh`

@@ -43,6 +43,13 @@ git fetch origin "${BRANCH}"
 git checkout "${BRANCH}"
 git pull --ff-only origin "${BRANCH}"
 
+if [[ "${USE_PNPM}" == "1" ]] && command -v pnpm >/dev/null 2>&1; then
+  corepack enable || true
+  pnpm install --frozen-lockfile || pnpm install
+else
+  npm ci || npm install
+fi
+
 if [[ -f "${ENV_FILE}" ]]; then
   echo "[DEPLOY] loading env for build from ${ENV_FILE}"
   set -a
@@ -54,11 +61,8 @@ else
 fi
 
 if [[ "${USE_PNPM}" == "1" ]] && command -v pnpm >/dev/null 2>&1; then
-  corepack enable || true
-  pnpm install --frozen-lockfile || pnpm install
   pnpm run build
 else
-  npm ci || npm install
   npm run build
 fi
 

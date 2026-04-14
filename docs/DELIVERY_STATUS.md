@@ -2096,3 +2096,31 @@
 
 2. Quality tuning follow-up
 - 글로벌 토픽 대표명 저정보 표현(`keep brawl` 등) 억제 규칙 추가
+
+## Step 5C Runtime Recovery (2026-04-15, deploy-chain follow-up)
+### Newly completed
+- Identified EC2 redeploy failure after basePath fix:
+  - `deploy-ec2.sh` loaded runtime env before install
+  - `NODE_ENV=production` caused build dependencies to be omitted during `npm ci`
+- Fixed deploy order:
+  - install dependencies first
+  - load env file second
+  - run build last
+
+### Validation
+- failure signature captured from EC2:
+  - missing `@tailwindcss/postcss`
+  - missing `prop-types`
+  - missing `react-is`
+- deploy script updated to prevent the same install/build split-brain on the next run
+
+### Current completion state
+- `/pulse` output fix: **code ready**
+- deploy chain regression: **fixed in script**
+
+### Remaining (updated)
+1. EC2 runtime apply
+- rerun deploy after script fix and confirm public `/pulse` HTML references `/pulse/...`
+
+2. Quality tuning follow-up
+- 글로벌 토픽 대표명 저정보 표현(`keep brawl` 등) 억제 규칙 추가
