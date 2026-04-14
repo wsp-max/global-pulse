@@ -143,6 +143,14 @@ const BASE_STOPWORDS = new Set([
   "isnt",
   "arent",
   "wont",
+  "credits",
+  "director",
+  "practice",
+  "teaser",
+  "teasers",
+  "season",
+  "part",
+  "complete",
 ]);
 
 const REGION_STOPWORDS: Record<string, Set<string>> = {
@@ -251,6 +259,66 @@ const REGION_STOPWORDS: Record<string, Set<string>> = {
   ]),
 };
 
+const EXTRA_REGION_STOPWORDS: Record<string, Set<string>> = {
+  kr: new Set([
+    "\uC624\uB298",
+    "\uC5B4\uC81C",
+    "\uB0B4\uC77C",
+    "\uC9C0\uAE08",
+    "\uBC29\uAE08",
+    "\uC774\uC288",
+    "\uBC18\uC751",
+    "\uC601\uC0C1",
+    "\uC0AC\uC9C4",
+    "\uC815\uB9AC",
+    "\uC694\uC57D",
+    "\uACF5\uC2DD",
+    "\uACF5\uAC1C",
+    "\uBC1C\uB9E4",
+    "\uC9C4\uD589",
+    "\uBCA0\uC2A4\uD2B8",
+    "\uC870\uD68C\uC218",
+    "\uCD94\uCC9C",
+    "\uB313\uAE00",
+    "\uBC29\uC1A1",
+    "\uC0DD\uBC29\uC1A1",
+  ]),
+  jp: new Set([
+    "\u4ECA\u65E5",
+    "\u6628\u65E5",
+    "\u660E\u65E5",
+    "\u901F\u5831",
+    "\u8A71\u984C",
+    "\u53CD\u5FDC",
+    "\u52D5\u753B",
+    "\u753B\u50CF",
+    "\u5199\u771F",
+    "\u516C\u5F0F",
+    "\u516C\u958B",
+    "\u767A\u58F2",
+    "\u611F\u60F3",
+    "\u307E\u3068\u3081",
+    "\u6700\u65B0",
+    "\u63B2\u793A\u677F",
+  ]),
+  cn: new Set([
+    "\u4ECA\u5929",
+    "\u6628\u5929",
+    "\u660E\u5929",
+    "\u70ED\u641C",
+    "\u8BDD\u9898",
+    "\u89C6\u9891",
+    "\u56FE\u7247",
+    "\u5B98\u65B9",
+    "\u53D1\u5E03",
+    "\u76F4\u64AD",
+    "\u7F51\u53CB",
+    "\u8BC4\u8BBA",
+    "\u6574\u7406",
+    "\u603B\u7ED3",
+  ]),
+};
+
 const HANGUL_ONLY_REGEX = /^[\p{Script=Hangul}]+$/u;
 const LATIN_TOKEN_REGEX = /^[a-z][a-z0-9._-]*$/;
 const DIGIT_ONLY_REGEX = /^\d+$/;
@@ -322,7 +390,11 @@ function splitIntoScriptSegments(rawToken: string): string[] {
 }
 
 function isStopword(token: string, regionId: string): boolean {
-  return BASE_STOPWORDS.has(token) || Boolean(REGION_STOPWORDS[regionId]?.has(token));
+  return (
+    BASE_STOPWORDS.has(token) ||
+    Boolean(REGION_STOPWORDS[regionId]?.has(token)) ||
+    Boolean(EXTRA_REGION_STOPWORDS[regionId]?.has(token))
+  );
 }
 
 function regionScriptMultiplier(token: string, regionId: string): number {
@@ -430,7 +502,7 @@ function shouldSkipPhrase(parts: string[], regionId: string): boolean {
 export function buildTitlePhrases(tokens: string[], regionId: string): string[] {
   const phrases: string[] = [];
   for (let index = 0; index < tokens.length; index += 1) {
-    for (let size = 2; size <= 3; size += 1) {
+    for (let size = 2; size <= 4; size += 1) {
       const parts = tokens.slice(index, index + size);
       if (parts.length !== size || shouldSkipPhrase(parts, regionId)) {
         continue;

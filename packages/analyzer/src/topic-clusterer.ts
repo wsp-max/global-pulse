@@ -34,6 +34,7 @@ const TOPIC_NAME_BLACKLIST = new Set([
   "topic",
   "update",
   "video",
+  "videos",
   "shorts",
   "official",
   "breaking",
@@ -62,33 +63,78 @@ const TOPIC_NAME_BLACKLIST = new Set([
   "where",
   "why",
   "how",
-  "오늘",
-  "어제",
-  "지금",
-  "뉴스",
-  "영상",
-  "사진",
-  "짤",
-  "댓글",
-  "조회수",
-  "추천",
-  "비추",
-  "근황",
-  "이슈",
-  "공식",
-  "速報",
-  "まとめ",
-  "画像",
-  "動画",
-  "コメント",
-  "人気",
-  "話題",
-  "热搜",
-  "话题",
-  "视频",
-  "图片",
-  "评论",
-  "网友",
+  "\uC624\uB298",
+  "\uC5B4\uC81C",
+  "\uC9C0\uAE08",
+  "\uC774\uC288",
+  "\uC601\uC0C1",
+  "\uC0AC\uC9C4",
+  "\uC815\uB9AC",
+  "\uC694\uC57D",
+  "\uC870\uD68C\uC218",
+  "\uCD94\uCC9C",
+  "\uBC18\uC751",
+  "\uACF5\uC2DD",
+  "\u4ECA\u65E5",
+  "\u6628\u65E5",
+  "\u8A71\u984C",
+  "\u52D5\u753B",
+  "\u753B\u50CF",
+  "\u5199\u771F",
+  "\u611F\u60F3",
+  "\u307E\u3068\u3081",
+  "\u516C\u5F0F",
+  "\u4ECA\u5929",
+  "\u6628\u5929",
+  "\u8BDD\u9898",
+  "\u89C6\u9891",
+  "\u56FE\u7247",
+  "\u8BC4\u8BBA",
+  "\u5B98\u65B9",
+]);
+
+const LOW_SIGNAL_LABEL_PARTS = new Set([
+  "official",
+  "video",
+  "videos",
+  "music",
+  "mv",
+  "trailer",
+  "teaser",
+  "teasers",
+  "preview",
+  "clip",
+  "audio",
+  "lyric",
+  "lyrics",
+  "director",
+  "credits",
+  "credit",
+  "producer",
+  "production",
+  "release",
+  "released",
+  "stream",
+  "channel",
+  "follow",
+  "group",
+  "season",
+  "episode",
+  "part",
+  "full",
+  "complete",
+  "keep",
+  "alive",
+  "dance",
+  "practice",
+  "version",
+  "ver",
+  "provided",
+  "performance",
+  "stage",
+  "watch",
+  "topic",
+  "update",
 ]);
 
 function normalizeText(text: string): string {
@@ -131,6 +177,42 @@ function isSingleTokenLabel(value: string): boolean {
   return !value.includes(" ");
 }
 
+function splitLabelParts(value: string): string[] {
+  return value
+    .toLowerCase()
+    .split(/[\s/|,:;+\-–—]+/u)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function isLowSignalLabelPart(value: string): boolean {
+  return TOPIC_NAME_BLACKLIST.has(value) || LOW_SIGNAL_LABEL_PARTS.has(value);
+}
+
+function countMeaningfulLabelParts(value: string): number {
+  return splitLabelParts(value).filter((part) => !isLowSignalLabelPart(part) && !/^\d+$/u.test(part)).length;
+}
+
+function getPhraseOverlap(left: string, right: string): { total: number; meaningful: number } {
+  const leftParts = new Set(splitLabelParts(left));
+  const rightParts = new Set(splitLabelParts(right));
+  let total = 0;
+  let meaningful = 0;
+
+  for (const part of leftParts) {
+    if (!rightParts.has(part)) {
+      continue;
+    }
+
+    total += 1;
+    if (!isLowSignalLabelPart(part)) {
+      meaningful += 1;
+    }
+  }
+
+  return { total, meaningful };
+}
+
 function isMeaningfulTopicLabel(value: string): boolean {
   if (!value) {
     return false;
@@ -152,6 +234,12 @@ function isMeaningfulTopicLabel(value: string): boolean {
 
   const normalizedLower = normalized.toLowerCase();
   if (TOPIC_NAME_BLACKLIST.has(normalizedLower)) {
+    return false;
+  }
+
+  const labelParts = splitLabelParts(normalized);
+  const meaningfulPartCount = countMeaningfulLabelParts(normalized);
+  if (labelParts.length > 0 && meaningfulPartCount === 0) {
     return false;
   }
 
@@ -180,6 +268,20 @@ function isMeaningfulTopicLabel(value: string): boolean {
     return false;
   }
 
+  if (isSingleTokenLabel(normalized) && isLowSignalLabelPart(normalizedLower)) {
+    return false;
+  }
+
+  if (!isSingleTokenLabel(normalized) && /^[a-z0-9\s./|:_-]+$/u.test(normalizedLower)) {
+    if (labelParts.length <= 2 && meaningfulPartCount < 2) {
+      return false;
+    }
+
+    if (labelParts.length >= 3 && meaningfulPartCount < 1) {
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -200,7 +302,7 @@ function combineTopicLabels(primary: string, secondary: string): string | null {
     return null;
   }
 
-  const combined = `${normalizedPrimary} · ${normalizedSecondary}`;
+  const combined = `${normalizedPrimary} / ${normalizedSecondary}`;
   if (combined.replace(/\s+/g, "").length > 42) {
     return null;
   }
@@ -208,17 +310,13 @@ function combineTopicLabels(primary: string, secondary: string): string | null {
   return combined;
 }
 
-function scoreCandidate(
-  map: Map<string, number>,
-  label: string,
-  score: number,
-): void {
+function scoreCandidate(map: Map<string, number>, label: string, score: number): void {
   const normalized = normalizeTopicLabel(label);
   if (!normalized || !isMeaningfulTopicLabel(normalized)) {
     return;
   }
 
-  const adjustedScore = isSingleTokenLabel(normalized) ? score * 0.55 : score;
+  const adjustedScore = isSingleTokenLabel(normalized) ? score * 0.4 : score;
   map.set(normalized, (map.get(normalized) ?? 0) + adjustedScore);
 }
 
@@ -243,10 +341,11 @@ function buildFallbackTopicName(
     return normalizeTopicLabel(candidates[0]!.label);
   }
 
-  const combined = `${candidates[0]!.label} · ${candidates[1]!.label}`;
+  const combined = `${candidates[0]!.label} / ${candidates[1]!.label}`;
   if (combined.replace(/\s+/g, "").length <= 42) {
     return combined;
   }
+
   return normalizeTopicLabel(candidates[0]!.label);
 }
 
@@ -277,7 +376,7 @@ function buildRepresentativeTopicName(params: {
   for (const clusterKeyword of clusterKeywords) {
     const original = keywordOriginalMap.get(clusterKeyword) ?? clusterKeyword;
     const baseScore = keywordScoreMap.get(clusterKeyword) ?? 1;
-    const phraseBoost = original.includes(" ") ? 2.4 : 1.2;
+    const phraseBoost = original.includes(" ") ? 2.9 : 1.15;
     scoreCandidate(candidateScores, original, baseScore * phraseBoost);
   }
 
@@ -287,16 +386,12 @@ function buildRepresentativeTopicName(params: {
     return b[1] + bBoost - (a[1] + aBoost);
   });
 
-  const bestPhrase = ranked.find(
-    ([label]) => label.includes(" ") && isMeaningfulTopicLabel(label),
-  );
+  const bestPhrase = ranked.find(([label]) => label.includes(" ") && isMeaningfulTopicLabel(label));
   if (bestPhrase) {
     return normalizeTopicLabel(bestPhrase[0]);
   }
 
-  const bestSingle = ranked.find(
-    ([label]) => isSingleTokenLabel(label) && isMeaningfulTopicLabel(label),
-  );
+  const bestSingle = ranked.find(([label]) => isSingleTokenLabel(label) && isMeaningfulTopicLabel(label));
   if (bestSingle) {
     const primary = normalizeTopicLabel(bestSingle[0]);
     const secondary = ranked
@@ -326,15 +421,13 @@ export async function clusterTopics(
     return [];
   }
 
-  const normalizedPostMap = new Map<
-    string,
-    { post: AnalysisPostInput; normalizedText: string }
-  >();
+  const normalizedPostMap = new Map<string, { post: AnalysisPostInput; normalizedText: string }>();
 
   for (const post of posts) {
+    const tokenizedText = tokenizeForAnalysis(`${post.title} ${post.bodyPreview ?? ""}`, regionId).join(" ");
     normalizedPostMap.set(post.id, {
       post,
-      normalizedText: normalizeText(`${post.title} ${post.bodyPreview ?? ""}`),
+      normalizedText: `${normalizeText(`${post.title} ${post.bodyPreview ?? ""}`)} ${tokenizedText}`.trim(),
     });
   }
 
@@ -387,7 +480,7 @@ export async function clusterTopics(
     }
 
     const clusterKeywords = [seedKeyword];
-    const requiredOverlap = seedPosts.size >= 20 ? 3 : 2;
+    const requiredOverlap = seedPosts.size === 1 ? 1 : seedPosts.size >= 20 ? 3 : 2;
 
     for (const candidate of keywords) {
       const candidateKeyword = candidate.keyword.toLowerCase();
@@ -407,7 +500,15 @@ export async function clusterTopics(
         }
       }
 
-      if (overlap >= requiredOverlap) {
+      const phraseOverlap =
+        seedKeyword.includes(" ") && candidateKeyword.includes(" ")
+          ? getPhraseOverlap(seedKeyword, candidateKeyword)
+          : { total: 0, meaningful: 0 };
+
+      const hasPhraseSimilarity =
+        phraseOverlap.meaningful >= 2 || (phraseOverlap.meaningful >= 1 && phraseOverlap.total >= 3);
+
+      if (overlap >= requiredOverlap || hasPhraseSimilarity) {
         clusterKeywords.push(candidateKeyword);
       }
 
@@ -432,15 +533,20 @@ export async function clusterTopics(
       .map((id) => normalizedPostMap.get(id)?.post)
       .filter((post): post is AnalysisPostInput => Boolean(post));
 
+    const hasPhraseKeyword = clusterKeywords.some((keyword) => keyword.includes(" "));
+
     if (relatedPosts.length < 2 && singlePostTopicCount >= 4) {
+      continue;
+    }
+
+    if (relatedPosts.length === 1 && clusterKeywords.length < 2 && !hasPhraseKeyword) {
       continue;
     }
 
     const now = new Date();
     const heatInputs = relatedPosts.map((post) => {
       const postedAt =
-        parsePostTimestamp(post.postedAt ?? undefined) ??
-        parsePostTimestamp(post.collectedAt ?? undefined);
+        parsePostTimestamp(post.postedAt ?? undefined) ?? parsePostTimestamp(post.collectedAt ?? undefined);
       const hoursSince = postedAt
         ? Math.max(0, (now.getTime() - postedAt.getTime()) / (1000 * 60 * 60))
         : 0;
@@ -455,14 +561,9 @@ export async function clusterTopics(
       };
     });
 
-    const sentiments = relatedPosts.map((post) =>
-      analyzeSentiment(`${post.title} ${post.bodyPreview ?? ""}`),
-    );
-
+    const sentiments = relatedPosts.map((post) => analyzeSentiment(`${post.title} ${post.bodyPreview ?? ""}`));
     const avgSentiment =
-      sentiments.length > 0
-        ? sentiments.reduce((sum, value) => sum + value, 0) / sentiments.length
-        : 0;
+      sentiments.length > 0 ? sentiments.reduce((sum, value) => sum + value, 0) / sentiments.length : 0;
 
     const sourceIds = [...new Set(relatedPosts.map((post) => post.sourceId))];
     const topicKeywords = [...new Set(clusterKeywords.map((keyword) => keywordOriginalMap.get(keyword) ?? keyword))];
@@ -474,7 +575,11 @@ export async function clusterTopics(
       keywordScoreMap,
     });
 
-    if (isSingleTokenLabel(topicName) && relatedPosts.length < 3) {
+    if (isSingleTokenLabel(topicName) && (relatedPosts.length < 3 || clusterKeywords.length < 2)) {
+      continue;
+    }
+
+    if (!isMeaningfulTopicLabel(topicName)) {
       continue;
     }
 
@@ -511,10 +616,12 @@ export async function clusterTopics(
       if (existingNormalized === normalized) {
         return true;
       }
+
       const shorterLength = Math.min(existingNormalized.length, normalized.length);
       if (shorterLength < 5) {
         return false;
       }
+
       return existingNormalized.includes(normalized) || normalized.includes(existingNormalized);
     });
 

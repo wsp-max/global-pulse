@@ -3725,3 +3725,31 @@
 ### Rollback Guide
 - rollback deploy-chain fix:
   - `scripts/deploy-ec2.sh`
+
+## GP-20260415-82 (Topic Quality Tuning)
+### Before -> After
+- Before:
+  - Topics were often emitted as low-information single words such as `keep`, `alive`, `director`, `credits`, `trailer`.
+  - Phrase keywords extracted from tokenized titles were not reliably matched back to post text when punctuation interrupted words.
+  - Similar phrase variants such as `laufey madwoman` and `madwoman laufey` stayed fragmented.
+- After:
+  - Region-aware stopwords were expanded with UTF-8 safe escapes.
+  - Phrase extraction now considers 2..4 token windows.
+  - Topic naming penalizes single-token labels more aggressively and rejects low-signal label parts.
+  - Cluster matching now uses tokenized post text plus phrase-token similarity to merge phrase variants.
+  - Singleton low-signal topics are filtered harder, so multi-word labels are favored.
+
+### Changed Files
+- `packages/analyzer/src/keyword-extractor.ts`
+- `packages/analyzer/src/topic-clusterer.ts`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- Synthetic analyzer check:
+  - `laufey madwoman` + `madwoman laufey` merged into one topic cluster
+  - `keep brawl alive ...` style inputs now remain phrase-shaped instead of collapsing to `keep` / `alive`
+
+### Notes
+- Existing historical patch-note sections contain legacy encoding corruption and still need a separate cleanup pass.
+- This change improves topic label quality without changing API contracts.

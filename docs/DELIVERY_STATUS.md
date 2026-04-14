@@ -2151,3 +2151,18 @@
 
 2. Quality tuning follow-up
 - 글로벌 토픽 대표명 저정보 표현(`keep brawl` 등) 억제 규칙 추가
+
+## Update 2026-04-15: Topic Quality Tuning
+- Status: In progress validation completed locally, pending EC2 analyzer rerun.
+- Scope:
+  - richer phrase extraction (2..4 grams)
+  - UTF-8 safe extra stopwords for KR/JP/CN
+  - stricter low-signal topic-label filtering
+  - phrase-token similarity merge for fragmented phrase variants
+- Local verification:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+- Expected user-facing effect:
+  - fewer one-word topics
+  - more phrase-shaped topic names
+  - better merging of reordered phrase variants
