@@ -1762,3 +1762,38 @@
 
 2. 소스 확장 우선순위 실행
 - 무비용 정책 전제에서 안정형 소스(`bilibili`, `mastodon`) 운영 투입 확대
+
+## Step 5C Update (2026-04-14, Analysis Quality Tuning Round 3)
+### Newly completed
+- `/api/topics` dedupe 적용:
+  - 동일 토픽명(정규화 기준) 중 최신 1건만 반환
+  - total 카운트도 dedupe 기준으로 일치
+- EC2 런타임 재검증:
+  - 배포 후 `global-pulse-web.service` active 확인
+  - `/pulse/api/health` 200 확인
+- 재분석 실행:
+  - `npm run analyze -- --hours 6` 재실행 완료
+  - heat 포화 완화(지역 합산 로그 기준 1k~6k 분포) 확인
+
+### Validation
+- Local:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+  - `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+  - `npm run ops:supabase:budget -- --print-json` -> pass
+  - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+- Runtime:
+  - `http://3.36.83.199/pulse/api/health` -> 200
+  - `npm run analyze -- --hours 6` -> pass
+
+### Current completion state
+- Step 5C: **Round 1 + Round 2 + Round 3 완료**
+- 중복 토픽 노출/점수 포화/잡음 토큰 이슈를 1차 운영 기준으로 정리 완료
+
+### Remaining (updated)
+1. 소스 확장 우선순위 실행
+- 무비용 정책 전제에서 안정형 소스(`bilibili`, `mastodon`) 운영 투입 확대
+
+2. 품질 고도화(선택)
+- dedupe key를 title 기반에서 cluster hash 기반으로 확장
+- Gemini 요약 on-demand 정책(일일 제한)으로 품질 문장화 보강

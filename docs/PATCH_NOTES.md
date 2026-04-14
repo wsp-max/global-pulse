@@ -3259,3 +3259,42 @@
   - `packages/analyzer/src/heat-score-calculator.ts`
   - `packages/analyzer/src/topic-clusterer.ts`
   - `packages/analyzer/src/keyword-extractor.ts`
+
+---
+
+## GP-20260414-69 (Step 5C analysis quality tuning round 3: topics API dedupe + runtime verify)
+### Before -> After
+- Before:
+  - 같은 기간 내 분석 배치가 누적되면서 `/api/topics` 응답에서 동일 토픽명이 중복 노출되어 대시보드 가독성이 저하됨.
+- After:
+  - `/api/topics`에서 토픽명 기준 최신 레코드 1건만 반환하도록 dedupe 로직 추가.
+  - dedupe 기준:
+    - `lower(coalesce(name_en, name_ko))` 단위
+    - `period_end desc, created_at desc, heat_score desc` 우선순위로 최신/대표 1건 선택
+  - total 카운트도 dedupe 기준으로 동기화.
+  - EC2 런타임 재배포/재분석 후 `/pulse/api/health` 200 확인.
+
+### Main File Changes
+- [route.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/api/topics/route.ts)
+- [supabase-fallback-audit.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/source-notes/supabase-fallback-audit.md)
+
+### Commands / Validation
+- Local:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+  - `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+  - `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+  - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+- EC2:
+  - overlay deploy + `npm run build` + `systemctl restart global-pulse-web.service` -> pass
+  - `http://127.0.0.1/pulse/api/health` -> 200
+  - `http://3.36.83.199/pulse/api/health` -> 200
+  - `npm run analyze -- --hours 6` -> pass
+
+### Known Risks
+- dedupe 키를 `name_en/name_ko` 기반으로 사용하므로, 실제로 다른 이슈인데 제목이 같은 경우 하나로 합쳐질 수 있음.
+- 향후에는 topic cluster hash(키워드 집합 기반)까지 포함한 dedupe 키로 확장 권장.
+
+### Rollback Guide
+- topics API dedupe 롤백:
+  - `app/api/topics/route.ts`

@@ -38,12 +38,24 @@ async function getTopics(request: Request) {
       const [topicsResult, countResult, snapshotResult] = await Promise.all([
         postgres.query<TopicRow>(
           `
+          with filtered as (
+            select
+              id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,
+              post_count,total_views,total_likes,total_comments,source_ids,rank,period_start,period_end,created_at
+            from topics
+            where region_id = $1 and period_end >= $2
+          ),
+          dedup as (
+            select distinct on (lower(coalesce(name_en, name_ko)))
+              *
+            from filtered
+            order by lower(coalesce(name_en, name_ko)), period_end desc, created_at desc, heat_score desc
+          )
           select
             id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,
             post_count,total_views,total_likes,total_comments,source_ids,rank,period_start,period_end
-          from topics
-          where region_id = $1 and period_end >= $2
-          order by ${sortColumn} desc
+          from dedup
+          order by ${sortColumn} desc, period_end desc
           offset $3
           limit $4
           `,
@@ -51,9 +63,19 @@ async function getTopics(request: Request) {
         ),
         postgres.query<{ total: string | number }>(
           `
+          with filtered as (
+            select name_en, name_ko, period_end, created_at, heat_score
+            from topics
+            where region_id = $1 and period_end >= $2
+          ),
+          dedup as (
+            select distinct on (lower(coalesce(name_en, name_ko)))
+              *
+            from filtered
+            order by lower(coalesce(name_en, name_ko)), period_end desc, created_at desc, heat_score desc
+          )
           select count(*) as total
-          from topics
-          where region_id = $1 and period_end >= $2
+          from dedup
           `,
           [region, startIso],
         ),
