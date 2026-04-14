@@ -370,6 +370,61 @@ function parseIsoDate(input: string): Date {
   return parsed;
 }
 
+function compactTopicName(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function isGenericGlobalName(name: string): boolean {
+  const compact = compactTopicName(name);
+  if (!compact) {
+    return true;
+  }
+
+  if (GENERIC_STOPWORDS.has(compact)) {
+    return true;
+  }
+
+  if (/^\d+$/u.test(compact)) {
+    return true;
+  }
+
+  if (!compact.includes(" ") && compact.length < 4) {
+    return true;
+  }
+
+  return false;
+}
+
+function representativeScore(topic: Topic): number {
+  const nameEn = compactTopicName(topic.nameEn);
+  const nameKo = compactTopicName(topic.nameKo);
+  const hasPhrase = nameEn.includes(" ") || nameKo.includes(" ");
+  const genericPenalty =
+    (isGenericGlobalName(nameEn) ? 1 : 0) + (isGenericGlobalName(nameKo) ? 1 : 0);
+
+  let score = topic.heatScore;
+  if (hasPhrase) {
+    score += 420;
+  }
+  if (genericPenalty === 0) {
+    score += 240;
+  } else if (genericPenalty >= 2) {
+    score -= 260;
+  }
+
+  const nameLength = Math.max(topic.nameEn.length, topic.nameKo.length);
+  if (nameLength >= 6 && nameLength <= 28) {
+    score += 80;
+  }
+
+  score += Math.min(80, topic.postCount * 4);
+  return score;
+}
+
+function chooseRepresentativeTopic(topics: Topic[]): Topic {
+  return [...topics].sort((a, b) => representativeScore(b) - representativeScore(a))[0]!;
+}
+
 function aggregateComponent(component: TopicNode[]): GlobalTopic | null {
   const topics = component.map((node) => node.topic);
   const regionIds = [...new Set(topics.map((topic) => topic.regionId))];
@@ -377,7 +432,7 @@ function aggregateComponent(component: TopicNode[]): GlobalTopic | null {
     return null;
   }
 
-  const representative = [...topics].sort((a, b) => b.heatScore - a.heatScore)[0]!;
+  const representative = chooseRepresentativeTopic(topics);
   const topicIds = topics
     .filter((topic): topic is Topic & { id: number } => typeof topic.id === "number")
     .map((topic) => topic.id);
