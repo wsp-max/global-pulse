@@ -2069,3 +2069,30 @@
 
 2. Quality tuning follow-up
 - 글로벌 토픽 대표명 저정보 표현(`keep brawl` 등) 억제 규칙 추가
+
+## Step 5C Runtime Recovery (2026-04-15, `/pulse` subpath output fix)
+### Newly completed
+- Identified public runtime fault:
+  - `/pulse` HTML was still emitting root-relative links and static asset paths
+  - this broke subpath deployment on the shared EC2 host
+- Fixed build-time basePath source:
+  - `next.config.ts` now reads `NEXT_PUBLIC_BASE_PATH` as well as `NEXT_BASE_PATH`
+- Re-normalized mobile navigation labels and key fallback UI strings for stable subpath builds
+
+### Validation
+- `$env:NEXT_PUBLIC_BASE_PATH='/pulse'; npm run lint` -> pass
+- `$env:NEXT_PUBLIC_BASE_PATH='/pulse'; npm run build` -> pass
+- `.next/server/app/index.html` confirmed:
+  - links use `/pulse/...`
+  - static chunks use `/pulse/_next/...`
+
+### Current completion state
+- `/pulse` deployment output path issue: **code fix 완료**
+- next action is runtime deploy + public endpoint verification
+
+### Remaining (updated)
+1. EC2 runtime apply
+- deploy latest commit and confirm public `/pulse` HTML now references `/pulse/_next/...`
+
+2. Quality tuning follow-up
+- 글로벌 토픽 대표명 저정보 표현(`keep brawl` 등) 억제 규칙 추가

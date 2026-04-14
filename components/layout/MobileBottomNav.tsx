@@ -15,25 +15,25 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   {
     href: "/",
-    label: "홈",
+    label: "\uD648",
     icon: Home,
     match: (pathname) => pathname === "/",
   },
   {
     href: "/global-issues",
-    label: "글로벌",
+    label: "\uAE00\uB85C\uBC8C",
     icon: Globe2,
     match: (pathname) => pathname.startsWith("/global-issues"),
   },
   {
     href: "/timeline",
-    label: "타임라인",
+    label: "\uD0C0\uC784\uB77C\uC778",
     icon: BarChart3,
     match: (pathname) => pathname.startsWith("/timeline"),
   },
   {
     href: "/search",
-    label: "검색",
+    label: "\uAC80\uC0C9",
     icon: Search,
     match: (pathname) => pathname.startsWith("/search"),
   },

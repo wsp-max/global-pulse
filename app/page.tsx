@@ -27,7 +27,7 @@ export default function HomePage() {
   const tickerItems = sortedRegions
     .flatMap((region) =>
       region.topTopics.slice(0, 1).map((topic) => {
-        return `${region.flagEmoji} ${region.nameKo}: "${topic.nameKo}" 🔥${Math.round(topic.heatScore)}`;
+        return `${region.flagEmoji} ${region.nameKo}: "${topic.nameKo}" \uD83D\uDD25${Math.round(topic.heatScore)}`;
       }),
     )
     .slice(0, 10);
@@ -38,8 +38,8 @@ export default function HomePage() {
 
       {regionsError && (
         <EmptyState
-          title="대시보드 데이터를 불러오지 못했습니다."
-          description="잠시 후 자동으로 다시 시도합니다. 문제가 계속되면 서버 상태를 확인해 주세요."
+          title="\uB300\uC2DC\uBCF4\uB4DC \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4."
+          description="\uC7A0\uC2DC \uD6C4 \uC790\uB3D9\uC73C\uB85C \uB2E4\uC2DC \uC2DC\uB3C4\uD569\uB2C8\uB2E4. \uBB38\uC81C\uAC00 \uACC4\uC18D\uB418\uBA74 \uC11C\uBC84 \uC0C1\uD0DC\uB97C \uD655\uC778\uD574 \uC8FC\uC138\uC694."
         />
       )}
 
@@ -52,8 +52,8 @@ export default function HomePage() {
 
       {!regionsError && !isRegionsLoading && sortedRegions.length === 0 && (
         <EmptyState
-          title="표시할 리전 데이터가 없습니다."
-          description="수집기와 분석기 실행 이후 데이터가 자동 반영됩니다."
+          title="\uD45C\uC2DC\uD560 \uB9AC\uC804 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4."
+          description="\uC218\uC9D1\uAE30\uC640 \uBD84\uC11D\uAE30 \uC2E4\uD589 \uC774\uD6C4 \uB370\uC774\uD130\uAC00 \uC790\uB3D9 \uBC18\uC601\uB429\uB2C8\uB2E4."
         />
       )}
 
@@ -80,8 +80,8 @@ export default function HomePage() {
       {isGlobalLoading && <LoadingSkeleton className="h-28" />}
       {globalError && (
         <EmptyState
-          title="글로벌 이슈를 불러오지 못했습니다."
-          description="잠시 후 자동으로 다시 시도합니다."
+          title="\uAE00\uB85C\uBC8C \uC774\uC288\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4."
+          description="\uC7A0\uC2DC \uD6C4 \uC790\uB3D9\uC73C\uB85C \uB2E4\uC2DC \uC2DC\uB3C4\uD569\uB2C8\uB2E4."
         />
       )}
       {!isGlobalLoading && !globalError && <GlobalIssuePanel topics={globalTopicsData?.globalTopics ?? []} />}

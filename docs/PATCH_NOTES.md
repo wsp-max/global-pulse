@@ -3638,3 +3638,50 @@
   - `app/page.tsx`
   - `app/global-issues/page.tsx`
   - `lib/api.ts`
+
+---
+
+## GP-20260415-79 (Subpath runtime recovery: `/pulse` basePath build fix)
+### Before -> After
+- Before:
+  - public `/pulse` page still emitted root-relative HTML paths such as:
+    - `href="/"`
+    - `href="/global-issues"`
+    - `src="/_next/..."`
+  - result:
+    - navigation escaped out of `/pulse`
+    - static asset loading was inconsistent on a host already serving another root site
+- After:
+  - `next.config.ts` now accepts `NEXT_PUBLIC_BASE_PATH` as build-time basePath source in addition to `NEXT_BASE_PATH`.
+  - build output now emits `/pulse/...` for:
+    - links
+    - favicon
+    - `_next` static chunks
+  - mobile bottom-nav labels were normalized again to avoid corrupted text in subpath build output.
+
+### Main File Changes
+- [next.config.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/next.config.ts)
+- [MobileBottomNav.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/layout/MobileBottomNav.tsx)
+- [HotTopicTicker.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/dashboard/HotTopicTicker.tsx)
+- [page.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/page.tsx)
+- [page.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/global-issues/page.tsx)
+
+### Commands / Validation
+- Local:
+  - `$env:NEXT_PUBLIC_BASE_PATH='/pulse'; npm run lint` -> pass
+  - `$env:NEXT_PUBLIC_BASE_PATH='/pulse'; npm run build` -> pass
+  - `.next/server/app/index.html` confirmed:
+    - `/pulse/_next/...`
+    - `href="/pulse"`
+    - `href="/pulse/global-issues"`
+
+### Known Risks
+- build-time basePath still depends on env presence; `deploy-ec2.sh` now loads env before build, but manual builds must also set the env.
+
+### Rollback Guide
+- rollback subpath runtime recovery:
+  - `next.config.ts`
+  - `components/layout/MobileBottomNav.tsx`
+  - `components/dashboard/HotTopicTicker.tsx`
+  - `app/page.tsx`
+  - `app/global-issues/page.tsx`

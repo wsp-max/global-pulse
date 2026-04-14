@@ -16,8 +16,8 @@ export default function GlobalIssuesPage() {
 
       {error && (
         <EmptyState
-          title="글로벌 이슈를 불러오지 못했습니다."
-          description="잠시 후 다시 시도해 주세요."
+          title="\uAE00\uB85C\uBC8C \uC774\uC288\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4."
+          description="\uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694."
           className="mb-4"
         />
       )}
