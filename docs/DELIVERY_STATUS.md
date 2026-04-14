@@ -1588,3 +1588,28 @@
 2. Step 6 Slice 2 (최종 QA)
 - 실기기(또는 모바일 뷰포트)에서 탭 내비/스크롤/가독성 최종 점검
 - 장애 상황(API 5xx/빈데이터) 시나리오 스크린샷 증적 추가
+
+## UI Step 6 Update (2026-04-14, Slice 1.5 Runtime Apply)
+### Newly completed
+- EC2 런타임에 Step 6 코드 반영 완료(archive deploy).
+- EC2 build + web service restart 완료.
+- 실접속 스모크:
+  - `/pulse` 200
+  - `/pulse/api/health` 200
+  - `/pulse/search` 200
+- 운영 스냅샷:
+  - `npm run ops:monitor:snapshot` pass
+  - `failures=0`
+  - evidence: `/srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/20260414_130936`
+
+### Current completion state
+- Step 6: **진행 중 (Slice 1 + Runtime apply 완료)**
+- 코드/배포/운영 스냅샷이 동일 기준으로 정렬됨
+
+### Remaining (updated)
+1. Step 6 Slice 2 (최종 QA)
+- 모바일 실기기 탭 내비/뷰포트 최종 점검
+- 에러/빈데이터 시나리오 캡처 증적 고정
+
+2. 운영 배포 루틴 정리
+- EC2 evidence 누적 파일 정리 루틴(배포 전/후)을 deploy 문서에 고정

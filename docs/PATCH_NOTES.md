@@ -41,6 +41,7 @@
 | GP-20260414-60 | 2026-04-14 | Step 4F 단일런 마감 + Dcard 브라우저 폴백 보강 | Done |
 | GP-20260414-61 | 2026-04-14 | 무비용 운영 정책 반영(Dcard 기본 비활성, TW는 PTT 중심) | Done |
 | GP-20260414-62 | 2026-04-14 | Step 6 UI 마감 1차 (모바일 내비 + 상태 UX + 텍스트 정리) | Done |
+| GP-20260414-63 | 2026-04-14 | Step 6 EC2 반영 및 운영 스냅샷 검증 | Done |
 
 ---
 
@@ -3018,3 +3019,29 @@
 ### Rollback Guide
 - UI 마감 롤백 시 GP-20260414-61 커밋으로 복귀:
   - `git checkout 13fe7c9 -- app components`
+
+---
+
+## GP-20260414-63 (Step 6 runtime apply: EC2 deployment + ops snapshot)
+### Before -> After
+- Before:
+  - Step 6 UI 변경은 로컬 코드/원격 Git에는 반영됐지만, EC2 런타임 적용 여부가 미확정이었음.
+- After:
+  - EC2에 commit `1ba520d` 파일셋을 아카이브 방식으로 반영.
+  - EC2에서 `npm run build` 수행 후 `global-pulse-web.service` 재시작.
+  - `/pulse` 경로와 API 헬스체크 정상 확인.
+  - 운영 스냅샷 재실행하여 failures=0 확인.
+
+### Runtime Validation (EC2)
+- `http://3.36.83.199/pulse` -> 200
+- `http://3.36.83.199/pulse/api/health` -> 200
+- `http://3.36.83.199/pulse/search` -> 200
+- `npm run ops:monitor:snapshot` -> pass
+  - output: `/srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/20260414_130936`
+  - failures=0
+
+### Known Risks
+- EC2 작업 디렉토리에는 evidence 로그 파일이 지속 누적되므로, 다음 `git pull` 기반 배포 전 evidence 정리 루틴 유지 필요.
+
+### Rollback Guide
+- EC2 런타임 롤백 시 이전 빌드 산출물/서비스 재시작 또는 이전 커밋 아카이브 재배포로 복귀 가능.
