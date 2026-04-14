@@ -1923,3 +1923,31 @@
 
 2. Next source expansion
 - proceed with `hatena`/`fivech`/`weibo` quality hardening under no-proxy policy
+
+## Step 5B Update (2026-04-14, Fivech Feed Quality Hardening)
+### Newly completed
+- Refined `fivech` scraper feed quality rules:
+  - skip non-time-based pinned/promotional DAT rows (invalid epoch DAT tokens)
+  - suppress low-signal constant activity values (`commentCount<=2`) to avoid fake engagement noise
+- Result:
+  - noisy top pinned ads removed from output
+  - feed now starts from real recent threads with valid `postedAt`
+
+### Validation
+- `npm run test:scraper -- --source fivech` -> pass (`postCount=48`)
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- JP source quality: **fivech noise filtering applied**
+- collector output suitability for downstream topic analysis improved
+
+### Remaining (updated)
+1. Runtime apply for this slice
+- deploy latest commit to EC2 and run `npm run test:scraper -- --source fivech` once on host
+
+2. Next source expansion
+- continue low-cost quality hardening for `hatena` -> `weibo` ordering/normalization

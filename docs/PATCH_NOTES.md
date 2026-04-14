@@ -3460,3 +3460,34 @@
 ### Rollback Guide
 - rollback parser hardening:
   - `packages/collector/src/scrapers/taiwan/ptt.ts`
+
+---
+
+## GP-20260414-74 (Step 5B source quality hardening: fivech pinned/noise filtering)
+### Before -> After
+- Before:
+  - fivech feed included pinned promotional rows (invalid DAT epoch) and emitted constant low-value activity (`commentCount=2`) that acted as noise.
+- After:
+  - added validity gate for DAT-based time parsing and skipped rows without valid `postedAt`.
+  - normalized low-signal activity by suppressing constant `<=2` values.
+  - output now prioritizes real recent threads and cleaner engagement fields.
+
+### Main File Changes
+- [fivech.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/collector/src/scrapers/japan/fivech.ts)
+- [PATCH_NOTES.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/PATCH_NOTES.md)
+- [DELIVERY_STATUS.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/DELIVERY_STATUS.md)
+
+### Commands / Validation
+- `npm run test:scraper -- --source fivech` -> pass (`postCount=48`)
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Known Risks
+- if upstream fivech payload changes its row schema, engagement normalization may need re-tuning.
+
+### Rollback Guide
+- rollback fivech quality hardening:
+  - `packages/collector/src/scrapers/japan/fivech.ts`

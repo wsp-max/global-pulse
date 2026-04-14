@@ -40,6 +40,15 @@ function parsePostedAt(dat: string): string | undefined {
   return new Date(seconds * 1000).toISOString();
 }
 
+function normalizeThreadActivity(value: unknown): number | undefined {
+  const parsed = toNumber(value);
+  // current subbacks payload often returns constant "2" that is not useful as engagement.
+  if (parsed <= 2) {
+    return undefined;
+  }
+  return parsed;
+}
+
 export class FivechScraper extends BaseScraper {
   sourceId = "fivech";
 
@@ -68,14 +77,21 @@ export class FivechScraper extends BaseScraper {
         continue;
       }
 
+      const postedAt = parsePostedAt(token.dat);
+      // Skip non-time-based pinned/promotional rows (for example DAT tokens like 9247xxxxxx).
+      if (!postedAt) {
+        continue;
+      }
+
       const subdomain = cleanText(String(row[2] ?? "")) || DEFAULT_SUBDOMAIN;
+      const commentCount = normalizeThreadActivity(row[1]);
       posts.push({
         externalId: `${token.board}:${token.dat}`,
         title,
         bodyPreview: cleanText(String(row[4] ?? "")).slice(0, 200) || undefined,
         url: `https://itest.5ch.io/${subdomain}/test/read.cgi/${token.board}/${token.dat}`,
-        commentCount: toNumber(row[1]),
-        postedAt: parsePostedAt(token.dat),
+        commentCount,
+        postedAt,
       });
     }
 
