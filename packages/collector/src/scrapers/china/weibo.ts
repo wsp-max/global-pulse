@@ -27,12 +27,25 @@ function toNumber(value: unknown): number {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
-function toExternalId(item: WeiboHotTopic): string {
+function toUtcHourBucket(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hour = String(date.getUTCHours()).padStart(2, "0");
+  return `${year}${month}${day}${hour}`;
+}
+
+function toExternalId(item: WeiboHotTopic, capturedAt: Date, index: number): string {
   const seed = cleanText(item.word_scheme || item.word || item.note);
+  const bucket = toUtcHourBucket(capturedAt);
+  const rank = toNumber(item.realpos ?? item.rank ?? index + 1);
+
   if (!seed) {
-    return `rank-${item.realpos ?? item.rank ?? "unknown"}`;
+    return `rank-${bucket}-${rank || "unknown"}`;
   }
-  return seed.slice(0, 256);
+
+  const safeSeed = encodeURIComponent(seed).slice(0, 160);
+  return `${safeSeed}:${bucket}:r${rank || index + 1}`;
 }
 
 function toSearchUrl(item: WeiboHotTopic): string | undefined {
@@ -61,19 +74,22 @@ export class WeiboScraper extends BaseScraper {
       throw new Error(`Weibo hot search API failed: ok=${payload?.ok ?? "unknown"}`);
     }
 
+    const capturedAt = new Date();
+    const postedAt = capturedAt.toISOString();
     const posts: ScrapedPost[] = [];
-    for (const item of realtime.slice(0, 50)) {
+    for (const [index, item] of realtime.slice(0, 50).entries()) {
       const title = cleanText(item.word || item.note);
       if (!title) {
         continue;
       }
 
       posts.push({
-        externalId: toExternalId(item),
+        externalId: toExternalId(item, capturedAt, index),
         title,
         bodyPreview: cleanText(item.note).slice(0, 200) || undefined,
         url: toSearchUrl(item),
         viewCount: toNumber(item.num),
+        postedAt,
       });
     }
 

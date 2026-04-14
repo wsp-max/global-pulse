@@ -3491,3 +3491,37 @@
 ### Rollback Guide
 - rollback fivech quality hardening:
   - `packages/collector/src/scrapers/japan/fivech.ts`
+
+---
+
+## GP-20260414-75 (Step 5B source quality hardening: weibo hourly snapshot identity)
+### Before -> After
+- Before:
+  - Weibo `externalId` was topic-text based only, so recurring hot topics were repeatedly upserted into the same row and hourly trend accumulation was limited.
+- After:
+  - `externalId` now includes:
+    - encoded topic seed
+    - UTC hour bucket (`YYYYMMDDHH`)
+    - rank position
+  - each scrape writes hour-level distinct topic snapshots while still deduping inside the same hour/rank slot.
+  - `postedAt` is now set to capture timestamp for consistent analyzer time handling.
+
+### Main File Changes
+- [weibo.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/collector/src/scrapers/china/weibo.ts)
+- [PATCH_NOTES.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/PATCH_NOTES.md)
+- [DELIVERY_STATUS.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/DELIVERY_STATUS.md)
+
+### Commands / Validation
+- `npm run test:scraper -- --source weibo` -> pass (`postCount=50`)
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Known Risks
+- rank-based suffix means a single topic can generate multiple rows in a volatile ranking hour; this is intentional for trend visibility but increases row volume.
+
+### Rollback Guide
+- rollback weibo snapshot identity hardening:
+  - `packages/collector/src/scrapers/china/weibo.ts`

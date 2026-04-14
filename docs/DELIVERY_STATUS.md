@@ -1951,3 +1951,33 @@
 
 2. Next source expansion
 - continue low-cost quality hardening for `hatena` -> `weibo` ordering/normalization
+
+## Step 5B Update (2026-04-14, Weibo Snapshot Identity Hardening)
+### Newly completed
+- Improved Weibo hot-search ingestion identity model:
+  - `externalId` now includes UTC hour bucket + rank position
+  - prevents long-term overwrite of the same topic key and keeps hourly trend snapshots
+- Added explicit `postedAt` for Weibo snapshot rows:
+  - each row now carries capture timestamp to keep analyzer time-decay behavior consistent
+- Retained existing source behavior:
+  - top 50 realtime items
+  - same search URL mapping and numeric view count extraction
+
+### Validation
+- `npm run test:scraper -- --source weibo` -> pass (`postCount=50`)
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- CN source quality: **weibo snapshot history retention improved**
+- downstream topic analysis can now use hour-level distinct rows instead of repeated upsert on one static key
+
+### Remaining (updated)
+1. Runtime apply for this slice
+- deploy latest commit to EC2 and run `npm run test:scraper -- --source weibo` once on host
+
+2. Next source hardening
+- evaluate `hatena` description normalization and `weibo` secondary metadata mapping (`icon_desc/flag`) for extra signal
