@@ -23,6 +23,23 @@ if [[ -f "${ENV_FILE}" ]]; then
   set +a
 fi
 
+APP_PORT="${APP_PORT:-${PORT:-3000}}"
+RAW_BASE_PATH="${APP_BASE_PATH:-${NEXT_BASE_PATH:-${NEXT_PUBLIC_BASE_PATH:-}}}"
+
+normalize_base_path() {
+  local raw="${1:-}"
+  if [[ -z "${raw}" || "${raw}" == "/" ]]; then
+    echo ""
+    return
+  fi
+
+  local with_leading="/${raw#/}"
+  echo "${with_leading%/}"
+}
+
+BASE_PATH="$(normalize_base_path "${RAW_BASE_PATH}")"
+API_BASE_URL="http://127.0.0.1:${APP_PORT}${BASE_PATH}/api"
+
 detect_postgres_mode() {
   if [[ -n "${DATABASE_URL:-}" ]]; then
     echo "database_url"
@@ -45,6 +62,9 @@ POSTGRES_MODE="$(detect_postgres_mode)"
   echo "host=$(hostname)"
   echo "app_dir=${APP_DIR}"
   echo "env_file=${ENV_FILE}"
+  echo "app_port=${APP_PORT}"
+  echo "app_base_path=${BASE_PATH:-/}"
+  echo "api_base_url=${API_BASE_URL}"
   echo "postgres_config_mode=${POSTGRES_MODE}"
   echo
 } >"${SUMMARY_FILE}"
@@ -67,6 +87,59 @@ run_capture() {
   fi
 }
 
+run_http_capture() {
+  local name="$1"
+  local url="$2"
+  local logfile="${OUT_DIR}/${name}.log"
+  local header_file="${OUT_DIR}/${name}.headers"
+
+  echo "[RUN] ${name}: GET ${url}" | tee -a "${SUMMARY_FILE}"
+
+  local http_code
+  if http_code="$(curl -sS -L -D "${header_file}" -o "${logfile}" -w "%{http_code}" "${url}")"; then
+    echo "http_status=${http_code}" >>"${logfile}"
+    if [[ "${http_code}" =~ ^2[0-9][0-9]$ ]]; then
+      echo "[OK] ${name} (http=${http_code})" | tee -a "${SUMMARY_FILE}"
+      return 0
+    fi
+
+    echo "[FAIL:http_${http_code}] ${name} (see ${logfile})" | tee -a "${SUMMARY_FILE}"
+    return 1
+  fi
+
+  local status=$?
+  echo "[FAIL:${status}] ${name} (curl error, see ${logfile})" | tee -a "${SUMMARY_FILE}"
+  return "${status}"
+}
+
+run_db_counts_capture() {
+  local logfile="${OUT_DIR}/db_table_counts.log"
+  local query="select 'raw_posts',count(*) from raw_posts union all select 'topics',count(*) from topics union all select 'global_topics',count(*) from global_topics union all select 'heat_history',count(*) from heat_history union all select 'region_snapshots',count(*) from region_snapshots;"
+
+  if [[ "${POSTGRES_MODE}" == "database_url" ]]; then
+    echo "[RUN] db_table_counts: psql DATABASE_URL(redacted) -Atc <table-count-query>" | tee -a "${SUMMARY_FILE}"
+    if psql "${DATABASE_URL}" -Atc "${query}" >"${logfile}" 2>&1; then
+      echo "[OK] db_table_counts" | tee -a "${SUMMARY_FILE}"
+      return 0
+    fi
+  else
+    echo "[RUN] db_table_counts: psql discrete-env(redacted) -Atc <table-count-query>" | tee -a "${SUMMARY_FILE}"
+    if env PGPASSWORD="${DB_PASSWORD}" psql \
+      --host "${DB_HOST}" \
+      --port "${DB_PORT}" \
+      --username "${DB_USER}" \
+      --dbname "${DB_NAME}" \
+      -Atc "${query}" >"${logfile}" 2>&1; then
+      echo "[OK] db_table_counts" | tee -a "${SUMMARY_FILE}"
+      return 0
+    fi
+  fi
+
+  local status=$?
+  echo "[FAIL:${status}] db_table_counts (see ${logfile})" | tee -a "${SUMMARY_FILE}"
+  return "${status}"
+}
+
 FAILURES=0
 
 run_capture "systemctl_list_timers" systemctl list-timers "global-pulse-*" --all --no-pager || FAILURES=$((FAILURES + 1))
@@ -83,9 +156,9 @@ else
   echo "[SKIP] global-pulse systemd units not installed on this host" | tee -a "${SUMMARY_FILE}"
 fi
 
-run_capture "api_health" curl -sS -i http://127.0.0.1:3000/api/health || FAILURES=$((FAILURES + 1))
-run_capture "api_stats" curl -sS -i http://127.0.0.1:3000/api/stats || FAILURES=$((FAILURES + 1))
-run_capture "api_topics" curl -sS -i "http://127.0.0.1:3000/api/topics?region=kr&limit=5" || FAILURES=$((FAILURES + 1))
+run_http_capture "api_health" "${API_BASE_URL}/health" || FAILURES=$((FAILURES + 1))
+run_http_capture "api_stats" "${API_BASE_URL}/stats" || FAILURES=$((FAILURES + 1))
+run_http_capture "api_topics" "${API_BASE_URL}/topics?region=kr&limit=5" || FAILURES=$((FAILURES + 1))
 
 run_capture "journal_web" journalctl -u global-pulse-web.service -n 200 --no-pager || FAILURES=$((FAILURES + 1))
 run_capture "journal_collector" journalctl -u global-pulse-collector.service -n 200 --no-pager || FAILURES=$((FAILURES + 1))
@@ -95,18 +168,7 @@ run_capture "journal_cleanup" journalctl -u global-pulse-cleanup.service -n 200 
 run_capture "journal_backup" journalctl -u global-pulse-backup.service -n 200 --no-pager || FAILURES=$((FAILURES + 1))
 
 if command -v psql >/dev/null 2>&1 && [[ "${POSTGRES_MODE}" != "unset" ]]; then
-  if [[ "${POSTGRES_MODE}" == "database_url" ]]; then
-    run_capture "db_table_counts" \
-      psql "${DATABASE_URL}" -Atc "select 'raw_posts',count(*) from raw_posts union all select 'topics',count(*) from topics union all select 'global_topics',count(*) from global_topics union all select 'heat_history',count(*) from heat_history union all select 'region_snapshots',count(*) from region_snapshots;" || FAILURES=$((FAILURES + 1))
-  else
-    run_capture "db_table_counts" \
-      env PGPASSWORD="${DB_PASSWORD}" psql \
-        --host "${DB_HOST}" \
-        --port "${DB_PORT}" \
-        --username "${DB_USER}" \
-        --dbname "${DB_NAME}" \
-        -Atc "select 'raw_posts',count(*) from raw_posts union all select 'topics',count(*) from topics union all select 'global_topics',count(*) from global_topics union all select 'heat_history',count(*) from heat_history union all select 'region_snapshots',count(*) from region_snapshots;" || FAILURES=$((FAILURES + 1))
-  fi
+  run_db_counts_capture || FAILURES=$((FAILURES + 1))
 else
   echo "[SKIP] db_table_counts (psql missing or postgres env unset)" | tee -a "${SUMMARY_FILE}"
 fi

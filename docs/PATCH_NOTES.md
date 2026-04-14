@@ -37,6 +37,7 @@
 | GP-20260414-56 | 2026-04-14 | Step 5C 분석 품질 3차-보강 (글로벌 대표명 선택 보정) | Done |
 | GP-20260414-57 | 2026-04-14 | Step 5C 분석 품질 3차-마감 (최신 배치 기준 글로벌 매핑) | Done |
 | GP-20260414-58 | 2026-04-14 | 운영 문서 동기화 + SSH/런타임 검증 정리 | Done |
+| GP-20260414-59 | 2026-04-14 | Ops 스냅샷 검증 정확도 보정(HTTP 상태코드/민감정보 마스킹) | Done |
 
 ---
 
@@ -2833,3 +2834,37 @@
   - `docs/DELIVERY_STATUS.md`
   - `docs/PATCH_NOTES.md`
   - `docs/source-notes/supabase-fallback-audit.md`
+
+---
+
+## GP-20260414-59 (Ops snapshot hardening: real HTTP check + secret-safe logging)
+### Before -> After
+- Before:
+  - `capture-ops-snapshot.sh`는 `curl` 실행 성공 여부만 확인해서 HTTP 404도 `[OK]`로 판정될 수 있었음.
+  - API 검증 URL이 `127.0.0.1:3000/api/*`로 고정되어 `/pulse` + 포트 분리(`3100`) 환경에서 오검증 가능.
+  - DB table count 명령 로그에 접속 문자열이 노출될 수 있었음.
+- After:
+  - API 검증을 `run_http_capture`로 분리해 HTTP 2xx만 성공 판정.
+  - 검증 URL을 환경 기반으로 동적 구성:
+    - `APP_PORT` -> 기본 `PORT` -> 기본 `3000`
+    - `APP_BASE_PATH` -> `NEXT_BASE_PATH` -> `NEXT_PUBLIC_BASE_PATH`
+    - 최종 `http://127.0.0.1:{port}{basePath}/api/*`
+  - DB count 실행은 `run_db_counts_capture`로 분리하고 summary에는 redacted 문구만 기록.
+
+### Main File Changes
+- [capture-ops-snapshot.sh](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/scripts/capture-ops-snapshot.sh)
+
+### Commands / Validation
+- Local:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+- Runtime spot-check:
+  - `http://127.0.0.1:3100/pulse/api/health` -> 200
+  - `http://127.0.0.1:3100/api/health` -> 404
+  - 오검증 위험을 재현 후 스크립트 보정 반영
+
+### Known Risks
+- 기존 watch summary(`watch_20260413_134515`)는 보정 전 스크립트로 생성된 로그이므로, strict closure 기준에는 보정 후 watch 1회 재실행이 바람직함.
+
+### Rollback Guide
+- `scripts/capture-ops-snapshot.sh`를 GP-20260414-58 시점으로 복구하면 기존 방식으로 되돌아감.

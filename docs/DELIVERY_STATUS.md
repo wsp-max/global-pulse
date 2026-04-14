@@ -1458,3 +1458,33 @@
 
 ### Operational note
 - Reddit 계열은 현재 fallback 경로로 수집 성공 케이스가 있으나, IP/시간대에 따라 403 재발 가능성이 있으므로 OAuth 자격증명이 있으면 안정성이 더 높아짐.
+
+## Ops Snapshot Accuracy Update (2026-04-14)
+### Newly completed
+- `scripts/capture-ops-snapshot.sh` 검증 로직 보정:
+  - API health/stats/topics를 HTTP 상태코드 2xx 기준으로 판정
+  - `PORT`/`NEXT_BASE_PATH`(`NEXT_PUBLIC_BASE_PATH`) 기반 동적 API URL 생성
+  - DB table count 실행 로그의 민감정보(redacted) 처리
+
+### Validation
+- Local:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+- EC2 endpoint spot check:
+  - `127.0.0.1:3100/pulse/api/health` -> 200
+  - `127.0.0.1:3100/api/health` -> 404
+  - 기존 오검증 조건을 확인한 뒤 스크립트 보정 반영
+
+### Current completion state
+- L4 Observability: **정확도 보정 완료**
+- 운영 스냅샷 결과가 `/pulse` + 포트 분리 환경과 정합하도록 수정됨
+
+### Remaining (updated)
+1. Step 4F 운영 관찰 최종 마감
+- 보정된 스크립트 기준으로 watch를 1회 재실행해 final summary를 고정해야 함
+
+2. Source hardening 잔여
+- `dcard` Cloudflare 403 대응(브라우저 기반/프록시/대체 소스 전략 결정)
+
+3. UI Step 6 마감
+- 모바일 레이아웃, 장애/빈 데이터 UX 최종 정리
