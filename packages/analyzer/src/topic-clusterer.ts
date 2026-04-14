@@ -27,6 +27,31 @@ const TOPIC_NAME_BLACKLIST = new Set([
   "shorts",
   "official",
   "breaking",
+  "today",
+  "music",
+  "mv",
+  "trailer",
+  "episode",
+  "director",
+  "producer",
+  "production",
+  "release",
+  "released",
+  "stream",
+  "channel",
+  "follow",
+  "group",
+  "final",
+  "people",
+  "not",
+  "you",
+  "your",
+  "what",
+  "who",
+  "when",
+  "where",
+  "why",
+  "how",
 ]);
 
 function normalizeText(text: string): string {
@@ -65,6 +90,10 @@ function normalizeTopicLabel(value: string): string {
     .trim();
 }
 
+function isSingleTokenLabel(value: string): boolean {
+  return !value.includes(" ");
+}
+
 function isMeaningfulTopicLabel(value: string): boolean {
   if (!value) {
     return false;
@@ -84,7 +113,8 @@ function isMeaningfulTopicLabel(value: string): boolean {
     return false;
   }
 
-  if (TOPIC_NAME_BLACKLIST.has(normalized.toLowerCase())) {
+  const normalizedLower = normalized.toLowerCase();
+  if (TOPIC_NAME_BLACKLIST.has(normalizedLower)) {
     return false;
   }
 
@@ -94,6 +124,10 @@ function isMeaningfulTopicLabel(value: string): boolean {
   }
 
   if (/^[a-z0-9._-]+$/u.test(compact) && compact.length < 5) {
+    return false;
+  }
+
+  if (isSingleTokenLabel(normalized) && /^[a-z0-9._-]+$/u.test(compact) && compact.length < 7) {
     return false;
   }
 
@@ -109,7 +143,9 @@ function scoreCandidate(
   if (!normalized || !isMeaningfulTopicLabel(normalized)) {
     return;
   }
-  map.set(normalized, (map.get(normalized) ?? 0) + score);
+
+  const adjustedScore = isSingleTokenLabel(normalized) ? score * 0.55 : score;
+  map.set(normalized, (map.get(normalized) ?? 0) + adjustedScore);
 }
 
 function buildFallbackTopicName(
@@ -177,9 +213,18 @@ function buildRepresentativeTopicName(params: {
     return b[1] + bBoost - (a[1] + aBoost);
   });
 
-  const best = ranked.find(([label]) => isMeaningfulTopicLabel(label));
-  if (best) {
-    return normalizeTopicLabel(best[0]);
+  const bestPhrase = ranked.find(
+    ([label]) => label.includes(" ") && isMeaningfulTopicLabel(label),
+  );
+  if (bestPhrase) {
+    return normalizeTopicLabel(bestPhrase[0]);
+  }
+
+  const bestSingle = ranked.find(
+    ([label]) => isSingleTokenLabel(label) && isMeaningfulTopicLabel(label),
+  );
+  if (bestSingle) {
+    return normalizeTopicLabel(bestSingle[0]);
   }
 
   return buildFallbackTopicName(clusterKeywords, keywordOriginalMap, keywordScoreMap);
@@ -342,6 +387,10 @@ export async function clusterTopics(
       keywordOriginalMap,
       keywordScoreMap,
     });
+
+    if (isSingleTokenLabel(topicName) && relatedPosts.length < 3) {
+      continue;
+    }
 
     clusteredTopics.push({
       regionId,

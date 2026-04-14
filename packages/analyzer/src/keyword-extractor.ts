@@ -70,6 +70,36 @@ const BASE_STOPWORDS = new Set([
   "said",
   "new",
   "more",
+  "today",
+  "official",
+  "music",
+  "mv",
+  "video",
+  "trailer",
+  "episode",
+  "director",
+  "producer",
+  "produced",
+  "production",
+  "released",
+  "release",
+  "stream",
+  "subscribe",
+  "channel",
+  "follow",
+  "group",
+  "final",
+  "people",
+  "you",
+  "your",
+  "what",
+  "when",
+  "where",
+  "who",
+  "why",
+  "how",
+  "not",
+  "just",
 ]);
 
 const REGION_STOPWORDS: Record<string, Set<string>> = {
@@ -98,6 +128,11 @@ const REGION_STOPWORDS: Record<string, Set<string>> = {
     "하는",
     "있는",
     "없는",
+    "공개",
+    "발매",
+    "예고",
+    "티저",
+    "공식영상",
   ]),
   jp: new Set([
     "これ",
@@ -117,6 +152,10 @@ const REGION_STOPWORDS: Record<string, Set<string>> = {
     "最新",
     "速報",
     "まとめ",
+    "公式",
+    "公開",
+    "配信",
+    "発売",
   ]),
   cn: new Set([
     "这个",
@@ -137,12 +176,17 @@ const REGION_STOPWORDS: Record<string, Set<string>> = {
     "网友",
     "评论",
     "热搜",
+    "官方",
+    "发布",
+    "更新",
+    "视频号",
   ]),
 };
 
 const HANGUL_ONLY_REGEX = /^[\p{Script=Hangul}]+$/u;
 const LATIN_TOKEN_REGEX = /^[a-z][a-z0-9._-]*$/;
 const DIGIT_ONLY_REGEX = /^\d+$/;
+const YEAR_LIKE_REGEX = /^(?:19|20)\d{2}$/;
 const NOISE_TOKEN_REGEX = /^(?:img|jpg|jpeg|png|gif|webp|v\d+|fyp)$/;
 const KOREAN_SUFFIXES = [
   "에서는",
@@ -242,6 +286,10 @@ function shouldKeepToken(token: string, regionId: string): boolean {
   }
 
   if (DIGIT_ONLY_REGEX.test(token) || NOISE_TOKEN_REGEX.test(token)) {
+    return false;
+  }
+
+  if (YEAR_LIKE_REGEX.test(token)) {
     return false;
   }
 
