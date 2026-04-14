@@ -1731,3 +1731,34 @@
 
 2. 소스 확장 우선순위 실행
 - 무비용 정책 전제에서 안정형 소스(`bilibili`, `mastodon`) 운영 투입 확대
+
+## Step 5C Update (2026-04-14, Analysis Quality Tuning Round 2)
+### Newly completed
+- Heat score 포화 완화:
+  - `heat-score-calculator`를 `log1p + soft-cap` 방식으로 전환
+  - 상단 구간에서 토픽 간 점수 분해능 확보
+- Source 가중치 재밸런싱:
+  - `topic-clusterer` source weight 확장
+  - YouTube 가중치 하향(0.45), 커뮤니티/뉴스형 소스 상대 우선
+- 토큰 품질 보강:
+  - YouTube 메타 단어 불용어 확장
+  - 날짜형 토큰 제거 규칙 추가
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- Step 5C: **진행 중 (Round 1 + Round 2 완료)**
+- 점수 포화 완화/잡음 억제 규칙까지 코드 기준 반영 완료
+
+### Remaining (updated)
+1. Step 5C Round 3 (EC2 결과 캘리브레이션)
+- Round 2 코드 배포 후 `npm run analyze -- --hours 6` 재실행
+- `/api/topics?region=kr|jp|us&period=1h` 샘플 리뷰로 stopword/source weight 미세 조정
+
+2. 소스 확장 우선순위 실행
+- 무비용 정책 전제에서 안정형 소스(`bilibili`, `mastodon`) 운영 투입 확대

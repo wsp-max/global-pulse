@@ -16,6 +16,16 @@ interface ClusterOptions {
 const SOURCE_WEIGHT_MAP: Record<string, number> = {
   dcinside: 1.2,
   reddit: 1.3,
+  reddit_worldnews: 1.25,
+  reddit_europe: 1.15,
+  reddit_mideast: 1.15,
+  fourchan: 0.95,
+  hackernews: 1.1,
+  youtube_kr: 0.45,
+  youtube_jp: 0.45,
+  youtube_us: 0.45,
+  mastodon: 0.8,
+  bilibili: 0.8,
 };
 
 const TOPIC_NAME_BLACKLIST = new Set([

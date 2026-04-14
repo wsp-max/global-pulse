@@ -3216,3 +3216,46 @@
   - `app/page.tsx`
   - `components/dashboard/PulseSignalBoard.tsx`
   - `components/dashboard/index.ts`
+
+---
+
+## GP-20260414-68 (Step 5C analysis quality tuning round 2: de-saturate heat + source/token rebalance)
+### Before -> After
+- Before:
+  - 다수 토픽이 `heat_score=2000`으로 포화되어 순위 분해능이 낮았고, KR/JP/US에서 SNS 메타 단어가 대표 토픽명으로 노출되는 비율이 높았음.
+- After:
+  - Heat score 계산 개선:
+    - `packages/analyzer/src/heat-score-calculator.ts`
+    - 선형 카운트 합산 -> `log1p` 기반 스케일로 변경
+    - 하드 클램프 직전 soft-cap(`1 - exp(-x/k)`) 적용으로 상단 구간 포화 완화
+  - Source rebalance:
+    - `packages/analyzer/src/topic-clusterer.ts`
+    - YouTube source weight를 낮춰(`0.45`) 커뮤니티 소스 신호 우선 반영
+    - Reddit/HN/Europe/Mideast/Bilibili/Mastodon 가중치 보정
+  - Token noise reduction:
+    - `packages/analyzer/src/keyword-extractor.ts`
+    - YouTube 메타 단어(credits/executive/starring/provided/album/single/kst 등) 불용어 확장
+    - 날짜형 토큰(`YYYY-MM-DD`) 제거 규칙 추가
+
+### Main File Changes
+- [heat-score-calculator.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/heat-score-calculator.ts)
+- [topic-clusterer.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/topic-clusterer.ts)
+- [keyword-extractor.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/keyword-extractor.ts)
+- [supabase-fallback-audit.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/source-notes/supabase-fallback-audit.md)
+
+### Commands / Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Known Risks
+- Source weight 재조정으로 SNS 비중이 의도적으로 낮아져, 특정 시점에는 커뮤니티 중심 토픽이 더 우세하게 보일 수 있음.
+- soft-cap 파라미터(`900`)는 운영 데이터에 따라 추가 튜닝이 필요할 수 있음.
+
+### Rollback Guide
+- Round 2 분석 튜닝 롤백:
+  - `packages/analyzer/src/heat-score-calculator.ts`
+  - `packages/analyzer/src/topic-clusterer.ts`
+  - `packages/analyzer/src/keyword-extractor.ts`

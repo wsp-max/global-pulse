@@ -78,7 +78,36 @@ const BASE_STOPWORDS = new Set([
   "trailer",
   "episode",
   "director",
+  "directed",
+  "featuring",
+  "feat",
+  "officially",
+  "credits",
+  "credit",
+  "executive",
   "producer",
+  "starring",
+  "provided",
+  "audio",
+  "lyric",
+  "lyrics",
+  "visualizer",
+  "performance",
+  "stage",
+  "ver",
+  "version",
+  "full",
+  "clip",
+  "album",
+  "single",
+  "title",
+  "track",
+  "preview",
+  "teaser",
+  "coming",
+  "comes",
+  "out",
+  "kst",
   "produced",
   "production",
   "released",
@@ -226,7 +255,8 @@ const HANGUL_ONLY_REGEX = /^[\p{Script=Hangul}]+$/u;
 const LATIN_TOKEN_REGEX = /^[a-z][a-z0-9._-]*$/;
 const DIGIT_ONLY_REGEX = /^\d+$/;
 const YEAR_LIKE_REGEX = /^(?:19|20)\d{2}$/;
-const NOISE_TOKEN_REGEX = /^(?:img|jpg|jpeg|png|gif|webp|v\d+|fyp|lol+|lmao|haha+|www+|ㅋ+|ㅎ+|ㅠ+|ㅜ+)$/u;
+const DATE_LIKE_REGEX = /^(?:19|20)\d{2}[-/.](?:0?[1-9]|1[0-2])[-/.](?:0?[1-9]|[12]\d|3[01])$/;
+const NOISE_TOKEN_REGEX = /^(?:img|jpg|jpeg|png|gif|webp|v\d+|fyp|lol+|lmao|haha+|www+|ㅋ+|ㅎ+|ㅠ+|ㅜ+|official)$/u;
 const KOREAN_SUFFIXES = [
   "에서는",
   "으로는",
@@ -329,6 +359,10 @@ function shouldKeepToken(token: string, regionId: string): boolean {
   }
 
   if (YEAR_LIKE_REGEX.test(token)) {
+    return false;
+  }
+
+  if (DATE_LIKE_REGEX.test(token)) {
     return false;
   }
 
