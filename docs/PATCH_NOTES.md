@@ -3604,3 +3604,37 @@
 - rollback runtime to pre-deploy EC2 local state:
   - `git checkout backup/ec2-local-20260414_213114`
   - or restore from `/home/ubuntu/global-pulse-backup-20260414_213114.bundle`
+
+---
+
+## GP-20260415-78 (UI encoding + loading-state correction, API base-path runtime guard)
+### Before -> After
+- Before:
+  - home/global pages had mojibake Korean strings in several UI texts.
+  - home/global pages rendered `GlobalIssuePanel` while still loading, so users could see temporary empty-state cards even when data arrived moments later.
+  - client fetch base path relied mainly on `NEXT_PUBLIC_BASE_PATH`, making deployments fragile when build-time env injection was missing.
+- After:
+  - `app/page.tsx`, `app/global-issues/page.tsx` were re-saved in UTF-8 with corrected Korean strings.
+  - global issues panel now renders only after loading finishes and no error exists.
+  - `lib/api.ts` now includes runtime `/pulse` base-path fallback detection for client fetch calls.
+
+### Main File Changes
+- [page.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/page.tsx)
+- [page.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/global-issues/page.tsx)
+- [api.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/lib/api.ts)
+- [supabase-fallback-audit.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/source-notes/supabase-fallback-audit.md)
+
+### Commands / Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Known Risks
+- runtime base-path fallback currently targets `/pulse`; if deployment path changes again, env injection should still be treated as primary.
+
+### Rollback Guide
+- rollback UI/base-path correction:
+  - `app/page.tsx`
+  - `app/global-issues/page.tsx`
+  - `lib/api.ts`

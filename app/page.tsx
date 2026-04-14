@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   GlobalIssuePanel,
@@ -15,7 +15,11 @@ import { useRegions } from "@/lib/hooks/useRegions";
 
 export default function HomePage() {
   const { data: regionsData, isLoading: isRegionsLoading, error: regionsError } = useRegions();
-  const { data: globalTopicsData, isLoading: isGlobalLoading } = useGlobalTopics(5);
+  const {
+    data: globalTopicsData,
+    isLoading: isGlobalLoading,
+    error: globalError,
+  } = useGlobalTopics(5);
 
   const regions = regionsData?.regions ?? [];
   const sortedRegions = [...regions].sort((a, b) => b.totalHeatScore - a.totalHeatScore);
@@ -49,7 +53,7 @@ export default function HomePage() {
       {!regionsError && !isRegionsLoading && sortedRegions.length === 0 && (
         <EmptyState
           title="표시할 리전 데이터가 없습니다."
-          description="수집기와 분석기 실행 이후 데이터가 표시됩니다."
+          description="수집기와 분석기 실행 이후 데이터가 자동 반영됩니다."
         />
       )}
 
@@ -74,7 +78,13 @@ export default function HomePage() {
       )}
 
       {isGlobalLoading && <LoadingSkeleton className="h-28" />}
-      <GlobalIssuePanel topics={globalTopicsData?.globalTopics ?? []} />
+      {globalError && (
+        <EmptyState
+          title="글로벌 이슈를 불러오지 못했습니다."
+          description="잠시 후 자동으로 다시 시도합니다."
+        />
+      )}
+      {!isGlobalLoading && !globalError && <GlobalIssuePanel topics={globalTopicsData?.globalTopics ?? []} />}
     </main>
   );
 }

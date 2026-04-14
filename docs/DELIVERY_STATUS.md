@@ -2041,3 +2041,31 @@
 
 2. Step 5A/5B source expansion continuation
 - 무비용 우선 정책 기준으로 `hatena`/`ptt` 등 고변동 소스 안정화
+
+## Step 5C Update (2026-04-15, UI Encoding + Loading State UX Guard)
+### Newly completed
+- 홈/글로벌 페이지 인코딩 복구:
+  - 깨진 한글 문구(모지바케) 제거 및 UTF-8 텍스트로 통일
+- 로딩 UX 보정:
+  - `GlobalIssuePanel`을 로딩 중에는 렌더하지 않도록 조건 수정
+  - 데이터 로드 전 빈 카드가 먼저 보이는 현상 완화
+- API 클라이언트 보강:
+  - `lib/api.ts`에 `/pulse` 런타임 base-path 감지 fallback 추가
+  - build-time env 누락 시에도 클라이언트 fetch 경로 안정성 강화
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- 사용자 체감 이슈(문자열 깨짐, 로딩 중 빈 글로벌 이슈 노출) 1차 보정 완료
+- `/pulse` 하위 경로 운영에서 클라이언트 API 호출 안정성 보강 완료
+
+### Remaining (updated)
+1. Runtime apply
+- EC2 배포 후 실제 브라우저에서 홈/글로벌 페이지 렌더 상태 재확인
+
+2. Quality tuning follow-up
+- 글로벌 토픽 대표명 저정보 표현(`keep brawl` 등) 억제 규칙 추가

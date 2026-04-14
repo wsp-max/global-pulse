@@ -43,6 +43,16 @@ git fetch origin "${BRANCH}"
 git checkout "${BRANCH}"
 git pull --ff-only origin "${BRANCH}"
 
+if [[ -f "${ENV_FILE}" ]]; then
+  echo "[DEPLOY] loading env for build from ${ENV_FILE}"
+  set -a
+  # shellcheck source=/dev/null
+  source "${ENV_FILE}"
+  set +a
+else
+  echo "[DEPLOY] warning: env file not found at ${ENV_FILE}; build-time NEXT_PUBLIC_* may be empty."
+fi
+
 if [[ "${USE_PNPM}" == "1" ]] && command -v pnpm >/dev/null 2>&1; then
   corepack enable || true
   pnpm install --frozen-lockfile || pnpm install
@@ -53,9 +63,6 @@ else
 fi
 
 sudo mkdir -p /etc/global-pulse
-if [[ ! -f "${ENV_FILE}" ]]; then
-  echo "[DEPLOY] warning: env file not found at ${ENV_FILE}. services may fail until env is configured."
-fi
 
 sudo install -m 644 infra/systemd/global-pulse-web.service /etc/systemd/system/global-pulse-web.service
 sudo install -m 644 infra/systemd/global-pulse-collector.service /etc/systemd/system/global-pulse-collector.service

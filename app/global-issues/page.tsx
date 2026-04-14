@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { GlobalIssuePanel } from "@/components/dashboard/GlobalIssuePanel";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -22,8 +22,7 @@ export default function GlobalIssuesPage() {
         />
       )}
 
-      {!error && <GlobalIssuePanel topics={data?.globalTopics ?? []} />}
+      {!isLoading && !error && <GlobalIssuePanel topics={data?.globalTopics ?? []} />}
     </main>
   );
 }
-

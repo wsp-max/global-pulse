@@ -1,13 +1,33 @@
-const rawBasePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim() ?? "";
-const normalizedBasePath = rawBasePath
-  ? rawBasePath.startsWith("/")
-    ? rawBasePath.replace(/\/+$/, "")
-    : `/${rawBasePath.replace(/\/+$/, "")}`
-  : "";
-const API_BASE = `${normalizedBasePath}/api`;
+function normalizeBasePath(input?: string): string {
+  const raw = input?.trim() ?? "";
+  if (!raw) return "";
+  return raw.startsWith("/") ? raw.replace(/\/+$/, "") : `/${raw.replace(/\/+$/, "")}`;
+}
+
+function detectRuntimeBasePath(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const pathname = window.location.pathname;
+  if (pathname === "/pulse" || pathname.startsWith("/pulse/")) {
+    return "/pulse";
+  }
+
+  return "";
+}
+
+function getApiBase(): string {
+  const envBasePath = normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH);
+  if (envBasePath) {
+    return `${envBasePath}/api`;
+  }
+
+  return `${detectRuntimeBasePath()}/api`;
+}
 
 export async function fetcher<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${getApiBase()}${path}`, {
     next: { revalidate: 60 },
   });
 
