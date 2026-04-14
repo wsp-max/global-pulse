@@ -35,6 +35,11 @@ DATABASE_URL=postgresql://global_pulse:change_me@127.0.0.1:5432/global_pulse
 # DB_PASSWORD=change_me
 YOUTUBE_API_KEY=...
 GEMINI_API_KEY=...
+VERIFY_SOURCE_INGEST_ENABLED=1
+VERIFY_SOURCE_SOURCES=bilibili,mastodon
+VERIFY_SOURCE_MINUTES=180
+VERIFY_SOURCE_SAMPLES=3
+VERIFY_SOURCE_ALLOW_EMPTY=0
 EOF
 ```
 
@@ -50,6 +55,7 @@ sudo systemctl enable --now global-pulse-analyzer.timer
 sudo systemctl enable --now global-pulse-snapshot.timer
 sudo systemctl enable --now global-pulse-cleanup.timer
 sudo systemctl enable --now global-pulse-backup.timer
+sudo systemctl enable --now global-pulse-source-verify.timer
 ```
 
 ## 5) Install nginx Config

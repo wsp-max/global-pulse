@@ -3380,3 +3380,49 @@
   - `scripts/verify-source-ingest.ts`
   - `package.json`
   - `docs/operations.md`
+
+---
+
+## GP-20260414-72 (Step 5A ops hardening: source verify systemd timer integration)
+### Before -> After
+- Before:
+  - source ingest verification existed only as a manual command (`ops:verify:source`), so periodic runtime checks depended on ad-hoc execution.
+- After:
+  - added wrapper runner `scripts/run-source-verify.ts` with env-based defaults and safe batch execution.
+  - added dedicated systemd units:
+    - `infra/systemd/global-pulse-source-verify.service`
+    - `infra/systemd/global-pulse-source-verify.timer` (hourly)
+  - updated deploy chain:
+    - `scripts/deploy-ec2.sh` now installs/enables source verify timer on rollout.
+  - updated runbooks:
+    - `docs/operations.md`
+    - `docs/deployment-ec2.md`
+
+### Main File Changes
+- [run-source-verify.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/scripts/run-source-verify.ts)
+- [global-pulse-source-verify.service](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/infra/systemd/global-pulse-source-verify.service)
+- [global-pulse-source-verify.timer](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/infra/systemd/global-pulse-source-verify.timer)
+- [deploy-ec2.sh](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/scripts/deploy-ec2.sh)
+- [package.json](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/package.json)
+- [operations.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/operations.md)
+- [deployment-ec2.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/deployment-ec2.md)
+- [DELIVERY_STATUS.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/DELIVERY_STATUS.md)
+
+### Commands / Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Known Risks
+- hourly verify can fail if selected sources are temporarily blocked; adjust `VERIFY_SOURCE_MINUTES` or `VERIFY_SOURCE_ALLOW_EMPTY` to tune alert strictness.
+
+### Rollback Guide
+- rollback source verify timer integration:
+  - `scripts/run-source-verify.ts`
+  - `infra/systemd/global-pulse-source-verify.service`
+  - `infra/systemd/global-pulse-source-verify.timer`
+  - `scripts/deploy-ec2.sh`
+  - `docs/operations.md`
+  - `docs/deployment-ec2.md`

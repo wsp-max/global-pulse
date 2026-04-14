@@ -8,6 +8,7 @@ systemctl status global-pulse-analyzer.timer --no-pager
 systemctl status global-pulse-snapshot.timer --no-pager
 systemctl status global-pulse-cleanup.timer --no-pager
 systemctl status global-pulse-backup.timer --no-pager
+systemctl status global-pulse-source-verify.timer --no-pager
 ```
 
 ## Logs
@@ -18,6 +19,7 @@ journalctl -u global-pulse-analyzer.service -n 200 --no-pager
 journalctl -u global-pulse-snapshot.service -n 200 --no-pager
 journalctl -u global-pulse-cleanup.service -n 200 --no-pager
 journalctl -u global-pulse-backup.service -n 200 --no-pager
+journalctl -u global-pulse-source-verify.service -n 200 --no-pager
 ```
 - API responses include `x-request-id`; use that value to correlate web/API and batch logs.
 
@@ -29,6 +31,7 @@ pnpm run ops:collector || npm run ops:collector
 pnpm run ops:analyzer -- --hours 6 --with-global --global-hours 24 || npm run ops:analyzer -- --hours 6 --with-global --global-hours 24
 pnpm run ops:snapshot -- --hours 24 || npm run ops:snapshot -- --hours 24
 pnpm run ops:cleanup || npm run ops:cleanup
+pnpm run ops:source-verify || npm run ops:source-verify
 ```
 
 ## PostgreSQL E2E Verification
@@ -194,6 +197,20 @@ npm run ops:verify:source -- --sources bilibili,mastodon --minutes 60 --allow-em
   - checks `raw_posts` ingestion count for selected sources within the recent window
   - prints per-source sample rows (title/url/collectedAt)
   - exits non-zero by default if any selected source has 0 rows in the window
+- Timerized source verification (hourly):
+```bash
+systemctl status global-pulse-source-verify.timer --no-pager
+systemctl status global-pulse-source-verify.service --no-pager
+journalctl -u global-pulse-source-verify.service -n 200 --no-pager
+```
+- Optional env overrides in `/etc/global-pulse/global-pulse.env`:
+```bash
+VERIFY_SOURCE_INGEST_ENABLED=1
+VERIFY_SOURCE_SOURCES=bilibili,mastodon
+VERIFY_SOURCE_MINUTES=180
+VERIFY_SOURCE_SAMPLES=3
+VERIFY_SOURCE_ALLOW_EMPTY=0
+```
 
 ## Common Failure Cases
 - `/api/health` returns `postgres_not_configured`

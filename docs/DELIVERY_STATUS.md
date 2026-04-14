@@ -1859,3 +1859,38 @@
 
 2. 다음 소스 확장
 - 비용 정책 유지 전제에서 `hatena` 또는 `ptt` 정합성 개선 우선 적용
+
+## Step 5A Update (2026-04-14, Source Verify Timer Integration)
+### Newly completed
+- Added source verify wrapper script:
+  - `scripts/run-source-verify.ts`
+  - applies env defaults and executes `verify-source-ingest.ts` safely in batch mode
+- Added dedicated systemd units:
+  - `infra/systemd/global-pulse-source-verify.service`
+  - `infra/systemd/global-pulse-source-verify.timer` (hourly)
+- Deployment chain updated:
+  - `scripts/deploy-ec2.sh` now installs/enables source-verify timer automatically
+- Operations/deployment runbooks updated with:
+  - timer status/log commands
+  - env override keys (`VERIFY_SOURCE_*`)
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- Step 5A follow-up: **ops verification now timerized**
+- Source ingest health can now be checked continuously without touching collector timer logic
+
+### Remaining (updated)
+1. EC2 runtime apply and smoke check
+- deploy latest commit to EC2, then verify:
+  - `systemctl status global-pulse-source-verify.timer --no-pager`
+  - `systemctl list-timers 'global-pulse-*' --no-pager`
+  - `journalctl -u global-pulse-source-verify.service -n 200 --no-pager`
+
+2. Next expansion slice
+- low-cost source quality expansion (`hatena` or `ptt`) after timer stability is confirmed

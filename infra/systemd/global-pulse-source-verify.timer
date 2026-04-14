@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Global Pulse source ingest verify hourly
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=120
+Persistent=true
+Unit=global-pulse-source-verify.service
+
+[Install]
+WantedBy=timers.target

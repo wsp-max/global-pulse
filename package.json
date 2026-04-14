@@ -41,6 +41,7 @@
     "ops:monitor:watch": "bash scripts/run-ops-watch-window.sh",
     "ops:ui:smoke": "bash scripts/ui-smoke-check.sh",
     "ops:verify:source": "tsx scripts/verify-source-ingest.ts",
+    "ops:source-verify": "tsx scripts/run-source-verify.ts",
     "ops:supabase:audit": "tsx scripts/audit-supabase-fallback.ts",
     "ops:supabase:budget": "tsx scripts/check-supabase-fallback-budget.ts",
     "ops:closure": "bash scripts/complete-closure.sh",
