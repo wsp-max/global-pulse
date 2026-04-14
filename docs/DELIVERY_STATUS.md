@@ -2119,8 +2119,35 @@
 - deploy chain regression: **fixed in script**
 
 ### Remaining (updated)
-1. EC2 runtime apply
-- rerun deploy after script fix and confirm public `/pulse` HTML references `/pulse/...`
+1. Quality tuning follow-up
+- 글로벌 토픽 대표명 저정보 표현(`keep brawl` 등) 억제 규칙 추가
+
+## Step 5C Runtime Recovery (2026-04-15, public `/pulse` recovered)
+### Newly completed
+- EC2 manual recovery completed with explicit npm install flags:
+  - `npm ci --include=dev --include-workspace-root`
+  - env load + rebuild + web restart
+- Public runtime confirmed healthy:
+  - `/pulse` now emits `/pulse/_next/...` static asset paths
+  - `/pulse` navigation links stay inside `/pulse/...`
+  - `/pulse/api/health` returns `200`
+  - `/pulse/api/global-topics` returns populated data
+
+### Validation
+- `http://3.36.83.199/pulse` HTML contains:
+  - `/pulse/_next/static/...`
+  - `href="/pulse"`
+  - `href="/pulse/global-issues"`
+- `http://3.36.83.199/pulse/api/health` -> `200`
+- `http://3.36.83.199/pulse/api/global-topics?limit=3` -> `200`, `total=3`
+
+### Current completion state
+- `/pulse` runtime breakage: **복구 완료**
+- deploy-chain root cause: **식별 및 스크립트 반영 완료**
+
+### Remaining (updated)
+1. Deploy script final hardening
+- `deploy-ec2.sh` 최신 수정(`--include=dev --include-workspace-root`) 커밋 반영본 기준으로 다음 배포 사이클 재검증
 
 2. Quality tuning follow-up
 - 글로벌 토픽 대표명 저정보 표현(`keep brawl` 등) 억제 규칙 추가

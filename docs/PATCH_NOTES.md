@@ -3697,6 +3697,9 @@
   - dependency install runs first.
   - env file is loaded only after install and immediately before build.
   - this preserves build-time `NEXT_PUBLIC_*` values without stripping build dependencies.
+  - npm installs now explicitly include:
+    - dev dependencies
+    - workspace root dependencies
 
 ### Main File Changes
 - [deploy-ec2.sh](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/scripts/deploy-ec2.sh)
@@ -3706,7 +3709,15 @@
   - missing `@tailwindcss/postcss`
   - missing `prop-types`
   - missing `react-is`
-- script order updated so the next deploy can install full deps, then build with env.
+- recovery run on EC2:
+  - `npm ci --include=dev --include-workspace-root`
+  - `source /etc/global-pulse/global-pulse.env`
+  - `npm run build`
+  - `sudo systemctl restart global-pulse-web.service`
+- public `/pulse` HTML confirmed:
+  - `href="/pulse"`
+  - `href="/pulse/global-issues"`
+  - `src="/pulse/_next/..."`
 
 ### Known Risks
 - if host policy explicitly forces production-only install elsewhere, manual deploy commands must still keep dev deps for the build phase.

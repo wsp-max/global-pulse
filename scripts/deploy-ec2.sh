@@ -45,9 +45,9 @@ git pull --ff-only origin "${BRANCH}"
 
 if [[ "${USE_PNPM}" == "1" ]] && command -v pnpm >/dev/null 2>&1; then
   corepack enable || true
-  pnpm install --frozen-lockfile || pnpm install
+  pnpm install --frozen-lockfile --prod=false || pnpm install --prod=false
 else
-  npm ci || npm install
+  npm ci --include=dev --include-workspace-root || npm install --include=dev --include-workspace-root
 fi
 
 if [[ -f "${ENV_FILE}" ]]; then
