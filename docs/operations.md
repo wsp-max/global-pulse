@@ -146,6 +146,19 @@ HOURS=24 INTERVAL_SECONDS=3600 MAX_FAILURES=3 npm run ops:monitor:watch
 - Watch summary:
   - `docs/evidence/ops-monitoring/watch_<timestamp>/watch-summary.txt`
 
+## UI Smoke (Mobile + Error Scenarios)
+```bash
+cd /srv/projects/project2/global-pulse
+npm run ops:ui:smoke
+```
+- Optional custom host/path:
+```bash
+APP_HOST=http://127.0.0.1:3100 APP_BASE_PATH=/pulse npm run ops:ui:smoke
+```
+- Output:
+  - `docs/evidence/ui-smoke/<timestamp>/summary.txt`
+  - route/api response headers + bodies for troubleshooting
+
 ## Common Failure Cases
 - `/api/health` returns `postgres_not_configured`
   - PostgreSQL pool/env is missing for web runtime.

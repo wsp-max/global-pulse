@@ -1613,3 +1613,26 @@
 
 2. 운영 배포 루틴 정리
 - EC2 evidence 누적 파일 정리 루틴(배포 전/후)을 deploy 문서에 고정
+
+## UI Step 6 Update (2026-04-14, Slice 2 QA Automation)
+### Newly completed
+- 모바일/에러 시나리오 QA 자동화 스크립트 추가:
+  - `scripts/ui-smoke-check.sh`
+  - `npm run ops:ui:smoke`
+- 운영 런북 반영:
+  - `docs/operations.md`에 UI smoke 섹션 추가
+- EC2 실검증 완료:
+  - `APP_HOST=http://127.0.0.1:3100 APP_BASE_PATH=/pulse npm run ops:ui:smoke`
+  - 결과 `failures=0`
+  - 증적: `/srv/projects/project2/global-pulse/docs/evidence/ui-smoke/20260414_132052`
+
+### Current completion state
+- Step 6: **Slice 1 + Slice 2 완료**
+- 모바일/장애 QA가 재실행 가능한 스크립트 기반으로 고정됨
+
+### Remaining (updated)
+1. 운영 배포 루틴 정리
+- EC2 evidence 누적 파일 정리 루틴(배포 전/후)을 deploy 문서에 고정
+
+2. 선택 과제 (권장)
+- 실기기 캡처(스크린샷) 1세트만 추가해 UI smoke 증적과 함께 보관

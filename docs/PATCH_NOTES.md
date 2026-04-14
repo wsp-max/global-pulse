@@ -42,6 +42,7 @@
 | GP-20260414-61 | 2026-04-14 | 무비용 운영 정책 반영(Dcard 기본 비활성, TW는 PTT 중심) | Done |
 | GP-20260414-62 | 2026-04-14 | Step 6 UI 마감 1차 (모바일 내비 + 상태 UX + 텍스트 정리) | Done |
 | GP-20260414-63 | 2026-04-14 | Step 6 EC2 반영 및 운영 스냅샷 검증 | Done |
+| GP-20260414-64 | 2026-04-14 | Step 6 QA 자동화 (모바일/UI/에러 스모크 증적) | Done |
 
 ---
 
@@ -3045,3 +3046,47 @@
 
 ### Rollback Guide
 - EC2 런타임 롤백 시 이전 빌드 산출물/서비스 재시작 또는 이전 커밋 아카이브 재배포로 복귀 가능.
+
+---
+
+## GP-20260414-64 (Step 6 slice 2: UI smoke automation and evidence)
+### Before -> After
+- Before:
+  - Step 6에서 요구된 모바일/장애 시나리오 검증은 수동 절차 위주였고, 재실행 가능한 자동 증적 수집 루틴이 없었음.
+- After:
+  - UI smoke 스크립트 추가:
+    - `scripts/ui-smoke-check.sh`
+    - 모바일 UA 기반 route/API 체크 + 응답 헤더/바디 증적 저장
+  - npm 실행 경로 추가:
+    - `npm run ops:ui:smoke`
+  - 운영 문서 반영:
+    - `docs/operations.md`에 실행법/출력 경로 추가
+  - EC2 실증 실행 완료:
+    - `APP_HOST=http://127.0.0.1:3100 APP_BASE_PATH=/pulse npm run ops:ui:smoke`
+    - 결과: `failures=0`
+    - 증적: `/srv/projects/project2/global-pulse/docs/evidence/ui-smoke/20260414_132052`
+
+### Main File Changes
+- [ui-smoke-check.sh](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/scripts/ui-smoke-check.sh)
+- [package.json](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/package.json)
+- [operations.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/operations.md)
+
+### Commands / Validation
+- Local:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+- EC2:
+  - `APP_HOST=http://127.0.0.1:3100 APP_BASE_PATH=/pulse npm run ops:ui:smoke` -> pass
+  - checked cases:
+    - UI routes: `/pulse`, `/pulse/global-issues`, `/pulse/timeline`, `/pulse/search`, `/pulse/region/kr` => 200
+    - API/error: `/pulse/api/health` 200, `/pulse/api/stats` 200
+    - negative paths: `/pulse/api/topic/not-a-number` 400, `/pulse/api/not-found` 404, `/pulse/not-found-page` 404
+
+### Known Risks
+- 본 스크립트는 네트워크/HTML 레벨 스모크이며, 실제 단말 UX(터치/뷰포트 스크롤)는 별도 실기기 점검이 여전히 유효함.
+
+### Rollback Guide
+- UI smoke 자동화 롤백:
+  - `scripts/ui-smoke-check.sh`
+  - `package.json`
+  - `docs/operations.md`
