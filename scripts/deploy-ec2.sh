@@ -6,6 +6,9 @@ REPO_URL="${REPO_URL:-}"
 BRANCH="${BRANCH:-master}"
 ENV_FILE="${ENV_FILE:-/etc/global-pulse/global-pulse.env}"
 USE_PNPM="${USE_PNPM:-1}"
+ROTATE_EVIDENCE_BEFORE_PULL="${ROTATE_EVIDENCE_BEFORE_PULL:-1}"
+ROTATE_EVIDENCE_PRUNE="${ROTATE_EVIDENCE_PRUNE:-1}"
+ALLOW_DIRTY_TRACKED="${ALLOW_DIRTY_TRACKED:-0}"
 
 echo "[DEPLOY] app_dir=${APP_DIR} branch=${BRANCH}"
 echo "[DEPLOY] override path with APP_DIR=/your/path when needed"
@@ -21,6 +24,21 @@ if [[ ! -d "${APP_DIR}/.git" ]]; then
 fi
 
 cd "${APP_DIR}"
+
+if [[ "${ROTATE_EVIDENCE_BEFORE_PULL}" == "1" ]] && [[ -f scripts/rotate-runtime-evidence.sh ]]; then
+  echo "[DEPLOY] rotating runtime evidence before pull (prune=${ROTATE_EVIDENCE_PRUNE})"
+  APP_DIR="${APP_DIR}" PRUNE="${ROTATE_EVIDENCE_PRUNE}" bash scripts/rotate-runtime-evidence.sh || \
+    echo "[DEPLOY] warning: evidence rotation failed; continuing deploy."
+fi
+
+DIRTY_TRACKED="$(git status --porcelain --untracked-files=no)"
+if [[ -n "${DIRTY_TRACKED}" ]] && [[ "${ALLOW_DIRTY_TRACKED}" != "1" ]]; then
+  echo "[DEPLOY] tracked local changes detected. aborting to avoid pull conflicts:"
+  echo "${DIRTY_TRACKED}"
+  echo "[DEPLOY] rerun with ALLOW_DIRTY_TRACKED=1 if this is intentional."
+  exit 1
+fi
+
 git fetch origin "${BRANCH}"
 git checkout "${BRANCH}"
 git pull --ff-only origin "${BRANCH}"

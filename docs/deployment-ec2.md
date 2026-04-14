@@ -92,3 +92,20 @@ ROUNDS=3 npm run ops:closure
 cd /srv/projects/project2/global-pulse
 bash scripts/deploy-ec2.sh
 ```
+- Default deploy behavior:
+  - rotates runtime evidence before pull (`ROTATE_EVIDENCE_BEFORE_PULL=1`)
+  - archives and prunes runtime evidence directories (`ROTATE_EVIDENCE_PRUNE=1`)
+  - aborts if tracked local changes exist (`ALLOW_DIRTY_TRACKED=0`)
+- Useful overrides:
+```bash
+# keep runtime evidence files, skip auto-rotation
+ROTATE_EVIDENCE_BEFORE_PULL=0 bash scripts/deploy-ec2.sh
+
+# allow deploy even when tracked local changes exist (use carefully)
+ALLOW_DIRTY_TRACKED=1 bash scripts/deploy-ec2.sh
+```
+- Manual evidence rotation:
+```bash
+cd /srv/projects/project2/global-pulse
+PRUNE=1 ARCHIVE_ROOT=/var/backups/global-pulse/evidence npm run ops:evidence:rotate
+```

@@ -1636,3 +1636,41 @@
 
 2. 선택 과제 (권장)
 - 실기기 캡처(스크린샷) 1세트만 추가해 UI smoke 증적과 함께 보관
+
+## UI Step 6 Update (2026-04-14, Slice 3 Deploy Hygiene)
+### Newly completed
+- 런타임 증적 회전 자동화 고도화:
+  - `scripts/rotate-runtime-evidence.sh`
+  - archive 대상: `ops-monitoring`, `ui-smoke`, `final-verification`, `cutover`
+  - 안전 prune 가드(앱 evidence 루트 외 경로 차단)
+- 배포 체인 고정:
+  - `scripts/deploy-ec2.sh`에서 `git pull` 전 증적 회전 기본 실행
+  - tracked 변경 감지 시 기본 배포 중단(충돌 예방)
+- 운영/배포 문서 반영:
+  - `docs/operations.md`, `docs/deployment-ec2.md`
+- npm 실행 경로 고정:
+  - `npm run ops:evidence:rotate`
+
+### Validation
+- `bash -n scripts/rotate-runtime-evidence.sh` -> pass
+- `bash -n scripts/deploy-ec2.sh` -> pass
+- `APP_DIR=... ARCHIVE_ROOT=... PRUNE=0 bash scripts/rotate-runtime-evidence.sh` -> pass
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- Step 6: **Slice 1 + Slice 2 + Slice 3 완료 (마감)**
+- 운영 배포 루틴(증적 누적/충돌 방지)까지 문서/스크립트 기준으로 고정됨
+
+### Remaining (updated)
+1. Step 5C 분석 품질 튜닝
+- 단편 키워드/의미 불명 토픽 감소를 위한 stopword/토큰 정규화/대표명 규칙 추가 튜닝
+
+2. 소스 확장 우선순위 실행
+- 무비용 정책 유지 전제에서 안정형 소스(`bilibili`, `mastodon`) 운영 투입 확대
+
+3. 선택 과제 (권장)
+- 실기기 캡처(스크린샷) 1세트 추가 후 UI smoke 증적과 함께 보관

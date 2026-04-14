@@ -3090,3 +3090,57 @@
   - `scripts/ui-smoke-check.sh`
   - `package.json`
   - `docs/operations.md`
+
+---
+
+## GP-20260414-65 (Step 6 slice 3: runtime evidence rotation + deploy guard)
+### Before -> After
+- Before:
+  - EC2 운영 중 `docs/evidence/*` 누적으로 배포 전 `git pull` 충돌 위험이 계속 남아 있었고, 수동 정리 절차가 고정되지 않았음.
+- After:
+  - 런타임 증적 회전 스크립트 고도화:
+    - `scripts/rotate-runtime-evidence.sh`
+    - 대상 확장: `ops-monitoring`, `ui-smoke`, `final-verification`, `cutover`
+    - 안전 가드: evidence 루트 외 경로 prune 차단
+    - archive-only / archive+prune(`PRUNE=1`) 모두 지원
+  - 배포 스크립트에 증적 회전 선행 훅 추가:
+    - `scripts/deploy-ec2.sh`
+    - 기본값: `ROTATE_EVIDENCE_BEFORE_PULL=1`, `ROTATE_EVIDENCE_PRUNE=1`
+    - tracked 변경 감지 시 pull 중단(`ALLOW_DIRTY_TRACKED=0`)
+  - 운영 명령 추가:
+    - `npm run ops:evidence:rotate`
+  - 런북/배포문서 동기화:
+    - `docs/operations.md`
+    - `docs/deployment-ec2.md`
+
+### Main File Changes
+- [rotate-runtime-evidence.sh](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/scripts/rotate-runtime-evidence.sh)
+- [deploy-ec2.sh](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/scripts/deploy-ec2.sh)
+- [package.json](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/package.json)
+- [operations.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/operations.md)
+- [deployment-ec2.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/deployment-ec2.md)
+
+### Commands / Validation
+- Script syntax:
+  - `bash -n scripts/rotate-runtime-evidence.sh` -> pass
+  - `bash -n scripts/deploy-ec2.sh` -> pass
+- Script dry-run(local archive only):
+  - `APP_DIR=... ARCHIVE_ROOT=... PRUNE=0 bash scripts/rotate-runtime-evidence.sh` -> pass
+- Project gates:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+  - `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+  - `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+  - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Known Risks
+- `ALLOW_DIRTY_TRACKED=1` 강제 배포는 여전히 충돌 위험이 있으므로 긴급 상황 외 사용 비권장.
+- 증적 prune를 활성화하면 런타임 작업 디렉토리의 증적은 제거되므로, 보존이 필요하면 반드시 archive 경로(`/var/backups/global-pulse/evidence`)를 백업 정책에 포함해야 함.
+
+### Rollback Guide
+- 배포 가드/증적 회전 롤백:
+  - `scripts/rotate-runtime-evidence.sh`
+  - `scripts/deploy-ec2.sh`
+  - `package.json`
+  - `docs/operations.md`
+  - `docs/deployment-ec2.md`

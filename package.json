@@ -29,6 +29,7 @@
     "ops:snapshot": "tsx scripts/build-snapshots.ts",
     "ops:cleanup": "tsx scripts/cleanup-old-data.ts",
     "ops:evidence": "bash scripts/capture-cutover-evidence.sh",
+    "ops:evidence:rotate": "bash scripts/rotate-runtime-evidence.sh",
     "ops:evidence:report": "tsx scripts/generate-evidence-report.ts",
     "ops:verify3": "bash scripts/run-final-verification-3x.sh",
     "ops:verify3:report": "tsx scripts/generate-final-verification-report.ts",

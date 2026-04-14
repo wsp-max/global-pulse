@@ -159,6 +159,27 @@ APP_HOST=http://127.0.0.1:3100 APP_BASE_PATH=/pulse npm run ops:ui:smoke
   - `docs/evidence/ui-smoke/<timestamp>/summary.txt`
   - route/api response headers + bodies for troubleshooting
 
+## Runtime Evidence Rotation (EC2 Deploy Hygiene)
+```bash
+cd /srv/projects/project2/global-pulse
+npm run ops:evidence:rotate
+```
+- Optional prune (archive first, then clear runtime evidence directories):
+```bash
+cd /srv/projects/project2/global-pulse
+PRUNE=1 ARCHIVE_ROOT=/var/backups/global-pulse/evidence npm run ops:evidence:rotate
+```
+- Deploy integration:
+  - `scripts/deploy-ec2.sh` runs evidence rotation before `git pull` by default.
+  - defaults: `ROTATE_EVIDENCE_BEFORE_PULL=1`, `ROTATE_EVIDENCE_PRUNE=1`.
+  - override example:
+```bash
+ROTATE_EVIDENCE_BEFORE_PULL=0 bash scripts/deploy-ec2.sh
+```
+- Output:
+  - `/var/backups/global-pulse/evidence/<timestamp>/summary.txt`
+  - one archive per evidence category (`ops-monitoring`, `ui-smoke`, `final-verification`, `cutover`)
+
 ## Common Failure Cases
 - `/api/health` returns `postgres_not_configured`
   - PostgreSQL pool/env is missing for web runtime.
