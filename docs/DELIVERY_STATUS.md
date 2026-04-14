@@ -1981,3 +1981,30 @@
 
 2. Next source hardening
 - evaluate `hatena` description normalization and `weibo` secondary metadata mapping (`icon_desc/flag`) for extra signal
+
+## Step 5C Update (2026-04-15, Global Topics Empty-State Stabilization)
+### Newly completed
+- Fixed global analyzer replacement policy to prevent transient empty global issues:
+  - when `topics` window is empty, keep existing active `global_topics`
+  - when cross-region mapping result is empty, keep existing active `global_topics`
+  - only expire+replace active rows when a new mapped set exists
+- UI polish:
+  - `HotTopicTicker` no longer duplicates fallback message when there is only one ticker item
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- Global issues panel resilience: **improved**
+- Temporary low-overlap analyzer runs no longer wipe visible global topic cards
+
+### Remaining (updated)
+1. Runtime apply and confirm
+- deploy to EC2, run one analyzer cycle, confirm `/pulse/api/global-topics` remains non-empty across next cycle
+
+2. Quality tuning follow-up
+- reduce low-information global names (`keep brawl`, etc.) via cross-region naming stopwords/normalization

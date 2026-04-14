@@ -3525,3 +3525,39 @@
 ### Rollback Guide
 - rollback weibo snapshot identity hardening:
   - `packages/collector/src/scrapers/china/weibo.ts`
+
+---
+
+## GP-20260415-76 (Step 5C stability fix: preserve active global topics on empty mapping)
+### Before -> After
+- Before:
+  - `run-global-analysis` expired all active `global_topics` before confirming new mapped output.
+  - on transient low-overlap runs, mapped result could be empty and dashboard/global page showed “아직 글로벌 토픽이 없습니다.”.
+- After:
+  - active global topics are preserved when:
+    - recent topics window is empty, or
+    - cross-region mapping result is empty.
+  - active rows are expired/replaced only when new mapped topics exist.
+- Additional UI fix:
+  - `HotTopicTicker` no longer duplicates single fallback text.
+
+### Main File Changes
+- [run-global-analysis.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/run-global-analysis.ts)
+- [HotTopicTicker.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/dashboard/HotTopicTicker.tsx)
+- [PATCH_NOTES.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/PATCH_NOTES.md)
+- [DELIVERY_STATUS.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/DELIVERY_STATUS.md)
+
+### Commands / Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Known Risks
+- preserving old active global topics can keep stale cards visible longer during prolonged low-signal periods; this is intentional to avoid abrupt empty state.
+
+### Rollback Guide
+- rollback this stability fix:
+  - `packages/analyzer/src/run-global-analysis.ts`
+  - `components/dashboard/HotTopicTicker.tsx`

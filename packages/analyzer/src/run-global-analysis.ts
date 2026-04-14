@@ -210,8 +210,7 @@ async function runGlobalAnalysis(): Promise<void> {
 
   const topics = (await storage.fetchTopics(periodStartIso)).map(toTopic);
   if (topics.length === 0) {
-    log("No recent topics found. Expiring currently active global topics.");
-    await storage.expireActiveGlobalTopics(nowIso);
+    log("No recent topics found. Keeping currently active global topics.");
     return;
   }
 
@@ -220,12 +219,12 @@ async function runGlobalAnalysis(): Promise<void> {
     minRegions,
   }).slice(0, limit);
 
-  await storage.expireActiveGlobalTopics(nowIso);
-
   if (mapped.length === 0) {
-    log("No cross-region topics matched after mapping.");
+    log("No cross-region topics matched after mapping. Keeping currently active global topics.");
     return;
   }
+
+  await storage.expireActiveGlobalTopics(nowIso);
 
   const payload: GlobalTopicInsertRow[] = mapped.map((topic) => ({
     name_en: topic.nameEn,
