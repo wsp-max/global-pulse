@@ -33,6 +33,10 @@
 | GP-20260414-52 | 2026-04-14 | Step 5C 분석 품질 2차 튜닝 (cross-region 매핑 정밀화) | Done |
 | GP-20260414-53 | 2026-04-14 | UI `??` 노출 제거 + UTF-8 저장 규칙 고정 | Done |
 | GP-20260414-54 | 2026-04-14 | Source Hardening 1차 (Reddit 403 완화 + Dcard fallback 보강) | Done |
+| GP-20260414-55 | 2026-04-14 | Step 5C 분석 품질 3차 (단편 토픽명 억제 규칙 강화) | Done |
+| GP-20260414-56 | 2026-04-14 | Step 5C 분석 품질 3차-보강 (글로벌 대표명 선택 보정) | Done |
+| GP-20260414-57 | 2026-04-14 | Step 5C 분석 품질 3차-마감 (최신 배치 기준 글로벌 매핑) | Done |
+| GP-20260414-58 | 2026-04-14 | 운영 문서 동기화 + SSH/런타임 검증 정리 | Done |
 
 ---
 
@@ -2705,3 +2709,127 @@
   - `packages/collector/src/scrapers/us/reddit.ts`
   - `packages/collector/src/scrapers/taiwan/dcard.ts`
   - 위 파일을 GP-20260414-53 시점으로 되돌리면 이전 동작으로 복귀 가능.
+
+---
+
+## GP-20260414-55 (Step 5C slice 3: topic label quality hardening)
+### Before -> After
+- Before:
+  - EC2 실데이터에서 `today`, `official`, `mv`, `people` 같은 단편/일반 단어 토픽명이 다수 발생.
+- After:
+  - keyword/cluster 규칙 강화:
+    - 일반 노이즈 단어 stopword 확장
+    - 연도/숫자형 토큰 필터 추가
+    - 단일 토큰 후보 점수 페널티, phrase 우선 대표명 선택
+    - 약한 single-topic 스킵 강화
+
+### Main File Changes
+- [keyword-extractor.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/keyword-extractor.ts)
+- [topic-clusterer.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/topic-clusterer.ts)
+
+### Commands / Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- EC2:
+  - `npm run analyze -- --hours 6` -> pass
+  - `npm run analyze:global -- --hours 24 --min-regions 2 --similarity 0.32` -> pass
+
+### Known Risks
+- 엔터테인먼트/팬덤 데이터 비중이 큰 시간대에는 고유명사 기반 단일 토큰(`txt`, `nct`)이 남을 수 있음.
+
+### Rollback Guide
+- `packages/analyzer/src/keyword-extractor.ts`
+- `packages/analyzer/src/topic-clusterer.ts`
+
+---
+
+## GP-20260414-56 (Step 5C slice 3 reinforcement: global representative name scoring)
+### Before -> After
+- Before:
+  - cross-region 컴포넌트 대표명 선정을 `heatScore` 단일 기준으로 선택해, 단편 단어가 글로벌 이슈명으로 남는 경우가 있었음.
+- After:
+  - 대표명 선택에 품질 점수 도입:
+    - phrase 보너스
+    - generic name 페널티
+    - 이름 길이/post_count 보정
+  - `chooseRepresentativeTopic` 기반으로 대표명 안정화
+
+### Main File Changes
+- [cross-region-mapper.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/cross-region-mapper.ts)
+
+### Commands / Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- EC2 `analyze:global` 재실행 -> pass
+
+### Rollback Guide
+- `packages/analyzer/src/cross-region-mapper.ts`
+
+---
+
+## GP-20260414-57 (Step 5C closure: map global topics from latest regional batch only)
+### Before -> After
+- Before:
+  - global 매핑 입력이 최근 24시간 전체 `topics`를 섞어 사용해, 이전 배치 노이즈 토픽명이 현재 결과에 재유입.
+- After:
+  - global analyzer 입력 쿼리를 리전별 최신 배치(`max(created_at)`)만 사용하도록 변경.
+  - 최신 튜닝 효과가 글로벌 토픽에 즉시 반영되도록 개선.
+
+### Main File Changes
+- [run-global-analysis.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/analyzer/src/run-global-analysis.ts)
+
+### Commands / Validation
+- 로컬:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+- EC2:
+  - `npm run analyze:global -- --hours 24 --min-regions 2 --similarity 0.32` -> pass
+  - 최신 배치 결과 확인:
+    - `topics`: region별 `single_token = 0`
+    - `global_topics`: 최신 실행에서 25 -> 3건(노이즈 대폭 축소)
+
+### Rollback Guide
+- `packages/analyzer/src/run-global-analysis.ts`
+
+---
+
+## GP-20260414-58 (Ops docs sync + access/runtime verification)
+### Before -> After
+- Before:
+  - `DELIVERY_STATUS`에 Step 5C Slice 3(55~57) 완료 내역 누락.
+  - SSH 키 경로/접속 가능 상태, Reddit credential 미제공 상태가 문서에 고정되지 않음.
+  - 운영 게이트 최근 실행 결과가 문서와 일부 분리되어 있었음.
+- After:
+  - `DELIVERY_STATUS`에 Step 5C Slice 3 완료 + 현재 남은 작업(4F/Source/UI) 반영.
+  - SSH 경로(`plasma-key.pem`) 및 EC2 접속 가능 상태, Reddit OAuth 미제공 운영 모드 문서화.
+  - 운영 게이트 재검증 결과를 반영:
+    - `lint`, `build`, `ops:supabase:audit`, `ops:supabase:budget`, `ops:verify3:check` 모두 pass
+  - 런타임 endpoint 확인:
+    - `http://3.36.83.199/pulse` -> 200
+    - `http://3.36.83.199/pulse/api/health` -> 200
+
+### Main File Changes
+- [DELIVERY_STATUS.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/DELIVERY_STATUS.md)
+- [PATCH_NOTES.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/PATCH_NOTES.md)
+- [supabase-fallback-audit.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/source-notes/supabase-fallback-audit.md)
+
+### Commands / Validation
+- Local:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+  - `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+  - `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+  - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+- EC2:
+  - `ssh -i C:\Users\wsp\Downloads\plasma-key.pem ubuntu@3.36.83.199 "echo connected"` -> pass
+  - `curl http://3.36.83.199/pulse/api/health` -> 200
+
+### Known Risks
+- `dcard`는 여전히 Cloudflare 403이 간헐/지속 발생.
+- `watch_20260413_134515`는 현재 `hour=23`까지 확인되어 final 종료 라인 고정이 추가로 필요.
+
+### Rollback Guide
+- 문서/증적 롤백:
+  - `docs/DELIVERY_STATUS.md`
+  - `docs/PATCH_NOTES.md`
+  - `docs/source-notes/supabase-fallback-audit.md`

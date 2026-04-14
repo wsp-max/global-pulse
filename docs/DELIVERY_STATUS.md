@@ -1415,3 +1415,46 @@
 - Source hardening: **부분 완료**
   - Reddit 계열: 개선 완료
   - Dcard: Cloudflare 정책 이슈로 추가 대응 필요
+
+## Step 5C Progress Update (2026-04-14, Slice 3)
+### Newly completed
+- 토픽 품질 튜닝 3차 마감:
+  - `keyword-extractor` stopword/노이즈 토큰 필터 확장
+  - `topic-clusterer` 단일 토큰 대표명 억제 강화(phrase 우선 + weak single-topic 스킵)
+  - `cross-region-mapper` 대표 글로벌 토픽명 선택을 품질 점수 기반으로 보정
+  - `run-global-analysis` 입력을 “리전별 최신 배치”로 제한해 과거 노이즈 재유입 차단
+- EC2 실데이터 재실행 검증:
+  - analyzer 재실행 후 최신 배치 기준 단일 토큰 토픽 비율 감소 확인
+  - 글로벌 토픽 건수 노이즈 축소 확인(25 -> 3)
+
+### Validation
+- Local:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+- EC2:
+  - `npm run analyze -- --hours 6` -> pass
+  - `npm run analyze:global -- --hours 24 --min-regions 2 --similarity 0.32` -> pass
+  - latest-batch quality query -> region별 `single_token = 0` 확인
+
+### Current completion state
+- Step 5C: **완료 (Slice 1~3)**
+- 분석 품질은 “단편 단어 중심”에서 “구문/의미 중심”으로 전환 완료
+
+### Remaining (current)
+1. Step 4F 운영 관찰 최종 마감
+- 24h watch summary가 현재 `hour=23, failures=0`까지 기록되어 있어 final hour 완료 후 문서 고정 필요
+
+2. Source hardening 잔여
+- `dcard` Cloudflare 403 지속: 프록시/브라우저 기반 수집 또는 대체 소스 전략 결정 필요
+
+3. UI Step 6 마감
+- 모바일 레이아웃 동선, 장애/빈 데이터 상태 표시 고도화
+
+## Access/Credential Update (2026-04-14)
+### Newly confirmed
+- EC2 SSH key path 확인: `C:\Users\wsp\Downloads\plasma-key.pem`
+- EC2 접속 확인: `ubuntu@3.36.83.199`
+- Reddit OAuth credentials 미제공 상태 확인(공개 endpoint fallback 모드로 운영)
+
+### Operational note
+- Reddit 계열은 현재 fallback 경로로 수집 성공 케이스가 있으나, IP/시간대에 따라 403 재발 가능성이 있으므로 OAuth 자격증명이 있으면 안정성이 더 높아짐.
