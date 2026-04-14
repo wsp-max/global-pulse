@@ -1,4 +1,4 @@
-import type { ScrapedPost } from "@global-pulse/shared";
+﻿import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
 import { cleanText } from "../../utils/text-cleaner";
@@ -41,21 +41,27 @@ function parsePttDate(value: string): string | undefined {
 }
 
 function parseRecommend(raw: string): { likeCount: number; dislikeCount: number } {
-  const value = raw.trim().toUpperCase();
-  if (!value) {
+  const normalized = raw.trim();
+  if (!normalized) {
     return { likeCount: 0, dislikeCount: 0 };
   }
 
-  if (value === "爆") {
+  // PTT marks very hot rows with the "爆" indicator.
+  if (/[爆]/u.test(normalized) || /^HOT$/i.test(normalized)) {
     return { likeCount: 100, dislikeCount: 0 };
   }
 
+  const value = normalized.toUpperCase();
   const downvote = value.match(/^X(\d+)$/);
   if (downvote) {
     return { likeCount: 0, dislikeCount: toNumber(downvote[1]) };
   }
 
-  return { likeCount: toNumber(value), dislikeCount: 0 };
+  if (/^\d+$/.test(value)) {
+    return { likeCount: toNumber(value), dislikeCount: 0 };
+  }
+
+  return { likeCount: 0, dislikeCount: 0 };
 }
 
 export class PttScraper extends BaseScraper {
@@ -108,4 +114,3 @@ export class PttScraper extends BaseScraper {
     return posts;
   }
 }
-

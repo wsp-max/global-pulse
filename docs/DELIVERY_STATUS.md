@@ -1894,3 +1894,32 @@
 
 2. Next expansion slice
 - low-cost source quality expansion (`hatena` or `ptt`) after timer stability is confirmed
+
+## Step 5B Update (2026-04-14, PTT Recommend Parsing Hardening)
+### Newly completed
+- Reworked PTT recommend parser to avoid encoding-fragile branch logic.
+- Added robust handling for:
+  - hot marker (`爆`) -> `likeCount=100`
+  - downvote marker (`X<number>`) -> `dislikeCount`
+  - numeric push counts (`<number>`) -> `likeCount`
+  - unknown markers -> graceful zero fallback
+- Kept existing over18 cookie and date parsing behavior unchanged.
+
+### Validation
+- `npm run test:scraper -- --source ptt` -> pass
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- TW source quality: **PTT parsing stability improved**
+- Encoding-dependent parsing edge case removed from collector path
+
+### Remaining (updated)
+1. Runtime apply for this slice
+- deploy latest commit to EC2 and run `npm run test:scraper -- --source ptt` once on host
+
+2. Next source expansion
+- proceed with `hatena`/`fivech`/`weibo` quality hardening under no-proxy policy

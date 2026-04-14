@@ -3426,3 +3426,37 @@
   - `scripts/deploy-ec2.sh`
   - `docs/operations.md`
   - `docs/deployment-ec2.md`
+
+---
+
+## GP-20260414-73 (Step 5B source quality hardening: PTT recommend parser stabilization)
+### Before -> After
+- Before:
+  - PTT recommend parsing depended on a fragile marker branch that could break under encoding/display variations.
+- After:
+  - parser now uses explicit robust branches:
+    - hot marker (`爆`) -> `likeCount=100`
+    - downvote marker (`X<number>`) -> `dislikeCount`
+    - numeric push counts -> `likeCount`
+    - unknown values -> zero fallback
+  - removed encoding-sensitive ambiguity from collector code path.
+
+### Main File Changes
+- [ptt.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/collector/src/scrapers/taiwan/ptt.ts)
+- [PATCH_NOTES.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/PATCH_NOTES.md)
+- [DELIVERY_STATUS.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/DELIVERY_STATUS.md)
+
+### Commands / Validation
+- `npm run test:scraper -- --source ptt` -> pass
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Known Risks
+- PTT UI marker vocabulary can still change; if new markers appear they will currently fall back to zero until mapped explicitly.
+
+### Rollback Guide
+- rollback parser hardening:
+  - `packages/collector/src/scrapers/taiwan/ptt.ts`
