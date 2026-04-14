@@ -3341,3 +3341,42 @@
 - Mastodon 텍스트 정제 롤백:
   - `packages/collector/src/utils/text-cleaner.ts`
   - `packages/collector/src/scrapers/sns/mastodon.ts`
+
+---
+
+## GP-20260414-71 (Step 5A ops hardening: source ingest verification command)
+### Before -> After
+- Before:
+  - EC2에서 특정 소스 적재 여부를 확인할 때 SQL/로그를 수동으로 확인해야 해서 운영 절차가 느리고 실수 가능성이 있었음.
+- After:
+  - 소스 적재 검증 스크립트 추가:
+    - `scripts/verify-source-ingest.ts`
+    - `raw_posts` 최근 N분 적재 건수 + 샘플 row 출력
+    - 기본 동작은 소스별 0건이면 실패(exit 1)
+  - npm 운영 명령 추가:
+    - `npm run ops:verify:source -- --sources bilibili,mastodon --minutes 60 --samples 3`
+  - 런북 반영:
+    - `docs/operations.md`에 실행법/옵션/동작 기준 문서화
+
+### Main File Changes
+- [verify-source-ingest.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/scripts/verify-source-ingest.ts)
+- [package.json](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/package.json)
+- [operations.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/operations.md)
+
+### Commands / Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run test:scraper -- --source bilibili` -> pass
+- `npm run test:scraper -- --source mastodon` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Known Risks
+- 샘플 row 출력은 최근 저장본 기준이므로, 소스별 가공 품질 평가는 별도 UI/API 샘플 점검이 필요함.
+
+### Rollback Guide
+- source ingest 검증 명령 롤백:
+  - `scripts/verify-source-ingest.ts`
+  - `package.json`
+  - `docs/operations.md`

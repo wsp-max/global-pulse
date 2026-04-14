@@ -1828,3 +1828,34 @@
 
 2. 다음 확장 우선순위
 - 비용 정책 유지 전제에서 `zhihu`/`weibo` 안정성 개선 또는 `hatena`/`ptt` 정합성 보강
+
+## Step 5A Update (2026-04-14, Ops Verification Automation)
+### Newly completed
+- 소스 적재 검증 자동화 추가:
+  - `scripts/verify-source-ingest.ts`
+  - 선택 소스의 최근 N분 `raw_posts` 건수/샘플 row 출력
+  - 기본 모드에서 소스별 0건이면 실패 처리
+- 운영 명령 추가:
+  - `npm run ops:verify:source`
+- 런북 반영:
+  - `docs/operations.md`에 source verify 섹션 추가
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run test:scraper -- --source bilibili` -> pass
+- `npm run test:scraper -- --source mastodon` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- Step 5A: **운영 검증 자동화까지 완료**
+- 안정형 SNS 소스 확장(수집 + 운영 점검) 절차가 반복 가능 형태로 고정됨
+
+### Remaining (updated)
+1. EC2 배치 루틴 결합
+- collector timer 후처리로 `ops:verify:source` 주기 실행 여부 검토
+
+2. 다음 소스 확장
+- 비용 정책 유지 전제에서 `hatena` 또는 `ptt` 정합성 개선 우선 적용

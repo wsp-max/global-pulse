@@ -180,6 +180,21 @@ ROTATE_EVIDENCE_BEFORE_PULL=0 bash scripts/deploy-ec2.sh
   - `/var/backups/global-pulse/evidence/<timestamp>/summary.txt`
   - one archive per evidence category (`ops-monitoring`, `ui-smoke`, `final-verification`, `cutover`)
 
+## Source Ingest Verification (DB Row Check)
+```bash
+cd /srv/projects/project2/global-pulse
+npm run ops:verify:source -- --sources bilibili,mastodon --minutes 60 --samples 3
+```
+- Optional:
+```bash
+# do not fail when one source has no rows in the window
+npm run ops:verify:source -- --sources bilibili,mastodon --minutes 60 --allow-empty
+```
+- Behavior:
+  - checks `raw_posts` ingestion count for selected sources within the recent window
+  - prints per-source sample rows (title/url/collectedAt)
+  - exits non-zero by default if any selected source has 0 rows in the window
+
 ## Common Failure Cases
 - `/api/health` returns `postgres_not_configured`
   - PostgreSQL pool/env is missing for web runtime.
