@@ -2008,3 +2008,36 @@
 
 2. Quality tuning follow-up
 - reduce low-information global names (`keep brawl`, etc.) via cross-region naming stopwords/normalization
+
+## Step 5C Runtime Apply (2026-04-15, EC2 deploy + revalidation)
+### Newly completed
+- EC2 deploy blocker resolved:
+  - preserved host-local dirty state on `backup/ec2-local-20260414_213114` (`ceb8d0b`)
+  - created safety bundle: `/home/ubuntu/global-pulse-backup-20260414_213114.bundle`
+- Runtime deployed to latest `master` commit `6812546`.
+- Rebuild + web restart completed on EC2.
+- Analyzer one-shot completed successfully, including global mapping.
+
+### Validation
+- Runtime services:
+  - `global-pulse-web.service` -> active/running
+  - `global-pulse-analyzer.service` -> success (oneshot)
+  - `systemctl list-timers 'global-pulse-*'` -> all expected timers active
+- Public endpoints:
+  - `http://3.36.83.199/pulse/api/health` -> `200`
+  - `http://3.36.83.199/pulse/api/global-topics?limit=5` -> `200`, `total=3`
+- Analyzer log:
+  - `Global analysis completed. generated=3`
+- UI signal:
+  - `/pulse/global-issues` empty-state text not present at verification time
+
+### Current completion state
+- Step 5C: **code + runtime apply 완료**
+- empty-state recurrence risk significantly reduced for transient low-signal analyzer runs
+
+### Remaining (updated)
+1. Step 5C quality follow-up
+- global topic naming normalization (`keep brawl` 등 저정보 명칭 억제)
+
+2. Step 5A/5B source expansion continuation
+- 무비용 우선 정책 기준으로 `hatena`/`ptt` 등 고변동 소스 안정화

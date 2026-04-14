@@ -3561,3 +3561,46 @@
 - rollback this stability fix:
   - `packages/analyzer/src/run-global-analysis.ts`
   - `components/dashboard/HotTopicTicker.tsx`
+
+---
+
+## GP-20260415-77 (Step 5C runtime apply: EC2 deploy + analyzer confirmation)
+### Before -> After
+- Before:
+  - fix commit `6812546` was pushed, but EC2 runtime still had local uncommitted changes on `master`, so deployment was blocked.
+- After:
+  - preserved EC2 local changes on backup branch:
+    - `backup/ec2-local-20260414_213114`
+    - commit: `ceb8d0b`
+    - safety bundle: `/home/ubuntu/global-pulse-backup-20260414_213114.bundle`
+  - fast-forward deployed `master` to `6812546` on EC2.
+  - rebuilt and restarted web service.
+  - ran analyzer batch once and confirmed global mapping output is stable (`generated=3`).
+
+### Main Runtime Changes
+- EC2 repo branch switch + backup commit
+- `master` pull to `6812546`
+- `global-pulse-web.service` restart
+- `global-pulse-analyzer.service` one-shot run
+
+### Commands / Validation
+- EC2 deploy:
+  - `git checkout master && git pull --ff-only origin master`
+  - `npm ci --no-audit --no-fund`
+  - `npm run build`
+  - `sudo systemctl restart global-pulse-web.service`
+- Runtime checks:
+  - `systemctl status global-pulse-web.service` -> active/running
+  - `systemctl list-timers 'global-pulse-*'` -> timers active
+  - `curl http://3.36.83.199/pulse/api/health` -> `200`
+  - `curl http://3.36.83.199/pulse/api/global-topics?limit=5` -> `200`, `total=3`
+  - `global-pulse-analyzer.service` log -> `Global analysis completed. generated=3`
+  - `/pulse/global-issues` empty-state text (`아직 글로벌 토픽이 없습니다.`) absent in current response
+
+### Known Risks
+- backup branch exists only on EC2 local git (origin push blocked by missing GitHub credential on host).
+
+### Rollback Guide
+- rollback runtime to pre-deploy EC2 local state:
+  - `git checkout backup/ec2-local-20260414_213114`
+  - or restore from `/home/ubuntu/global-pulse-backup-20260414_213114.bundle`
