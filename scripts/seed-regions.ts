@@ -1,4 +1,4 @@
-import { REGIONS, SOURCES } from "@global-pulse/shared";
+import { DISABLED_SOURCE_ID_SET, REGIONS, SOURCES } from "@global-pulse/shared";
 import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
 import { getLogger } from "@global-pulse/shared/server-logger";
 import type { Pool } from "pg";
@@ -79,7 +79,7 @@ async function seedWithPostgres(pool: Pool): Promise<void> {
     type: source.type,
     scrape_url: source.scrapeUrl,
     scrape_interval_minutes: source.scrapeIntervalMinutes,
-    is_active: true,
+    is_active: !DISABLED_SOURCE_ID_SET.has(source.id),
   }));
   const sourceColumns: Array<keyof (typeof sourceRows)[number] & string> = [
     "id",

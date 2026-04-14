@@ -311,3 +311,7 @@ export const SOURCES = [
 
 export type RegionId = (typeof REGIONS)[number]["id"];
 export type SourceId = (typeof SOURCES)[number]["id"];
+
+// Cost-control policy: keep high-friction sources disabled by default.
+// They can still be run explicitly via --source <id> for ad-hoc diagnostics.
+export const DISABLED_SOURCE_ID_SET = new Set<string>(["dcard"]);

@@ -1,4 +1,4 @@
-import { SOURCES } from "@global-pulse/shared";
+import { DISABLED_SOURCE_ID_SET, SOURCES } from "@global-pulse/shared";
 import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
 import { getLogger } from "@global-pulse/shared/server-logger";
 import type { Pool } from "pg";
@@ -92,7 +92,9 @@ function aggregateRows(
   }
 
   return [...byRegion.entries()].map(([regionId, acc]) => {
-    const sourcesTotal = SOURCES.filter((source) => source.regionId === regionId).length;
+    const sourcesTotal = SOURCES.filter(
+      (source) => source.regionId === regionId && !DISABLED_SOURCE_ID_SET.has(source.id),
+    ).length;
     const avgSentiment = acc.sentimentCount === 0 ? 0 : acc.sentimentSum / acc.sentimentCount;
 
     return {

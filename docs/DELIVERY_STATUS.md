@@ -1527,3 +1527,31 @@
 
 2. UI Step 6 마감
 - 모바일 레이아웃, 장애/빈 데이터 UX 최종 정리
+
+## Cost Policy Update (2026-04-14, No-proxy mode)
+### Newly completed
+- 사용자 결정 반영: **프록시 비용 비사용** 정책 확정.
+- Dcard를 기본 비활성 소스로 전환:
+  - collector 기본 실행에서 자동 제외
+  - 명시 실행(`--source dcard`)만 진단 목적으로 허용
+- seed/snapshot 정합성 반영:
+  - `seed-regions` -> `dcard.is_active=false`
+  - `region_snapshots.sources_total` -> 기본 활성 소스 기준 집계
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run collect -- --region tw` -> pass
+  - 로그: `Disabled-by-default sources skipped: dcard`
+  - 실행: `ptt` 단일 소스 수집 확인
+
+### Current completion state
+- 운영 정책: **무비용(no-proxy) 기준 고정**
+- TW 데이터 플레인: PTT 중심 운영으로 안정화
+
+### Remaining (updated)
+1. EC2 반영
+- 신규 정책 커밋 pull/deploy 또는 수동 반영 후 `npm run seed:regions` 재실행 필요
+
+2. UI Step 6 마감
+- 모바일 레이아웃, 장애/빈 데이터 UX 최종 정리

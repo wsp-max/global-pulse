@@ -39,6 +39,7 @@
 | GP-20260414-58 | 2026-04-14 | 운영 문서 동기화 + SSH/런타임 검증 정리 | Done |
 | GP-20260414-59 | 2026-04-14 | Ops 스냅샷 검증 정확도 보정(HTTP 상태코드/민감정보 마스킹) | Done |
 | GP-20260414-60 | 2026-04-14 | Step 4F 단일런 마감 + Dcard 브라우저 폴백 보강 | Done |
+| GP-20260414-61 | 2026-04-14 | 무비용 운영 정책 반영(Dcard 기본 비활성, TW는 PTT 중심) | Done |
 
 ---
 
@@ -2904,3 +2905,45 @@
 
 ### Rollback Guide
 - `packages/collector/src/scrapers/taiwan/dcard.ts`를 GP-20260414-59 시점으로 복구하면 API fallback-only 상태로 되돌아감.
+
+---
+
+## GP-20260414-61 (No-cost policy: disable Dcard by default)
+### Before -> After
+- Before:
+  - 대만 region 수집(`--region tw`) 시 `ptt + dcard`가 함께 실행되어 Dcard 403 실패가 주기적으로 발생.
+  - seed/snapshot는 Dcard를 활성 소스로 집계해 운영 상태 패널에서 노이즈가 발생할 수 있었음.
+- After:
+  - 공통 상수에 기본 비활성 소스 정책 추가:
+    - `DISABLED_SOURCE_ID_SET = {"dcard"}`
+  - collector 필터 변경:
+    - 기본 수집에서는 비활성 소스를 자동 제외
+    - 단, `--source dcard`처럼 명시 호출 시에는 진단 목적으로 실행 가능
+  - seed/snapshot 정합성 반영:
+    - `seed-regions`는 Dcard를 `is_active=false`로 저장
+    - `build-snapshots`의 `sources_total`은 기본 활성 소스 기준으로 집계
+  - 결과적으로 무비용 정책에서 TW 수집은 PTT 중심으로 안정화.
+
+### Main File Changes
+- [constants.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/shared/src/constants.ts)
+- [run.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/collector/src/run.ts)
+- [seed-regions.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/scripts/seed-regions.ts)
+- [build-snapshots.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/scripts/build-snapshots.ts)
+
+### Commands / Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run collect -- --region tw` -> pass
+  - log 확인: `Disabled-by-default sources skipped: dcard`
+  - 실행 대상: `ptt` 1개만 수집
+
+### Known Risks
+- Dcard는 기본 비활성 정책으로 운영되므로, 대만 커버리지는 당분간 PTT 편중.
+- Dcard 재활성은 프록시 비용 허용 또는 대체 우회 전략 승인 시에만 권장.
+
+### Rollback Guide
+- 다음 파일을 GP-20260414-60 시점으로 되돌리면 Dcard 기본 포함 정책으로 복귀:
+  - `packages/shared/src/constants.ts`
+  - `packages/collector/src/run.ts`
+  - `scripts/seed-regions.ts`
+  - `scripts/build-snapshots.ts`

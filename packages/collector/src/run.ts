@@ -1,4 +1,4 @@
-import { SOURCES, type ScraperResult } from "@global-pulse/shared";
+import { DISABLED_SOURCE_ID_SET, SOURCES, type ScraperResult } from "@global-pulse/shared";
 import { WeiboScraper } from "./scrapers/china/weibo";
 import { ClienScraper } from "./scrapers/korea/clien";
 import { DcInsideScraper } from "./scrapers/korea/dcinside";
@@ -141,6 +141,10 @@ async function run(): Promise<void> {
       return false;
     }
 
+    if (sourceFilter.length === 0 && DISABLED_SOURCE_ID_SET.has(source.id)) {
+      return false;
+    }
+
     return true;
   });
 
@@ -154,6 +158,14 @@ async function run(): Promise<void> {
       sourceFilter.length > 0 ? sourceFilter.join(",") : "all"
     }`,
   );
+  if (sourceFilter.length === 0) {
+    const disabledByDefault = SOURCES.filter((source) => DISABLED_SOURCE_ID_SET.has(source.id)).map(
+      (source) => source.id,
+    );
+    if (disabledByDefault.length > 0) {
+      Logger.info(`Disabled-by-default sources skipped: ${disabledByDefault.join(", ")}`);
+    }
+  }
   Logger.info(`Starting collection for ${scrapers.length} source(s).`);
 
   const results: ScraperResult[] = [];
