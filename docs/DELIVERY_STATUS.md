@@ -2166,3 +2166,6 @@
   - fewer one-word topics
   - more phrase-shaped topic names
   - better merging of reordered phrase variants
+- API freshness update (2026-04-15):
+  - `/api/topics` and `/api/regions` now read latest batch only.
+  - Purpose: prevent stale fragmented topics from dominating the dashboard after analyzer improvements.

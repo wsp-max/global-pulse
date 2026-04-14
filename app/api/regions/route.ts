@@ -43,12 +43,18 @@ async function getRegions() {
           ),
           postgres.query<TopicRow>(
             `
+            with latest_batch as (
+              select max(created_at) as latest_created_at
+              from topics
+              where region_id = $1
+            )
             select
               id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,
               post_count,total_views,total_likes,total_comments,source_ids,rank,period_start,period_end
             from topics
             where region_id = $1
-            order by heat_score desc
+              and created_at = (select latest_created_at from latest_batch)
+            order by heat_score desc, rank asc nulls last
             limit 3
             `,
             [region.id],

@@ -3753,3 +3753,22 @@
 ### Notes
 - Existing historical patch-note sections contain legacy encoding corruption and still need a separate cleanup pass.
 - This change improves topic label quality without changing API contracts.
+
+## GP-20260415-83 (Latest Batch Topic API)
+### Before -> After
+- Before:
+  - `/api/topics` returned deduped topics across the last 24h window.
+  - `/api/regions` selected top topics from the full historical `topics` table.
+  - As a result, older fragmented topic names stayed visible even after analyzer quality improved.
+- After:
+  - `/api/topics` now scopes its result set to the latest analysis batch for the selected region within the requested period.
+  - `/api/regions` now uses the latest batch only for `topTopics`.
+  - UI surfaces the newest analyzer output instead of stale historical fragments.
+
+### Changed Files
+- `app/api/topics/route.ts`
+- `app/api/regions/route.ts`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass

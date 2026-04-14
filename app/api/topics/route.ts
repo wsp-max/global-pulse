@@ -38,12 +38,19 @@ async function getTopics(request: Request) {
       const [topicsResult, countResult, snapshotResult] = await Promise.all([
         postgres.query<TopicRow>(
           `
-          with filtered as (
+          with latest_batch as (
+            select max(created_at) as latest_created_at
+            from topics
+            where region_id = $1 and period_end >= $2
+          ),
+          filtered as (
             select
               id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,
               post_count,total_views,total_likes,total_comments,source_ids,rank,period_start,period_end,created_at
             from topics
-            where region_id = $1 and period_end >= $2
+            where region_id = $1
+              and period_end >= $2
+              and created_at = (select latest_created_at from latest_batch)
           ),
           dedup as (
             select distinct on (lower(coalesce(name_en, name_ko)))
@@ -63,10 +70,17 @@ async function getTopics(request: Request) {
         ),
         postgres.query<{ total: string | number }>(
           `
-          with filtered as (
-            select name_en, name_ko, period_end, created_at, heat_score
+          with latest_batch as (
+            select max(created_at) as latest_created_at
             from topics
             where region_id = $1 and period_end >= $2
+          ),
+          filtered as (
+            select name_en, name_ko, period_end, created_at, heat_score
+            from topics
+            where region_id = $1
+              and period_end >= $2
+              and created_at = (select latest_created_at from latest_batch)
           ),
           dedup as (
             select distinct on (lower(coalesce(name_en, name_ko)))
