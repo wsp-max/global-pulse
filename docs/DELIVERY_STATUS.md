@@ -1797,3 +1797,34 @@
 2. 품질 고도화(선택)
 - dedupe key를 title 기반에서 cluster hash 기반으로 확장
 - Gemini 요약 on-demand 정책(일일 제한)으로 품질 문장화 보강
+
+## Step 5A Update (2026-04-14, Stable SNS Source Hardening)
+### Newly completed
+- Mastodon 수집 정제 품질 강화:
+  - HTML 엔티티 디코딩(named + numeric)
+  - URL 공백 정규화
+  - `cleanUrl()` 추가 및 mastodon scraper URL 적용
+- 안정형 SNS 소스 검증:
+  - `bilibili` scraper 통과
+  - `mastodon` scraper 통과
+
+### Validation
+- `npm run test:scraper -- --source mastodon` -> pass
+- `npm run test:scraper -- --source bilibili` -> pass
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- Step 5A: **안정형 SNS 소스 1차 하드닝 완료**
+- 텍스트/URL 정합성 개선으로 downstream 분석 품질 개선 기반 확보
+
+### Remaining (updated)
+1. EC2 운영 데이터 검증
+- `npm run collect -- --source bilibili,mastodon` 실행 후 `raw_posts` 증가 확인
+- 해당 소스 기반 분석 반영 샘플 확인
+
+2. 다음 확장 우선순위
+- 비용 정책 유지 전제에서 `zhihu`/`weibo` 안정성 개선 또는 `hatena`/`ptt` 정합성 보강

@@ -1,7 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
-import { cleanText } from "../../utils/text-cleaner";
+import { cleanText, cleanUrl } from "../../utils/text-cleaner";
 
 const MASTODON_TRENDS_URL = "https://mastodon.social/api/v1/trends/statuses?limit=30";
 
@@ -53,7 +53,7 @@ export class MastodonScraper extends BaseScraper {
         externalId,
         title: content.slice(0, 120),
         bodyPreview: content.slice(0, 200) || undefined,
-        url: cleanText(item.url || item.uri) || undefined,
+        url: cleanUrl(item.url || item.uri) || undefined,
         author: cleanText(item.account?.acct || item.account?.username) || undefined,
         likeCount: toNumber(item.favourites_count) + toNumber(item.reblogs_count),
         commentCount: toNumber(item.replies_count),

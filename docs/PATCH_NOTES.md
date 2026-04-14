@@ -3298,3 +3298,46 @@
 ### Rollback Guide
 - topics API dedupe 롤백:
   - `app/api/topics/route.ts`
+
+---
+
+## GP-20260414-70 (Step 5A source quality hardening: Mastodon entity/url cleanup)
+### Before -> After
+- Before:
+  - Mastodon 수집 본문에 HTML 엔티티(`&quot;`, `&#39;`)와 공백이 섞인 URL(`https:// patreon...`)이 남아 토픽/키워드 품질을 떨어뜨렸음.
+- After:
+  - 텍스트 정제 유틸 고도화:
+    - `packages/collector/src/utils/text-cleaner.ts`
+    - HTML 엔티티(named + numeric) 디코딩 추가
+    - 제로폭 문자 제거
+    - URL 스페이싱 정규화(`https:// ` -> `https://`)
+    - `cleanUrl()` 신규 추가
+  - Mastodon scraper 적용:
+    - `packages/collector/src/scrapers/sns/mastodon.ts`
+    - URL 필드에 `cleanUrl()` 적용
+  - 결과: SNS 안정형 소스(`mastodon`, `bilibili`) 스크래퍼 테스트 통과.
+
+### Main File Changes
+- [text-cleaner.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/collector/src/utils/text-cleaner.ts)
+- [mastodon.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/packages/collector/src/scrapers/sns/mastodon.ts)
+- [supabase-fallback-audit.md](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/docs/source-notes/supabase-fallback-audit.md)
+
+### Commands / Validation
+- Source tests:
+  - `npm run test:scraper -- --source mastodon` -> pass (`postCount=30`)
+  - `npm run test:scraper -- --source bilibili` -> pass (`postCount=10`)
+- Project gates:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+  - `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+  - `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+  - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Known Risks
+- 일부 인스턴스 특수 문자/이모지 조합은 여전히 제목 절단 시 문맥 손실이 있을 수 있음.
+- URL 정규화는 공백 제거 중심으로 적용되어 비정상 URL은 그대로 제외될 수 있음.
+
+### Rollback Guide
+- Mastodon 텍스트 정제 롤백:
+  - `packages/collector/src/utils/text-cleaner.ts`
+  - `packages/collector/src/scrapers/sns/mastodon.ts`
