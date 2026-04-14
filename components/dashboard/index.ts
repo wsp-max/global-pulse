@@ -3,5 +3,6 @@ export { RegionCard } from "./RegionCard";
 export { HotTopicTicker } from "./HotTopicTicker";
 export { GlobalIssuePanel } from "./GlobalIssuePanel";
 export { LivePulseIndicator } from "./LivePulseIndicator";
+export { PulseSignalBoard } from "./PulseSignalBoard";
 
 

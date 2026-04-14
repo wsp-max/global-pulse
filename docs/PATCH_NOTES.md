@@ -3182,3 +3182,37 @@
 - 분석 튜닝 롤백:
   - `packages/analyzer/src/keyword-extractor.ts`
   - `packages/analyzer/src/topic-clusterer.ts`
+
+---
+
+## GP-20260414-67 (Dashboard layout polish: fill left empty zone with Signal Board)
+### Before -> After
+- Before:
+  - 메인 대시보드 좌측 컬럼이 우측 리전 카드 높이에 맞춰 stretch 되면서, 지도/상태 인디케이터 아래에 큰 빈 영역이 남았음.
+- After:
+  - 좌측 컬럼을 `flex` 레이아웃으로 전환하고, 남는 영역을 실데이터 기반 패널로 채움.
+  - 신규 컴포넌트 `PulseSignalBoard` 추가:
+    - 전체 heat/활성 토픽/소스 상태/글로벌 토픽 수 요약
+    - 리전별 momentum bar
+    - 크로스 리전 키워드 신호(중복 빈도)
+    - 리드 글로벌 이슈 요약
+  - 결과적으로 빨간 박스 영역이 시각적으로 채워지고, 정보 밀도가 상승.
+
+### Main File Changes
+- [page.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/page.tsx)
+- [PulseSignalBoard.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/dashboard/PulseSignalBoard.tsx)
+- [index.ts](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/dashboard/index.ts)
+
+### Commands / Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Known Risks
+- Signal Board는 현재 스냅샷 기반 집계이므로, 실시간 시계열(분당 변동)을 직접 보여주지는 않음.
+- 글로벌 토픽 데이터가 비어 있으면 해당 섹션은 대기 문구로 표시됨(정상 동작).
+
+### Rollback Guide
+- 대시보드 채움 UI 롤백:
+  - `app/page.tsx`
+  - `components/dashboard/PulseSignalBoard.tsx`
+  - `components/dashboard/index.ts`

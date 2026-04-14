@@ -4,6 +4,7 @@ import {
   GlobalIssuePanel,
   HotTopicTicker,
   LivePulseIndicator,
+  PulseSignalBoard,
   RegionCard,
   WorldHeatMap,
 } from "@/components/dashboard";
@@ -54,10 +55,13 @@ export default function HomePage() {
 
       {!regionsError && sortedRegions.length > 0 && (
         <section className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
-          <div className="hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-card)] md:block">
+          <div className="hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-card)] md:flex md:flex-col">
             <WorldHeatMap regions={sortedRegions} />
             <div className="mt-4">
               <LivePulseIndicator />
+            </div>
+            <div className="mt-4 min-h-[260px] flex-1">
+              <PulseSignalBoard regions={sortedRegions} globalTopics={globalTopicsData?.globalTopics ?? []} />
             </div>
           </div>
 
@@ -74,4 +78,3 @@ export default function HomePage() {
     </main>
   );
 }
-

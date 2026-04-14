@@ -1706,3 +1706,28 @@
 
 3. 선택 과제 (권장)
 - 실기기 캡처(스크린샷) 1세트 추가 후 UI smoke 증적과 함께 보관
+
+## Dashboard UI Update (2026-04-14, Left Empty Zone Fill)
+### Newly completed
+- 메인 대시보드 좌측 빈 영역을 데이터 패널로 전환:
+  - 신규 `PulseSignalBoard` 추가
+  - 좌측 컬럼을 `flex` 구조로 조정해 남는 높이를 패널이 자연스럽게 점유
+- Signal Board 구성:
+  - Total Heat / Active Topics / Source Health / Global Topics
+  - Region Momentum 바
+  - Cross Signals(리드 글로벌 이슈 + 키워드 빈도 태그)
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Current completion state
+- 홈 대시보드: **지도 하단 빈 공간 이슈 해결 완료**
+- 시각 균형과 정보 밀도 개선 완료
+
+### Remaining (updated)
+1. Step 5C Round 2 (EC2 실데이터 캘리브레이션)
+- `npm run analyze -- --hours 6` 후 토픽 품질 샘플 리뷰/미세 튜닝
+
+2. 소스 확장 우선순위 실행
+- 무비용 정책 전제에서 안정형 소스(`bilibili`, `mastodon`) 운영 투입 확대
