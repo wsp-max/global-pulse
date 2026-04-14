@@ -29,3 +29,4 @@ export function TopicList({ topics, selectedTopicId, onSelect }: TopicListProps)
     </div>
   );
 }
+

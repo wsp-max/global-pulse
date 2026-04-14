@@ -3,6 +3,8 @@
 import useSWR from "swr";
 import { useMemo, useState } from "react";
 import type { GlobalTopic, Topic } from "@global-pulse/shared";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 
 interface SearchResponse {
   topics: Topic[];
@@ -43,7 +45,7 @@ export default function SearchPage() {
       <header className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
         <h1 className="text-lg font-semibold">Search Topics</h1>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
-          Search region topics and global topics from collected data.
+          Search regional topics and global issues from collected data.
         </p>
       </header>
 
@@ -69,16 +71,17 @@ export default function SearchPage() {
         </button>
       </form>
 
-      {isLoading && (
-        <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 text-sm text-[var(--text-secondary)]">
-          Loading results...
-        </div>
+      {!submittedQuery.trim() && (
+        <EmptyState title="검색어를 입력하세요." description="키워드로 리전 토픽과 글로벌 이슈를 동시에 조회할 수 있습니다." />
       )}
 
+      {isLoading && <LoadingSkeleton className="h-24" lines={4} />}
+
       {error && (
-        <div className="rounded-xl border border-red-900/50 bg-red-950/30 p-4 text-sm text-red-300">
-          {error instanceof Error ? error.message : "Search failed"}
-        </div>
+        <EmptyState
+          title="검색 요청에 실패했습니다."
+          description={error instanceof Error ? error.message : "Search failed"}
+        />
       )}
 
       {data && (
@@ -131,3 +134,4 @@ export default function SearchPage() {
     </main>
   );
 }
+

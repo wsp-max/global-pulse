@@ -5,7 +5,7 @@ export function RegionFlag({ regionId }: { regionId: string }) {
   const region = getRegionById(normalizedRegionId);
 
   if (!region) {
-    return <span>🌐 미확인 지역</span>;
+    return <span>🌐 Unknown Region</span>;
   }
 
   return (
@@ -14,5 +14,4 @@ export function RegionFlag({ regionId }: { regionId: string }) {
     </span>
   );
 }
-
 

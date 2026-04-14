@@ -3,7 +3,7 @@ interface HotTopicTickerProps {
 }
 
 export function HotTopicTicker({ items }: HotTopicTickerProps) {
-  const fallback = ["데이터 수집 중 · 잠시 후 자동 갱신됩니다"];
+  const fallback = ["데이터 수집 중 · 잠시 후 자동 갱신됩니다."];
   const tickerItems = items.length > 0 ? items : fallback;
   const line = [...tickerItems, ...tickerItems].join("   |   ");
 
@@ -13,3 +13,4 @@ export function HotTopicTicker({ items }: HotTopicTickerProps) {
     </div>
   );
 }
+

@@ -34,15 +34,11 @@ function toChartData(points: TimelinePoint[]): HeatChartDatum[] {
   }
 
   return [...grouped.entries()]
-    .sort(
-      (a, b) =>
-        new Date(a[0]).getTime() - new Date(b[0]).getTime(),
-    )
+    .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
     .slice(-48)
     .map(([timestamp, bucket]) => {
       const heatSum = bucket.reduce((sum, item) => sum + item.heatScore, 0);
-      const sentimentAvg =
-        bucket.reduce((sum, item) => sum + item.sentiment, 0) / bucket.length;
+      const sentimentAvg = bucket.reduce((sum, item) => sum + item.sentiment, 0) / bucket.length;
       const postCountSum = bucket.reduce((sum, item) => sum + item.postCount, 0);
 
       const date = new Date(timestamp);
@@ -74,7 +70,7 @@ export function HeatTrendLine({ points }: HeatTrendLineProps) {
 
   return (
     <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-      <p className="mb-3 text-xs text-[var(--text-secondary)]">최근 48개 포인트 Heat Trend</p>
+      <p className="mb-3 text-xs text-[var(--text-secondary)]">최근 48시간 Heat Trend</p>
       <div className="h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 8, right: 12, left: -12, bottom: 4 }}>
@@ -129,3 +125,4 @@ export function HeatTrendLine({ points }: HeatTrendLineProps) {
     </div>
   );
 }
+

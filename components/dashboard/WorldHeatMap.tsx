@@ -1,19 +1,13 @@
 "use client";
 
-import {
-  ComposableMap,
-  Geographies,
-  Geography,
-  Marker,
-} from "react-simple-maps";
+import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
 import type { RegionDashboardRow } from "@/lib/types/api";
 
 interface WorldHeatMapProps {
   regions: RegionDashboardRow[];
 }
 
-const GEO_URL =
-  "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 const REGION_COORDINATES: Record<string, [number, number]> = {
   kr: [127.8, 36.3],
@@ -43,14 +37,11 @@ export function WorldHeatMap({ regions }: WorldHeatMapProps) {
       <div className="relative">
         <p className="font-display text-lg text-[var(--text-accent)]">WORLD HEAT MAP</p>
         <p className="mt-1 text-xs text-[var(--text-secondary)]">
-          리전별 열기 점수를 세계 지도에 표시합니다.
+          리전별 열기 점수를 세계 지도 위에 표시합니다.
         </p>
 
         <div className="mt-4 rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-2">
-          <ComposableMap
-            projectionConfig={{ scale: 145 }}
-            style={{ width: "100%", height: "300px" }}
-          >
+          <ComposableMap projectionConfig={{ scale: 145 }} style={{ width: "100%", height: "300px" }}>
             <Geographies geography={GEO_URL}>
               {({ geographies }) =>
                 geographies.map((geo) => (
@@ -77,19 +68,9 @@ export function WorldHeatMap({ regions }: WorldHeatMapProps) {
 
               return (
                 <Marker key={region.id} coordinates={coordinates}>
-                  <circle
-                    r={radius}
-                    fill={color}
-                    fillOpacity={0.22}
-                    stroke={color}
-                    strokeWidth={1.2}
-                  />
+                  <circle r={radius} fill={color} fillOpacity={0.22} stroke={color} strokeWidth={1.2} />
                   <circle r={2.6} fill={color} />
-                  <text
-                    y={-radius - 4}
-                    textAnchor="middle"
-                    className="fill-slate-200 text-[10px] font-medium"
-                  >
+                  <text y={-radius - 4} textAnchor="middle" className="fill-slate-200 text-[10px] font-medium">
                     {region.flagEmoji} {Math.round(region.totalHeatScore)}
                   </text>
                 </Marker>
@@ -101,3 +82,4 @@ export function WorldHeatMap({ regions }: WorldHeatMapProps) {
     </div>
   );
 }
+

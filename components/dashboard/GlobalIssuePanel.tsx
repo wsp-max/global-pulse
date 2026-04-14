@@ -22,7 +22,7 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
 
       {rows.length === 0 ? (
         <div className="mt-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 text-sm text-[var(--text-secondary)]">
-          아직 글로벌 토픽이 없습니다. `analyze-global` 실행 후 표시됩니다.
+          아직 글로벌 토픽이 없습니다. 분석 배치 실행 후 자동 반영됩니다.
         </div>
       ) : (
         <div className="mt-3 space-y-3">
@@ -34,9 +34,7 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
 
             const card = (
               <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 transition-colors hover:border-[var(--border-hover)]">
-                <p className="text-sm font-medium text-[var(--text-primary)]">
-                  {topic.nameKo || topic.nameEn}
-                </p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">{topic.nameKo || topic.nameEn}</p>
                 <p className="mt-1 text-xs text-[var(--text-secondary)]">
                   {topic.regions
                     .map((regionId) => {
@@ -82,14 +80,11 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
               );
             }
 
-            return (
-              <div key={topic.nameEn}>
-                {card}
-              </div>
-            );
+            return <div key={topic.nameEn}>{card}</div>;
           })}
         </div>
       )}
     </section>
   );
 }
+

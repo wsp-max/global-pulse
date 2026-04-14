@@ -44,3 +44,4 @@ export function RegionCard({ region }: RegionCardProps) {
     </Link>
   );
 }
+

@@ -7,13 +7,14 @@ import {
   RegionCard,
   WorldHeatMap,
 } from "@/components/dashboard";
-import { Header } from "@/components/layout/Header";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGlobalTopics } from "@/lib/hooks/useGlobalTopics";
 import { useRegions } from "@/lib/hooks/useRegions";
 
 export default function HomePage() {
-  const { data: regionsData, isLoading: isRegionsLoading } = useRegions();
-  const { data: globalTopicsData } = useGlobalTopics(5);
+  const { data: regionsData, isLoading: isRegionsLoading, error: regionsError } = useRegions();
+  const { data: globalTopicsData, isLoading: isGlobalLoading } = useGlobalTopics(5);
 
   const regions = regionsData?.regions ?? [];
   const sortedRegions = [...regions].sort((a, b) => b.totalHeatScore - a.totalHeatScore);
@@ -27,13 +28,33 @@ export default function HomePage() {
     .slice(0, 10);
 
   return (
-    <div className="min-h-screen">
-      <Header />
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-10 pt-6 lg:px-6">
-        <HotTopicTicker items={tickerItems} />
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-10 pt-6 lg:px-6">
+      <HotTopicTicker items={tickerItems} />
 
+      {regionsError && (
+        <EmptyState
+          title="대시보드 데이터를 불러오지 못했습니다."
+          description="잠시 후 자동으로 다시 시도합니다. 문제가 계속되면 서버 상태를 확인해 주세요."
+        />
+      )}
+
+      {!regionsError && isRegionsLoading && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <LoadingSkeleton />
+          <LoadingSkeleton />
+        </div>
+      )}
+
+      {!regionsError && !isRegionsLoading && sortedRegions.length === 0 && (
+        <EmptyState
+          title="표시할 리전 데이터가 없습니다."
+          description="수집기와 분석기 실행 이후 데이터가 표시됩니다."
+        />
+      )}
+
+      {!regionsError && sortedRegions.length > 0 && (
         <section className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
-          <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-card)]">
+          <div className="hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-card)] md:block">
             <WorldHeatMap regions={sortedRegions} />
             <div className="mt-4">
               <LivePulseIndicator />
@@ -41,19 +62,16 @@ export default function HomePage() {
           </div>
 
           <div className="space-y-4">
-            {isRegionsLoading && (
-              <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 text-sm text-[var(--text-secondary)]">
-                리전 데이터 로딩 중...
-              </div>
-            )}
             {sortedRegions.map((region) => (
               <RegionCard key={region.id} region={region} />
             ))}
           </div>
         </section>
+      )}
 
-        <GlobalIssuePanel topics={globalTopicsData?.globalTopics ?? []} />
-      </main>
-    </div>
+      {isGlobalLoading && <LoadingSkeleton className="h-28" />}
+      <GlobalIssuePanel topics={globalTopicsData?.globalTopics ?? []} />
+    </main>
   );
 }
+

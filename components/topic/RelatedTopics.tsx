@@ -18,9 +18,7 @@ export function RelatedTopics({ title = "연관 토픽", items }: RelatedTopicsP
     return (
       <section className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
         <h2 className="text-sm font-semibold">{title}</h2>
-        <p className="mt-2 text-xs text-[var(--text-secondary)]">
-          연관된 토픽이 아직 없습니다.
-        </p>
+        <p className="mt-2 text-xs text-[var(--text-secondary)]">연관 토픽이 아직 없습니다.</p>
       </section>
     );
   }
@@ -38,14 +36,10 @@ export function RelatedTopics({ title = "연관 토픽", items }: RelatedTopicsP
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs text-[var(--text-primary)]">{item.title}</p>
                 {typeof item.heatScore === "number" ? (
-                  <span className="text-[11px] text-[var(--text-tertiary)]">
-                    Heat {Math.round(item.heatScore)}
-                  </span>
+                  <span className="text-[11px] text-[var(--text-tertiary)]">Heat {Math.round(item.heatScore)}</span>
                 ) : null}
               </div>
-              {item.subtitle ? (
-                <p className="mt-1 text-[11px] text-[var(--text-secondary)]">{item.subtitle}</p>
-              ) : null}
+              {item.subtitle ? <p className="mt-1 text-[11px] text-[var(--text-secondary)]">{item.subtitle}</p> : null}
             </Link>
           </li>
         ))}
@@ -53,3 +47,4 @@ export function RelatedTopics({ title = "연관 토픽", items }: RelatedTopicsP
     </section>
   );
 }
+

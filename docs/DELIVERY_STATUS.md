@@ -1555,3 +1555,36 @@
 
 2. UI Step 6 마감
 - 모바일 레이아웃, 장애/빈 데이터 UX 최종 정리
+
+## UI Step 6 Update (2026-04-14, Slice 1)
+### Newly completed
+- 모바일 동선 강화:
+  - 전 페이지 공통 상단 `Header` 적용
+  - 모바일 하단 탭 내비 `MobileBottomNav` 추가
+- 장애/로딩/빈 상태 UX 정리:
+  - `EmptyState`, `LoadingSkeleton`, `ErrorBoundary` 강화
+  - `app/error.tsx`, `app/loading.tsx` 추가로 라우트 레벨 fallback 보완
+- 주요 페이지 상태 처리 일관화:
+  - Home, Global Issues, Timeline, Search, Region Detail, Topic Detail
+- 텍스트 정합성 정리:
+  - 깨진 문구/구버전 안내문구(PostgreSQL 기준 아님) 정리
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Current completion state
+- Step 6: **진행 중 (Slice 1 완료)**
+- 모바일 내비 + 기본 상태 UX는 운영 가능한 수준으로 정리됨
+
+### Remaining (updated)
+1. EC2 적용 마감
+- UI Step 6 커밋을 EC2에 pull/deploy 반영
+- `/pulse` 실접속으로 모바일/에러 fallback 스모크 확인
+
+2. Step 6 Slice 2 (최종 QA)
+- 실기기(또는 모바일 뷰포트)에서 탭 내비/스크롤/가독성 최종 점검
+- 장애 상황(API 5xx/빈데이터) 시나리오 스크린샷 증적 추가

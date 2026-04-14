@@ -40,6 +40,7 @@
 | GP-20260414-59 | 2026-04-14 | Ops 스냅샷 검증 정확도 보정(HTTP 상태코드/민감정보 마스킹) | Done |
 | GP-20260414-60 | 2026-04-14 | Step 4F 단일런 마감 + Dcard 브라우저 폴백 보강 | Done |
 | GP-20260414-61 | 2026-04-14 | 무비용 운영 정책 반영(Dcard 기본 비활성, TW는 PTT 중심) | Done |
+| GP-20260414-62 | 2026-04-14 | Step 6 UI 마감 1차 (모바일 내비 + 상태 UX + 텍스트 정리) | Done |
 
 ---
 
@@ -2947,3 +2948,73 @@
   - `packages/collector/src/run.ts`
   - `scripts/seed-regions.ts`
   - `scripts/build-snapshots.ts`
+
+---
+
+## GP-20260414-62 (Step 6 UI closeout slice 1: mobile + resilient states)
+### Before -> After
+- Before:
+  - 페이지별 네비게이션이 일관되지 않아 모바일에서 주요 화면 이동 동선이 약했음.
+  - 일부 화면에서 로딩/에러/빈 상태 표현이 단순 문자열 수준이거나 일관되지 않았음.
+  - 일부 컴포넌트 문구가 깨진 상태로 표시될 수 있는 위험이 있었음.
+- After:
+  - 공통 레이아웃 강화:
+    - 상단 `Header`를 전 페이지 공통 적용
+    - 모바일 전용 하단 탭 내비(`MobileBottomNav`) 추가
+    - `ErrorBoundary`를 레이아웃에 적용해 렌더링 예외 시 안정적 fallback 보장
+  - 상태 UX 통일:
+    - `EmptyState`/`LoadingSkeleton`를 확장해 페이지 전반에 재사용
+    - `Home`, `Region`, `Topic`, `Global Issues`, `Timeline`, `Search`에 로딩/에러/빈상태를 명확히 반영
+    - `app/error.tsx`, `app/loading.tsx` 추가로 App Router 레벨 fallback 강화
+  - 텍스트/표기 정리:
+    - 대시보드/리전/토픽/차트/공통 컴포넌트 문구 정리
+    - `not_configured` 안내문을 PostgreSQL 기준으로 정정
+
+### Main File Changes
+- Layout/Nav:
+  - [layout.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/layout.tsx)
+  - [Header.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/layout/Header.tsx)
+  - [MobileBottomNav.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/layout/MobileBottomNav.tsx)
+- App fallbacks:
+  - [error.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/error.tsx)
+  - [loading.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/loading.tsx)
+- Shared status components:
+  - [ErrorBoundary.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/shared/ErrorBoundary.tsx)
+  - [EmptyState.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/shared/EmptyState.tsx)
+  - [LoadingSkeleton.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/shared/LoadingSkeleton.tsx)
+- Updated pages/components:
+  - [page.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/page.tsx)
+  - [global-issues/page.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/global-issues/page.tsx)
+  - [timeline/page.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/timeline/page.tsx)
+  - [search/page.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/app/search/page.tsx)
+  - [RegionPageClient.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/region/RegionPageClient.tsx)
+  - [TopicPageClient.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/topic/TopicPageClient.tsx)
+  - [GlobalIssuePanel.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/dashboard/GlobalIssuePanel.tsx)
+  - [WorldHeatMap.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/dashboard/WorldHeatMap.tsx)
+  - [RegionCard.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/dashboard/RegionCard.tsx)
+  - [HeatTrendLine.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/charts/HeatTrendLine.tsx)
+  - [TopicTimeline.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/topic/TopicTimeline.tsx)
+  - [CrossRegionComparison.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/topic/CrossRegionComparison.tsx)
+  - [RelatedTopics.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/topic/RelatedTopics.tsx)
+  - [KeywordCloud.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/topic/KeywordCloud.tsx)
+  - [RegionHeader.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/region/RegionHeader.tsx)
+  - [TopicList.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/region/TopicList.tsx)
+  - [HotTopicTicker.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/dashboard/HotTopicTicker.tsx)
+  - [LivePulseIndicator.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/dashboard/LivePulseIndicator.tsx)
+  - [HeatBadge.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/shared/HeatBadge.tsx)
+  - [RegionFlag.tsx](/c:/Users/wsp/Desktop/Web/Human_flow/global-pulse/components/shared/RegionFlag.tsx)
+
+### Commands / Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+- `npm run ops:supabase:budget -- --print-json` -> pass (`ok=true`)
+- `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
+
+### Known Risks
+- EC2 워킹트리에 evidence 로그가 지속 누적되어 `git pull` 전 충돌 가능성이 있으므로 배포 루틴에서 evidence 정리 단계 유지 필요.
+- Step 6은 1차 마감이며, 실제 모바일 실기기 QA(터치 영역/가시성)는 추가 점검 권장.
+
+### Rollback Guide
+- UI 마감 롤백 시 GP-20260414-61 커밋으로 복귀:
+  - `git checkout 13fe7c9 -- app components`

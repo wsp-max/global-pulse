@@ -36,3 +36,4 @@ export function RegionHeader({ regionId, snapshot }: RegionHeaderProps) {
     </header>
   );
 }
+

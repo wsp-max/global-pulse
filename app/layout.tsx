@@ -5,6 +5,9 @@ import {
   Noto_Sans_KR,
   Space_Mono,
 } from "next/font/google";
+import { Header } from "@/components/layout/Header";
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import "./globals.css";
 
 const displayFont = Space_Mono({
@@ -45,7 +48,11 @@ export default function RootLayout({
       className={`${displayFont.variable} ${monoFont.variable} ${bodyFontKr.variable} ${bodyFontJp.variable}`}
     >
       <body className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] antialiased">
-        {children}
+        <Header />
+        <ErrorBoundary>
+          <div className="min-h-screen pb-20 md:pb-0">{children}</div>
+        </ErrorBoundary>
+        <MobileBottomNav />
       </body>
     </html>
   );

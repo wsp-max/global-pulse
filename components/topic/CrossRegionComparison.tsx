@@ -25,10 +25,7 @@ interface ComparisonRow {
   heatScore: number;
 }
 
-export function CrossRegionComparison({
-  sentiments,
-  heatScores,
-}: CrossRegionComparisonProps) {
+export function CrossRegionComparison({ sentiments, heatScores }: CrossRegionComparisonProps) {
   const regionIds = [...new Set([...Object.keys(sentiments), ...Object.keys(heatScores)])];
 
   const rows: ComparisonRow[] = regionIds
@@ -43,9 +40,7 @@ export function CrossRegionComparison({
     return (
       <section className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
         <h2 className="text-sm font-semibold">리전별 반응 비교</h2>
-        <p className="mt-2 text-xs text-[var(--text-secondary)]">
-          비교 가능한 리전 데이터가 없습니다.
-        </p>
+        <p className="mt-2 text-xs text-[var(--text-secondary)]">비교 가능한 리전 데이터가 없습니다.</p>
       </section>
     );
   }
@@ -63,17 +58,12 @@ export function CrossRegionComparison({
           const sentimentColor = getSentimentColor(row.sentiment);
 
           return (
-            <article
-              key={row.regionId}
-              className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3"
-            >
+            <article key={row.regionId} className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
               <div className="mb-2 flex items-center justify-between text-xs">
                 <span className="font-medium text-[var(--text-primary)]">
                   {region?.flagEmoji ?? "🌐"} {region?.nameKo ?? row.regionId.toUpperCase()}
                 </span>
-                <span className="text-[var(--text-tertiary)]">
-                  Heat {Math.round(row.heatScore)}
-                </span>
+                <span className="text-[var(--text-tertiary)]">Heat {Math.round(row.heatScore)}</span>
               </div>
 
               <div className="relative h-2 rounded-full bg-[linear-gradient(to_right,var(--sentiment-negative),var(--sentiment-neutral),var(--sentiment-positive))]">
@@ -95,10 +85,7 @@ export function CrossRegionComparison({
               </div>
 
               <div className="mt-2 h-1.5 rounded-full bg-[var(--bg-tertiary)]">
-                <div
-                  className="h-full rounded-full bg-[var(--text-accent)]"
-                  style={{ width: `${heatWidth}%` }}
-                />
+                <div className="h-full rounded-full bg-[var(--text-accent)]" style={{ width: `${heatWidth}%` }} />
               </div>
             </article>
           );
@@ -107,3 +94,4 @@ export function CrossRegionComparison({
     </section>
   );
 }
+

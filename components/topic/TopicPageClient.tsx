@@ -1,12 +1,11 @@
 "use client";
 
 import type { GlobalTopic, Topic } from "@global-pulse/shared";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { CrossRegionComparison } from "@/components/topic/CrossRegionComparison";
 import { KeywordCloud } from "@/components/topic/KeywordCloud";
-import {
-  RelatedTopics,
-  type RelatedTopicItem,
-} from "@/components/topic/RelatedTopics";
+import { RelatedTopics, type RelatedTopicItem } from "@/components/topic/RelatedTopics";
 import { TopicTimeline } from "@/components/topic/TopicTimeline";
 import { useTopicDetail } from "@/lib/hooks/useTopicDetail";
 
@@ -54,9 +53,7 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
   if (isLoading) {
     return (
       <main className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-6">
-        <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 text-sm text-[var(--text-secondary)]">
-          토픽 상세 데이터를 불러오는 중...
-        </div>
+        <LoadingSkeleton className="h-28" lines={4} />
       </main>
     );
   }
@@ -64,9 +61,10 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
   if (error || !data) {
     return (
       <main className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-6">
-        <div className="rounded-xl border border-[var(--sentiment-negative)] bg-[var(--bg-secondary)] p-4 text-sm text-[var(--sentiment-negative)]">
-          토픽 상세 데이터를 가져오지 못했습니다.
-        </div>
+        <EmptyState
+          title="토픽 상세 데이터를 불러오지 못했습니다."
+          description="잠시 후 다시 시도해 주세요."
+        />
       </main>
     );
   }
@@ -74,9 +72,10 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
   if (data.kind === "not_configured") {
     return (
       <main className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-6">
-        <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 text-sm text-[var(--text-secondary)]">
-          Supabase 환경변수가 설정되지 않아 토픽 상세를 표시할 수 없습니다.
-        </div>
+        <EmptyState
+          title="데이터베이스 설정이 필요합니다."
+          description="PostgreSQL 연결을 확인한 뒤 다시 시도해 주세요."
+        />
       </main>
     );
   }
@@ -122,3 +121,4 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
     </main>
   );
 }
+
