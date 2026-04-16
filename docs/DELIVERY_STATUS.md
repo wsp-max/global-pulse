@@ -2298,3 +2298,22 @@ pm run build -> pass
 - Fixed markdown sanitizer to handle non-string values from PostgreSQL rows.
 - Resolved EC2 failure signature: `value.replace is not a function`.
 - Validation: `npm run lint`, `npm run typecheck` pass.
+
+## Step 5A Runtime Update (2026-04-16, Non-Reddit Recovery Verified)
+### Newly completed
+- EC2 runtime pulled latest commits and executed source matrix report.
+- Verified `fmkorea` and `dcard` scraper success on EC2.
+- Ran targeted collector execution for both sources and refreshed matrix.
+
+### Verification
+- `npm run test:scraper -- --source fmkorea` -> success, postCount=24
+- `npm run test:scraper -- --source dcard` -> success, postCount=30
+- `npm run collect -- --source fmkorea,dcard` -> 2/2 succeeded
+- `npm run ops:source:report -- --minutes 180 --print-json`:
+  - before rerun: connected=17, error=39
+  - after rerun: connected=19, error=37
+  - non-reddit: 19/19 connected
+
+### Remaining
+1. Reddit family (37 sources) remains blocked from EC2 runtime path.
+2. Next step is Reddit OAuth credentials + alternative egress strategy.

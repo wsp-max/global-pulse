@@ -3875,3 +3875,24 @@ pm run ops:snapshot -> completed (egions=6)
 - Fixed sanitizeCell to safely stringify non-string DB fields (timestamp/date/object) before markdown escaping.
 - Prevents runtime crash: `value.replace is not a function` on EC2 report generation.
 - Validation: `npm run lint`, `npm run typecheck` pass.
+
+## GP-20260416-90 (EC2 Runtime Apply: Non-Reddit Recovery Verified)
+### Runtime Apply
+- Deployed commits to EC2 (`db9eb60`, `7209220`) via `git pull --ff-only`.
+- Generated source matrix on EC2:
+  - `npm run ops:source:report -- --minutes 180 --print-json`
+
+### Runtime Findings (2026-04-16)
+- Initial matrix after deploy:
+  - `total=56`, `connected=17`, `error=39`
+- Source-specific verification:
+  - `npm run test:scraper -- --source fmkorea` -> success (24 posts)
+  - `npm run test:scraper -- --source dcard` -> success (30 posts)
+- Targeted collector rerun:
+  - `npm run collect -- --source fmkorea,dcard` -> `2/2 succeeded`
+- Matrix refresh after rerun:
+  - `total=56`, `connected=19`, `error=37`
+  - non-reddit sources: `19/19 connected`
+
+### Remaining Constraint
+- Current failures are now concentrated on Reddit family (`37` sources) due EC2 egress/API limitations.
