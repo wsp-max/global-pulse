@@ -1,4 +1,4 @@
-import type { Topic } from "@global-pulse/shared";
+import { SOURCES, type GlobalTopic, type Topic } from "@global-pulse/shared";
 import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
 import { getLogger } from "@global-pulse/shared/server-logger";
 import type { Pool } from "pg";
@@ -86,6 +86,108 @@ function toTopic(row: TopicRow): Topic {
     rank: row.rank === null || row.rank === undefined ? undefined : toNumber(row.rank),
     periodStart: row.period_start,
     periodEnd: row.period_end,
+  };
+}
+
+function allowedSourceIdsByRegion(): Map<string, Set<string>> {
+  const map = new Map<string, Set<string>>();
+
+  for (const source of SOURCES) {
+    const set = map.get(source.regionId) ?? new Set<string>();
+    set.add(source.id);
+    map.set(source.regionId, set);
+  }
+
+  return map;
+}
+
+const allowedSourcesByRegion = allowedSourceIdsByRegion();
+
+function hasRegionSourceOverlap(regionId: string, sourceIds: string[] | null): boolean {
+  if (!sourceIds || sourceIds.length === 0) {
+    return false;
+  }
+
+  const allowedSources = allowedSourcesByRegion.get(regionId);
+  if (!allowedSources || allowedSources.size === 0) {
+    return false;
+  }
+
+  return sourceIds.some((sourceId) => allowedSources.has(sourceId));
+}
+
+function sanitizeGlobalTopicByRegions(topic: GlobalTopic, topicMap: Map<number, Topic>): GlobalTopic | null {
+  const filteredRegionEntries = new Map<string, number[]>();
+
+  for (const topicId of topic.topicIds) {
+    const regionTopic = topicMap.get(topicId);
+    if (!regionTopic) {
+      continue;
+    }
+
+    if (!hasRegionSourceOverlap(regionTopic.regionId, regionTopic.sourceIds)) {
+      continue;
+    }
+
+    const current = filteredRegionEntries.get(regionTopic.regionId);
+    if (current) {
+      current.push(topicId);
+    } else {
+      filteredRegionEntries.set(regionTopic.regionId, [topicId]);
+    }
+  }
+
+  const filteredRegions = topic.regions.filter((regionId) => filteredRegionEntries.has(regionId));
+  if (filteredRegions.length < 2) {
+    return null;
+  }
+
+  const regionalHeatScores: Record<string, number> = {};
+  const regionalSentiments: Record<string, number> = {};
+  const keptTopicIds = new Set<number>();
+  const seededTopics: Topic[] = [];
+
+  for (const regionId of filteredRegions) {
+    const regionTopicIds = filteredRegionEntries.get(regionId) ?? [];
+    for (const regionTopicId of regionTopicIds) {
+      keptTopicIds.add(regionTopicId);
+    }
+
+    const regionTopics = regionTopicIds
+      .map((id) => topicMap.get(id))
+      .filter((item): item is Topic => Boolean(item));
+    if (regionTopics.length === 0) {
+      continue;
+    }
+
+    seededTopics.push(...regionTopics);
+    const totalHeat = regionTopics.reduce((sum, item) => sum + item.heatScore, 0);
+    const totalSentiment =
+      regionTopics.reduce((sum, item) => sum + item.sentiment, 0) / Math.max(regionTopics.length, 1);
+
+    regionalHeatScores[regionId] = Number(totalHeat.toFixed(3));
+    regionalSentiments[regionId] = Number(totalSentiment.toFixed(3));
+  }
+
+  if (seededTopics.length === 0) {
+    return null;
+  }
+
+  const firstSeen = [...seededTopics].sort(
+    (a, b) => new Date(a.periodStart).getTime() - new Date(b.periodStart).getTime(),
+  )[0];
+
+  const totalHeatScore = filteredRegions.reduce((sum, regionId) => sum + (regionalHeatScores[regionId] ?? 0), 0);
+
+  return {
+    ...topic,
+    regions: filteredRegions,
+    regionalHeatScores,
+    regionalSentiments,
+    topicIds: [...keptTopicIds],
+    totalHeatScore: Number(totalHeatScore.toFixed(3)),
+    firstSeenRegion: firstSeen.regionId,
+    firstSeenAt: firstSeen.periodStart,
   };
 }
 
@@ -208,23 +310,29 @@ async function runGlobalAnalysis(): Promise<void> {
     `Starting global analysis. db=${storage.mode} window=${windowHours}h minRegions=${minRegions} similarity=${threshold}`,
   );
 
-  const topics = (await storage.fetchTopics(periodStartIso)).map(toTopic);
-  if (topics.length === 0) {
-    log("No recent topics found. Keeping currently active global topics.");
+  await storage.expireActiveGlobalTopics(nowIso);
+
+  const fetchedTopics = (await storage.fetchTopics(periodStartIso))
+    .map(toTopic)
+    .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
+  if (fetchedTopics.length === 0) {
+    log("No recent topics found. Global topic table has been expired for this run.");
     return;
   }
 
-  const mapped = mapCrossRegionTopics(topics, {
+  const topicById = new Map<number, Topic>(fetchedTopics.map((topic) => [topic.id ?? 0, topic]));
+  const mapped = mapCrossRegionTopics(fetchedTopics, {
     similarityThreshold: threshold,
     minRegions,
-  }).slice(0, limit);
+  })
+    .map((topic) => sanitizeGlobalTopicByRegions(topic, topicById))
+    .filter((topic): topic is GlobalTopic => Boolean(topic))
+    .slice(0, limit);
 
   if (mapped.length === 0) {
     log("No cross-region topics matched after mapping. Keeping currently active global topics.");
     return;
   }
-
-  await storage.expireActiveGlobalTopics(nowIso);
 
   const payload: GlobalTopicInsertRow[] = mapped.map((topic) => ({
     name_en: topic.nameEn,

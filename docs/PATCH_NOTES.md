@@ -3750,3 +3750,40 @@
 - `npm run test:scraper -- --source reddit_science` -> pass (30 posts)
 - `npm run test:scraper -- --source reddit_taiwan` -> pass (30 posts)
 - `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+
+## GP-20260416-85 (EC2 Source Sync + Live Collection Diagnostics)
+### Before -> After
+- Before:
+  - runtime DB had partial source registration (`sources` table behind code constants)
+  - many newly added country/community sources were not present in production DB
+- After:
+  - ran runtime source sync on EC2:
+    - `npm run seed:regions`
+  - DB source registry now aligned with current runtime constants:
+    - `db_sources=47`
+    - `db_active=47`
+    - `db_active_community=41`
+  - executed one full collection cycle (`npm run collect`) against synced registry and captured live failure modes
+
+### Runtime Findings
+- hard failures:
+  - all active Reddit community sources from EC2 egress return HTTP `403`
+  - `fmkorea` returns HTTP `430` (`retry-after: 300`)
+  - `dcard` returns HTTP `403` (Cloudflare challenge path, including browser fallback)
+  - `zhihu` stays at `ZERO` due stub scraper implementation
+- low-volume but successful:
+  - `dcinside`, `ruliweb`, `theqoo`, `youtube_kr`, `youtube_jp`
+
+### Evidence Commands
+- `npm run seed:regions` on EC2 -> `Seed completed. db=postgres regions=8, sources=47`
+- `npm run collect` on EC2 -> `Collection finished: 16/46 succeeded.`
+- DB status query after run confirmed per-source buckets (`OK/LOW/ERROR/ZERO`) across all 47 active sources
+
+### Recovery Guidance
+- Reddit path:
+  - move Reddit collection off EC2 egress (GitHub Actions or alternate egress IP)
+  - keep EC2 runtime for non-Reddit sources
+- FMKorea/Dcard:
+  - require anti-bot bypass strategy (session/cookie/proxy/browser profile), not parser-only changes
+- Zhihu:
+  - implement scraper and add to runner before expecting non-zero rows

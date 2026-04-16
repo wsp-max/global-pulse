@@ -2202,3 +2202,32 @@
 - verify `/pulse/api/topics?region=eu` heat/sources are consistent in dashboard
 2. Quality follow-up
 - tune topic naming after phrase merge to reduce low-signal fragments where still present
+
+## Step 5A Runtime Update (2026-04-16, Source Sync + Live Failure Classification)
+### Newly completed
+- Applied EC2 runtime source sync:
+  - `npm run seed:regions`
+- Production DB source registry now updated:
+  - `db_sources=47`
+  - `db_active=47`
+  - `db_active_community=41`
+- Ran one full collection cycle against synced registry:
+  - `npm run collect`
+  - result: `16/46 succeeded`
+
+### Live diagnostics summary
+- Reddit community family: HTTP 403 from EC2 egress (broad failure across regions)
+- FMKorea: HTTP 430 with retry-after
+- Dcard: HTTP 403 including browser fallback challenge
+- Zhihu: still zero because scraper implementation is stub
+- Stable/OK cluster: weibo, bilibili, mastodon, ptt, fivech, hatena, clien, fourchan, hackernews, youtube_us
+- Low-volume but successful: dcinside, ruliweb, theqoo, youtube_kr, youtube_jp
+
+### Remaining (updated)
+1. Reddit collection path split
+- move Reddit scraping to alternate egress (GitHub Actions or another IP)
+- keep EC2 collector for non-Reddit sources
+2. Anti-bot constrained sources
+- FMKorea/Dcard require dedicated bypass strategy beyond parser tuning
+3. Zhihu implementation
+- implement actual scraper and wire runner/test entry
