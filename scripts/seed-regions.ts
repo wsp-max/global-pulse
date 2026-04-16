@@ -110,6 +110,9 @@ async function seedWithPostgres(pool: Pool): Promise<void> {
     `,
     sourceBatch.values,
   );
+
+  const sourceIdList = SOURCES.map((source) => source.id);
+  await pool.query(`update sources set is_active = id = any($1::text[])`, [sourceIdList]);
 }
 
 async function run(): Promise<void> {

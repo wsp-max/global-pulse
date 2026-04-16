@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRegionById } from "@global-pulse/shared";
+import { SOURCES, getRegionById } from "@global-pulse/shared";
 import { mapTopicRow, type TopicRow } from "../_shared/mappers";
 import { getPostgresPoolOrNull } from "../_shared/postgres-server";
 import { withApiRequestLog } from "../_shared/route-logger";
@@ -34,6 +34,8 @@ async function getTopics(request: Request) {
 
   const postgres = getPostgresPoolOrNull();
   if (postgres) {
+    const sourceIds = SOURCES.filter((source) => source.regionId === region).map((source) => source.id);
+
     try {
       const [topicsResult, countResult, snapshotResult] = await Promise.all([
         postgres.query<TopicRow>(
@@ -50,6 +52,7 @@ async function getTopics(request: Request) {
             from topics
             where region_id = $1
               and period_end >= $2
+              and source_ids && $3::text[]
               and created_at = (select latest_created_at from latest_batch)
           ),
           dedup as (
@@ -63,10 +66,10 @@ async function getTopics(request: Request) {
             post_count,total_views,total_likes,total_comments,source_ids,rank,period_start,period_end
           from dedup
           order by ${sortColumn} desc, period_end desc
-          offset $3
-          limit $4
+          offset $4
+          limit $5
           `,
-          [region, startIso, offset, limit],
+          [region, startIso, sourceIds, offset, limit],
         ),
         postgres.query<{ total: string | number }>(
           `
@@ -80,6 +83,7 @@ async function getTopics(request: Request) {
             from topics
             where region_id = $1
               and period_end >= $2
+              and source_ids && $3::text[]
               and created_at = (select latest_created_at from latest_batch)
           ),
           dedup as (
@@ -91,7 +95,7 @@ async function getTopics(request: Request) {
           select count(*) as total
           from dedup
           `,
-          [region, startIso],
+          [region, startIso, sourceIds],
         ),
         postgres.query(
           `

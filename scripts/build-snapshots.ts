@@ -22,6 +22,35 @@ interface RegionAccumulator {
   sourceIds: Set<string>;
 }
 
+function buildAllowedSourceIdsByRegion(): Map<string, Set<string>> {
+  const sourceIds = new Map<string, Set<string>>();
+  for (const source of SOURCES.filter((item) => !DISABLED_SOURCE_ID_SET.has(item.id))) {
+    const set = sourceIds.get(source.regionId) ?? new Set<string>();
+    set.add(source.id);
+    sourceIds.set(source.regionId, set);
+  }
+  return sourceIds;
+}
+
+function hasAllowedSource(regionId: string, sourceIds: string[] | null, allowedMap: Map<string, Set<string>>): boolean {
+  if (!sourceIds || sourceIds.length === 0) {
+    return false;
+  }
+
+  const allowed = allowedMap.get(regionId);
+  if (!allowed || allowed.size === 0) {
+    return false;
+  }
+
+  for (const sourceId of sourceIds) {
+    if (allowed.has(sourceId)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function parseArg(flag: string): string | undefined {
   const index = process.argv.findIndex((arg) => arg === flag);
   if (index < 0) {
@@ -137,6 +166,8 @@ function buildBatchInsert(
 }
 
 async function runWithPostgres(pool: Pool, periodStartIso: string, nowIso: string, windowHours: number) {
+  const allowedSourceIdsByRegion = buildAllowedSourceIdsByRegion();
+
   const { rows } = await pool.query<TopicSnapshotRow>(
     `
     select region_id,heat_score,sentiment,keywords,source_ids
@@ -151,7 +182,8 @@ async function runWithPostgres(pool: Pool, periodStartIso: string, nowIso: strin
     return;
   }
 
-  const payload = aggregateRows(rows, nowIso);
+  const filteredRows = rows.filter((row) => hasAllowedSource(row.region_id, row.source_ids, allowedSourceIdsByRegion));
+  const payload = aggregateRows(filteredRows, nowIso);
   const columns = [
     "region_id",
     "total_heat_score",

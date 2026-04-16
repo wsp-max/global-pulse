@@ -4,6 +4,9 @@ import { RedditEuropeScraper } from "../packages/collector/src/scrapers/europe/r
 import { FivechScraper } from "../packages/collector/src/scrapers/japan/fivech";
 import { HatenaScraper } from "../packages/collector/src/scrapers/japan/hatena";
 import { FmkoreaScraper } from "../packages/collector/src/scrapers/korea/fmkorea";
+import { PpomppuScraper } from "../packages/collector/src/scrapers/korea/ppomppu";
+import { RuliwebScraper } from "../packages/collector/src/scrapers/korea/ruliweb";
+import { TheqooScraper } from "../packages/collector/src/scrapers/korea/theqoo";
 import { RedditMideastScraper } from "../packages/collector/src/scrapers/mideast/reddit-mideast";
 import { WeiboScraper } from "../packages/collector/src/scrapers/china/weibo";
 import { BilibiliScraper } from "../packages/collector/src/scrapers/sns/bilibili";
@@ -36,14 +39,41 @@ async function run(): Promise<void> {
     dcinside: new DcInsideScraper(),
     fmkorea: new FmkoreaScraper(),
     clien: new ClienScraper(),
+    ppomppu: new PpomppuScraper(),
+    ruliweb: new RuliwebScraper(),
+    theqoo: new TheqooScraper(),
     fivech: new FivechScraper(),
     hatena: new HatenaScraper(),
     ptt: new PttScraper(),
     weibo: new WeiboScraper(),
     reddit: new RedditScraper(),
     reddit_worldnews: new RedditScraper("reddit_worldnews"),
+    reddit_japan: new RedditScraper("reddit_japan"),
+    reddit_japan_politics: new RedditScraper("reddit_japan_politics"),
+    reddit_japan_tech: new RedditScraper("reddit_japan_tech"),
+    reddit_japanese: new RedditScraper("reddit_japanese"),
+    reddit_taiwan: new RedditScraper("reddit_taiwan"),
+    reddit_taiwanese: new RedditScraper("reddit_taiwanese"),
+    reddit_taiwan_tech: new RedditScraper("reddit_taiwan_tech"),
+    reddit_hongkong: new RedditScraper("reddit_hongkong"),
+    reddit_science: new RedditScraper("reddit_science"),
+    reddit_china: new RedditScraper("reddit_china"),
+    reddit_korea: new RedditScraper("reddit_korea"),
+    reddit_korea_opentalk: new RedditScraper("reddit_korea_opentalk"),
     reddit_europe: new RedditEuropeScraper(),
+    reddit_eu_union: new RedditScraper("reddit_eu_union"),
+    reddit_askuk: new RedditScraper("reddit_askuk"),
+    reddit_greek: new RedditScraper("reddit_greek"),
+    reddit_germany: new RedditScraper("reddit_germany"),
+    reddit_france: new RedditScraper("reddit_france"),
     reddit_mideast: new RedditMideastScraper(),
+    reddit_mideast_arabic: new RedditScraper("reddit_mideast_arabic"),
+    reddit_pakistan: new RedditScraper("reddit_pakistan"),
+    reddit_israel: new RedditScraper("reddit_israel"),
+    reddit_iran: new RedditScraper("reddit_iran"),
+    reddit_russia: new RedditScraper("reddit_russia"),
+    reddit_ukraine: new RedditScraper("reddit_ukraine"),
+    reddit_russian: new RedditScraper("reddit_russian"),
     fourchan: new FourchanScraper(),
     hackernews: new HackernewsScraper(),
     youtube_kr: new YoutubeScraper(),

@@ -1,8 +1,25 @@
 import { NextResponse } from "next/server";
-import { getAllRegions } from "@global-pulse/shared";
+import { SOURCES, getAllRegions } from "@global-pulse/shared";
 import { mapTopicRow, type TopicRow } from "../_shared/mappers";
 import { getPostgresPoolOrNull } from "../_shared/postgres-server";
 import { withApiRequestLog } from "../_shared/route-logger";
+
+function deriveTopKeywords(topics: ReturnType<typeof mapTopicRow>[]): string[] {
+  const counts = new Map<string, number>();
+  for (const topic of topics) {
+    for (const keyword of topic.keywords ?? []) {
+      const trimmed = keyword.trim();
+      if (!trimmed) {
+        continue;
+      }
+      counts.set(trimmed, (counts.get(trimmed) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 10)
+    .map(([keyword]) => keyword);
+}
 
 export async function GET(request: Request) {
   return withApiRequestLog(request, "/api/regions", () => getRegions());
@@ -15,7 +32,8 @@ async function getRegions() {
   if (postgres) {
     const regionRows = await Promise.all(
       regions.map(async (region) => {
-        const [snapshotResult, topicsResult] = await Promise.all([
+        const sourceIds = SOURCES.filter((source) => source.regionId === region.id).map((source) => source.id);
+        const [snapshotResult, topicsResult, metricsResult] = await Promise.all([
           postgres.query<{
             total_heat_score: number | string | null;
             active_topics: number | string | null;
@@ -53,25 +71,60 @@ async function getRegions() {
               post_count,total_views,total_likes,total_comments,source_ids,rank,period_start,period_end
             from topics
             where region_id = $1
+              and source_ids && $2::text[]
               and created_at = (select latest_created_at from latest_batch)
             order by heat_score desc, rank asc nulls last
             limit 3
             `,
-            [region.id],
+            [region.id, sourceIds],
+          ),
+          postgres.query<{
+            total_heat_score: number | string | null;
+            active_topics: number | string | null;
+            avg_sentiment: number | string | null;
+            sources_active: number | string | null;
+          }>(
+            `
+            with latest_batch as (
+              select max(created_at) as latest_created_at
+              from topics
+              where region_id = $1
+                and period_end >= now() - interval '24 hours'
+            ),
+            filtered as (
+              select heat_score, sentiment, source_ids
+              from topics
+              where region_id = $1
+                and period_end >= now() - interval '24 hours'
+                and source_ids && $2::text[]
+                and created_at = (select latest_created_at from latest_batch)
+            )
+            select
+              coalesce(sum(heat_score), 0) as total_heat_score,
+              count(*) as active_topics,
+              coalesce(avg(sentiment), 0) as avg_sentiment,
+              coalesce(count(distinct sid), 0) as sources_active
+            from filtered
+            left join lateral unnest(coalesce(source_ids, '{}'::text[])) as src(sid) on true
+            `,
+            [region.id, sourceIds],
           ),
         ]);
 
         const snapshot = snapshotResult.rows[0];
+        const metrics = metricsResult.rows[0];
+        const topTopics = topicsResult.rows.map(mapTopicRow);
+        const hasMetrics = Number(metrics?.active_topics ?? 0) > 0;
         return {
           ...region,
-          totalHeatScore: Number(snapshot?.total_heat_score ?? 0),
-          activeTopics: Number(snapshot?.active_topics ?? 0),
-          avgSentiment: Number(snapshot?.avg_sentiment ?? 0),
-          topKeywords: snapshot?.top_keywords ?? [],
-          sourcesActive: Number(snapshot?.sources_active ?? 0),
-          sourcesTotal: Number(snapshot?.sources_total ?? 0),
+          totalHeatScore: Number(hasMetrics ? metrics?.total_heat_score ?? 0 : 0),
+          activeTopics: Number(hasMetrics ? metrics?.active_topics ?? 0 : 0),
+          avgSentiment: Number(hasMetrics ? metrics?.avg_sentiment ?? 0 : 0),
+          topKeywords: hasMetrics && topTopics.length > 0 ? deriveTopKeywords(topTopics) : [],
+          sourcesActive: Number(hasMetrics ? metrics?.sources_active ?? 0 : 0),
+          sourcesTotal: Number(snapshot?.sources_total ?? sourceIds.length),
           snapshotAt: snapshot?.snapshot_at ?? null,
-          topTopics: topicsResult.rows.map(mapTopicRow),
+          topTopics,
         };
       }),
     );

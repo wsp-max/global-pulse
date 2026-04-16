@@ -2169,3 +2169,36 @@
 - API freshness update (2026-04-15):
   - `/api/topics` and `/api/regions` now read latest batch only.
   - Purpose: prevent stale fragmented topics from dominating the dashboard after analyzer improvements.
+
+## Step 5A Runtime Apply (2026-04-16)
+### Newly completed
+- Expanded per-region source registry and wired new IDs end-to-end:
+  - collector run registry: `packages/collector/src/run.ts`
+  - Reddit source router: `packages/collector/src/scrapers/us/reddit.ts`
+  - scraper test harness: `scripts/test-scraper.ts`
+  - source constants: `packages/shared/src/constants.ts`
+- Added region source filtering in API queries to prevent cross-region contamination:
+  - `app/api/topics/route.ts`
+  - `app/api/regions/route.ts`
+- Snapshot/build scripts now ignore rows not belonging to active allowed sources by region:
+  - `scripts/build-snapshots.ts`
+  - `scripts/seed-regions.ts`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run test:scraper -- --source reddit_eu_union` -> pass
+- `npm run test:scraper -- --source reddit_science` -> pass
+- `npm run test:scraper -- --source reddit_taiwan` -> pass
+- `npm run ops:supabase:audit` -> pass (`totalMatches=0`)
+
+### Current completion state
+- Source expansion: **active**
+- EU heat distortion guard: **implemented at query level**
+
+### Remaining (next)
+1. EC2 runtime apply (required)
+- deploy latest commit and run collection/analyze cycle once
+- verify `/pulse/api/topics?region=eu` heat/sources are consistent in dashboard
+2. Quality follow-up
+- tune topic naming after phrase merge to reduce low-signal fragments where still present

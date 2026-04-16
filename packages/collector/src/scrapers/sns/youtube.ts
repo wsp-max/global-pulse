@@ -7,6 +7,12 @@ const YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/videos";
 const YOUTUBE_SOURCE_IDS = ["youtube_kr", "youtube_jp", "youtube_us"] as const;
 type YoutubeSourceId = (typeof YOUTUBE_SOURCE_IDS)[number];
 
+const YOUTUBE_REGION_CODE_OVERRIDES: Readonly<Record<YoutubeSourceId, string>> = {
+  youtube_kr: "KR",
+  youtube_jp: "JP",
+  youtube_us: "US",
+};
+
 interface YoutubeTrendingResponse {
   items?: Array<{
     id?: string;
@@ -34,7 +40,12 @@ function resolveRegionCode(sourceId: string): string {
   if (!match) {
     return "KR";
   }
-  return match[1]!.toUpperCase();
+
+  const sourceRegionCode = match[1]!.toLowerCase();
+  return (
+    YOUTUBE_REGION_CODE_OVERRIDES[sourceId as YoutubeSourceId] ??
+    sourceRegionCode.toUpperCase()
+  );
 }
 
 export class YoutubeScraper extends BaseScraper {

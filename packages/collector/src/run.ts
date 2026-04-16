@@ -3,6 +3,9 @@ import { WeiboScraper } from "./scrapers/china/weibo";
 import { ClienScraper } from "./scrapers/korea/clien";
 import { DcInsideScraper } from "./scrapers/korea/dcinside";
 import { FmkoreaScraper } from "./scrapers/korea/fmkorea";
+import { PpomppuScraper } from "./scrapers/korea/ppomppu";
+import { RuliwebScraper } from "./scrapers/korea/ruliweb";
+import { TheqooScraper } from "./scrapers/korea/theqoo";
 import { RedditEuropeScraper } from "./scrapers/europe/reddit-europe";
 import { FivechScraper } from "./scrapers/japan/fivech";
 import { HatenaScraper } from "./scrapers/japan/hatena";
@@ -97,14 +100,41 @@ async function run(): Promise<void> {
     new DcInsideScraper(),
     new FmkoreaScraper(),
     new ClienScraper(),
+    new PpomppuScraper(),
+    new RuliwebScraper(),
+    new TheqooScraper(),
     new FivechScraper(),
     new HatenaScraper(),
     new PttScraper(),
     new WeiboScraper(),
     new RedditScraper(),
     new RedditScraper("reddit_worldnews"),
+    new RedditScraper("reddit_japan"),
+    new RedditScraper("reddit_japan_politics"),
+    new RedditScraper("reddit_japan_tech"),
+    new RedditScraper("reddit_japanese"),
+    new RedditScraper("reddit_taiwan"),
+    new RedditScraper("reddit_taiwanese"),
+    new RedditScraper("reddit_taiwan_tech"),
+    new RedditScraper("reddit_hongkong"),
+    new RedditScraper("reddit_science"),
+    new RedditScraper("reddit_china"),
+    new RedditScraper("reddit_korea"),
+    new RedditScraper("reddit_korea_opentalk"),
     new RedditEuropeScraper(),
+    new RedditScraper("reddit_eu_union"),
+    new RedditScraper("reddit_askuk"),
+    new RedditScraper("reddit_greek"),
+    new RedditScraper("reddit_germany"),
+    new RedditScraper("reddit_france"),
     new RedditMideastScraper(),
+    new RedditScraper("reddit_mideast_arabic"),
+    new RedditScraper("reddit_pakistan"),
+    new RedditScraper("reddit_israel"),
+    new RedditScraper("reddit_iran"),
+    new RedditScraper("reddit_russia"),
+    new RedditScraper("reddit_ukraine"),
+    new RedditScraper("reddit_russian"),
     new FourchanScraper(),
     new HackernewsScraper(),
     new YoutubeScraper("youtube_kr"),
