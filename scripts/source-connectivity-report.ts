@@ -87,11 +87,11 @@ function parseTime(value: string | null | undefined): number | null {
   return timestamp;
 }
 
-function sanitizeCell(value: string | null | undefined, max = 120): string {
-  if (!value) {
+function sanitizeCell(value: unknown, max = 120): string {
+  if (value === null || value === undefined) {
     return "-";
   }
-  return value
+  return String(value)
     .replace(/\r?\n/g, " ")
     .replace(/\|/g, "\\|")
     .trim()

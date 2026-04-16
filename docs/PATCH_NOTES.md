@@ -3870,3 +3870,8 @@ pm run ops:snapshot -> completed (egions=6)
   - `npm run ops:source:report -- --minutes 180 --print-json`
 - output:
   - `docs/source-notes/source-connectivity-report.md`
+
+## GP-20260416-89 (Connectivity Report Runtime Fix)
+- Fixed sanitizeCell to safely stringify non-string DB fields (timestamp/date/object) before markdown escaping.
+- Prevents runtime crash: `value.replace is not a function` on EC2 report generation.
+- Validation: `npm run lint`, `npm run typecheck` pass.

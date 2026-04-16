@@ -2293,3 +2293,8 @@ pm run build -> pass
 - `npm run ops:source:report -- --minutes 180 --print-json`
 2. Use generated matrix to prioritize non-Reddit fixes by region/source.
 3. After matrix refresh, continue source expansion hardening.
+
+## Step 5A Runtime Update (2026-04-16, Connectivity Report Hotfix)
+- Fixed markdown sanitizer to handle non-string values from PostgreSQL rows.
+- Resolved EC2 failure signature: `value.replace is not a function`.
+- Validation: `npm run lint`, `npm run typecheck` pass.
