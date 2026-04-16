@@ -212,6 +212,25 @@ VERIFY_SOURCE_SAMPLES=3
 VERIFY_SOURCE_ALLOW_EMPTY=0
 ```
 
+## Source Connectivity Matrix (All Sources)
+```bash
+cd /srv/projects/project2/global-pulse
+npm run ops:source:report -- --minutes 180 --print-json
+```
+- Output file:
+  - `docs/source-notes/source-connectivity-report.md`
+- Optional filters:
+```bash
+# include inactive sources
+npm run ops:source:report -- --include-disabled
+
+# only selected regions
+npm run ops:source:report -- --regions kr,jp,tw --minutes 120
+```
+- Purpose:
+  - one-table view for `connected` vs `error/stale/zero` per source
+  - includes last error and recommended next action for triage
+
 ## Common Failure Cases
 - `/api/health` returns `postgres_not_configured`
   - PostgreSQL pool/env is missing for web runtime.

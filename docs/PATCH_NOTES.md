@@ -3841,3 +3841,32 @@ pm run ops:snapshot -> completed (egions=6)
 
 ### Current Constraint
 - Reddit family still blocked by HTTP 403 on EC2 egress until OAuth + alternate egress strategy is applied.
+## GP-20260416-88 (Source Connectivity Matrix Automation)
+### Before -> After
+- Before:
+  - Source triage required ad-hoc SQL/log checks.
+  - There was no single generated matrix showing connected vs disconnected sources with actionable reasons.
+- After:
+  - Added `scripts/source-connectivity-report.ts` to generate a full source connectivity matrix from PostgreSQL.
+  - New report includes:
+    - per-source recent rows, total rows, last collected timestamp, last scraped timestamp
+    - status classification: `CONNECTED`, `ERROR`, `STALE`, `ZERO`, `DISABLED`
+    - last error summary and recommended next action
+  - Added npm command:
+    - `npm run ops:source:report`
+  - Updated operations runbook with command usage and filters.
+
+### Changed Files
+- `scripts/source-connectivity-report.ts`
+- `package.json`
+- `docs/operations.md`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Usage
+- default:
+  - `npm run ops:source:report -- --minutes 180 --print-json`
+- output:
+  - `docs/source-notes/source-connectivity-report.md`

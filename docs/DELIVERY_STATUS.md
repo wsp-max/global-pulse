@@ -2266,3 +2266,30 @@ pm run build -> pass
 - Global topics regenerated and non-empty
 - Non-Reddit source coverage improved via Zhihu + source registry sync
 - Remaining blockers are anti-bot/egress constrained sources (Reddit, FMKorea, Dcard)
+## Step 5A Runtime Update (2026-04-16, Source Connectivity Matrix)
+### Newly completed
+- Added source connectivity matrix generator:
+  - `scripts/source-connectivity-report.ts`
+- Added npm command:
+  - `npm run ops:source:report`
+- Updated operations runbook with usage and filtering examples.
+
+### What it provides
+- Per-source triage in one table:
+  - region/source/type/active flag
+  - recent rows, total rows
+  - last collected and last scraped timestamps
+  - connectivity state: `CONNECTED`, `ERROR`, `STALE`, `ZERO`, `DISABLED`
+  - recommended next action by failure signature (403/430/missing key/reddit path)
+- Generated output:
+  - `docs/source-notes/source-connectivity-report.md`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Remaining
+1. Run matrix on EC2 with production DB env:
+- `npm run ops:source:report -- --minutes 180 --print-json`
+2. Use generated matrix to prioritize non-Reddit fixes by region/source.
+3. After matrix refresh, continue source expansion hardening.
