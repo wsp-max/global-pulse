@@ -1,5 +1,6 @@
 import { DISABLED_SOURCE_ID_SET, SOURCES, type ScraperResult } from "@global-pulse/shared";
 import { WeiboScraper } from "./scrapers/china/weibo";
+import { ZhihuScraper } from "./scrapers/china/zhihu";
 import { ClienScraper } from "./scrapers/korea/clien";
 import { DcInsideScraper } from "./scrapers/korea/dcinside";
 import { FmkoreaScraper } from "./scrapers/korea/fmkorea";
@@ -107,6 +108,7 @@ async function run(): Promise<void> {
     new HatenaScraper(),
     new PttScraper(),
     new WeiboScraper(),
+    new ZhihuScraper(),
     new RedditScraper(),
     new RedditScraper("reddit_worldnews"),
     new RedditScraper("reddit_japan"),

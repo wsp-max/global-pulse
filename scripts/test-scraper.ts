@@ -9,6 +9,7 @@ import { RuliwebScraper } from "../packages/collector/src/scrapers/korea/ruliweb
 import { TheqooScraper } from "../packages/collector/src/scrapers/korea/theqoo";
 import { RedditMideastScraper } from "../packages/collector/src/scrapers/mideast/reddit-mideast";
 import { WeiboScraper } from "../packages/collector/src/scrapers/china/weibo";
+import { ZhihuScraper } from "../packages/collector/src/scrapers/china/zhihu";
 import { BilibiliScraper } from "../packages/collector/src/scrapers/sns/bilibili";
 import { MastodonScraper } from "../packages/collector/src/scrapers/sns/mastodon";
 import { YoutubeScraper } from "../packages/collector/src/scrapers/sns/youtube";
@@ -46,6 +47,7 @@ async function run(): Promise<void> {
     hatena: new HatenaScraper(),
     ptt: new PttScraper(),
     weibo: new WeiboScraper(),
+    zhihu: new ZhihuScraper(),
     reddit: new RedditScraper(),
     reddit_worldnews: new RedditScraper("reddit_worldnews"),
     reddit_japan: new RedditScraper("reddit_japan"),

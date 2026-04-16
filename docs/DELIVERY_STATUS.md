@@ -2231,3 +2231,25 @@
 - FMKorea/Dcard require dedicated bypass strategy beyond parser tuning
 3. Zhihu implementation
 - implement actual scraper and wire runner/test entry
+
+## Step 5A Runtime Update (2026-04-16, Non-Reddit Priority)
+### Newly completed
+- Source registry sync completed on EC2:
+  - 
+pm run seed:regions
+  - result: sources=56, ctive_sources=56
+- Zhihu scraper moved from stub to real API collector:
+  - endpoint: https://api.zhihu.com/topstory/hot-list
+  - runner wiring added in collector run path and test harness
+
+### Verification
+- 
+pm run lint -> pass
+- 
+pm run build -> pass
+- EC2 seed sync output confirms 56 registered sources
+
+### Remaining
+1. Reddit path: OAuth credentials + alternate egress/collection path (403 resolution)
+2. FMKorea/Dcard: anti-bot bypass strategy refinement
+3. Re-run full collect/analyze after deploy and refresh dashboard metrics

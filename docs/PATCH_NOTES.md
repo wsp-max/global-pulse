@@ -3787,3 +3787,31 @@
   - require anti-bot bypass strategy (session/cookie/proxy/browser profile), not parser-only changes
 - Zhihu:
   - implement scraper and add to runner before expecting non-zero rows
+
+## GP-20260416-86 (Non-Reddit Progress: Source Registry Sync + Zhihu Collector Wiring)
+### Before -> After
+- Before:
+  - runtime sources table lagged behind code constants (47 registered vs 56 in code)
+  - zhihu scraper was a stub (eturn []) and not wired into collector runner
+- After:
+  - EC2 runtime source sync executed: 
+pm run seed:regions
+  - runtime registry aligned: sources=56, ctive_sources=56
+  - implemented Zhihu hot-list scraper against public endpoint https://api.zhihu.com/topstory/hot-list
+  - wired Zhihu into collector execution and scraper test harness
+
+### Changed Files
+- packages/collector/src/scrapers/china/zhihu.ts
+- packages/collector/src/run.ts
+- scripts/test-scraper.ts
+
+### Validation
+- local: 
+pm run lint -> pass
+- local: 
+pm run build -> pass
+- ec2: 
+pm run seed:regions -> Seed completed. db=postgres regions=8, sources=56
+
+### Notes
+- Reddit family remains blocked from EC2 egress (HTTP 403) and still requires separate OAuth + egress strategy.
