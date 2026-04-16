@@ -3815,3 +3815,29 @@ pm run seed:regions -> Seed completed. db=postgres regions=8, sources=56
 
 ### Notes
 - Reddit family remains blocked from EC2 egress (HTTP 403) and still requires separate OAuth + egress strategy.
+
+## GP-20260416-87 (EC2 Runtime Verify after Zhihu + Source Sync)
+### Runtime Apply
+- Commit deployed to EC2: 8342615
+- Build + restart completed on runtime port 3100 (/pulse base path)
+
+### Runtime Verification
+- 
+pm run test:scraper -- --source zhihu (EC2) -> success, postCount=30
+- 
+pm run collect -- --source zhihu (EC2) -> 1/1 succeeded
+- 
+pm run collect (EC2, full) -> 17/56 succeeded
+- 
+pm run analyze -> completed for regions with collected posts
+- 
+pm run analyze:global -> generated=2
+- 
+pm run ops:snapshot -> completed (egions=6)
+- API checks:
+  - http://127.0.0.1:3100/pulse/api/health -> 200
+  - http://127.0.0.1:3100/pulse/api/global-topics?limit=5 -> non-empty
+  - http://3.36.83.199/pulse/api/health -> 200
+
+### Current Constraint
+- Reddit family still blocked by HTTP 403 on EC2 egress until OAuth + alternate egress strategy is applied.

@@ -2253,3 +2253,16 @@ pm run build -> pass
 1. Reddit path: OAuth credentials + alternate egress/collection path (403 resolution)
 2. FMKorea/Dcard: anti-bot bypass strategy refinement
 3. Re-run full collect/analyze after deploy and refresh dashboard metrics
+
+## Step 5A Runtime Verify (2026-04-16, after Zhihu implementation)
+### Completed now
+- EC2 deployed commit 8342615
+- Full collector pass executed: 17/56 succeeded
+- Zhihu promoted to active working source (postCount=30 test pass)
+- Analysis pipeline rerun (nalyze, nalyze:global, ops:snapshot)
+- /pulse/api/health externally reachable (200)
+
+### Current state
+- Global topics regenerated and non-empty
+- Non-Reddit source coverage improved via Zhihu + source registry sync
+- Remaining blockers are anti-bot/egress constrained sources (Reddit, FMKorea, Dcard)
