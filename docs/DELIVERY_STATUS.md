@@ -2393,3 +2393,18 @@
 ### Remaining
 1. Runtime deploy to EC2 and visual confirmation at `/pulse`.
 2. Optional follow-up: tune animation density for low-end mobile devices after runtime observation.
+
+## Hotfix Update (2026-04-18, regions/topics recovery)
+### Newly completed
+- Fixed `/api/regions` SQL CTE syntax error causing dashboard region fetch failures.
+- Fixed latest-batch matching precision in `/api/topics` and `/api/regions`.
+- Deployed to EC2 and verified runtime recovery.
+
+### Runtime verification
+- `/pulse/api/health` -> 200
+- `/pulse/api/regions` -> 200 with non-zero heat/activity for active regions
+- `/pulse/api/topics?region=kr&limit=5` -> populated topic list
+
+### Remaining
+1. Continue analyzer quality tuning for label readability.
+2. Keep source connectivity/collection watch loop running.

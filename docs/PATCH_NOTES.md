@@ -4005,3 +4005,40 @@ pm run ops:snapshot -> completed (egions=6)
 ### Notes
 - UI-only enhancement for visibility of "word motion + spread".
 - When global topics are temporarily empty, fallback lanes still render from regional heat.
+
+## GP-20260418-94 (Hotfix: /api/regions SQL CTE Syntax)
+### Before -> After
+- Before:
+  - `/api/regions` returned SQL error `syntax error at or near "filtered"` due missing `WITH` in CTE.
+  - Dashboard region graph/cards could not render correctly when regions fetch failed.
+- After:
+  - Restored valid CTE syntax (`with filtered as (...)`) in regions metrics query.
+  - `/api/regions` recovered to HTTP 200.
+
+### Changed Files
+- `app/api/regions/route.ts`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- Runtime: `/pulse/api/regions` -> 200
+
+## GP-20260418-95 (Hotfix: Latest Batch Timestamp Match Tolerance)
+### Before -> After
+- Before:
+  - `selectedBatchCreatedAt` exact equality match (`created_at = $3`) caused empty topics in some cases.
+  - Precision mismatch (millisecond vs microsecond) could produce `dataState=fresh` with zero rows.
+- After:
+  - Updated `/api/topics` and `/api/regions` latest-batch filters to use `created_at between $3 - 1s and $3 + 1s`.
+  - Latest batch topics/metrics now load consistently.
+
+### Changed Files
+- `app/api/topics/route.ts`
+- `app/api/regions/route.ts`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- Runtime:
+  - `/pulse/api/topics?region=kr&limit=5` -> topics populated
+  - `/pulse/api/regions` -> non-zero heat/topics recovered
