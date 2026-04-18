@@ -2235,18 +2235,15 @@
 ## Step 5A Runtime Update (2026-04-16, Non-Reddit Priority)
 ### Newly completed
 - Source registry sync completed on EC2:
-  - 
-pm run seed:regions
-  - result: sources=56, ctive_sources=56
+  - `npm run seed:regions`
+  - result: `sources=56, active_sources=56`
 - Zhihu scraper moved from stub to real API collector:
   - endpoint: https://api.zhihu.com/topstory/hot-list
   - runner wiring added in collector run path and test harness
 
 ### Verification
-- 
-pm run lint -> pass
-- 
-pm run build -> pass
+- `npm run lint` -> pass
+- `npm run build` -> pass
 - EC2 seed sync output confirms 56 registered sources
 
 ### Remaining
@@ -2259,7 +2256,7 @@ pm run build -> pass
 - EC2 deployed commit 8342615
 - Full collector pass executed: 17/56 succeeded
 - Zhihu promoted to active working source (postCount=30 test pass)
-- Analysis pipeline rerun (nalyze, nalyze:global, ops:snapshot)
+- Analysis pipeline rerun (`analyze`, `analyze:global`, `ops:snapshot`)
 - /pulse/api/health externally reachable (200)
 
 ### Current state
@@ -2317,3 +2314,67 @@ pm run build -> pass
 ### Remaining
 1. Reddit family (37 sources) remains blocked from EC2 runtime path.
 2. Next step is Reddit OAuth credentials + alternative egress strategy.
+## Step 5A Runtime Update (2026-04-18, Source Expansion Batch A/B/C)
+### Newly completed
+- Implemented and wired 14 new expansion sources:
+  - KR: `inven`, `instiz`, `arca`
+  - JP: `yahoo_japan`, `girlschannel`, `togetter`
+  - US: `slashdot`, `fark`, `resetera`
+  - TW/CN/EU: `bahamut`, `mobile01`, `tieba`, `gutefrage`, `mumsnet`
+- Added source IDs into shared constants and collector/test runner routes.
+- Applied analyzer quality tuning for new source weights + low-signal token filtering.
+
+### Verification
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run test:scraper -- --source <id>` summary:
+  - `tieba=29`, `gutefrage=16`, `yahoo_japan=50`, `togetter=50`, `slashdot=15`
+  - `inven=21`, `instiz=41`, `arca=1`, `bahamut=8`, `mobile01=30`
+  - `girlschannel=50`, `mumsnet=27`, `fark=50`, `resetera=39`
+- Batch collect dry-run (no DB persistence in local env):
+  - `npm run collect -- --source tieba,gutefrage,yahoo_japan,togetter,slashdot` -> `5/5 succeeded`
+  - `npm run collect -- --source inven,instiz,arca,bahamut,mobile01` -> `5/5 succeeded`
+  - `npm run collect -- --source girlschannel,mumsnet,fark,resetera` -> `4/4 succeeded`
+
+### Runtime constraints (local)
+- PostgreSQL env missing in local shell:
+  - collect persisted writes skipped
+  - `npm run analyze -- --region <id>` logs `PostgreSQL configuration missing. Skipping analysis run.`
+  - `npm run ops:source:report -- --print-json` fails with DB config error as expected
+
+### Remaining
+1. EC2 runtime apply:
+- pull latest commit and rerun Batch A/B/C collect with runtime env loaded
+2. Generate runtime connectivity matrix:
+- `npm run ops:source:report -- --minutes 180 --print-json`
+3. 24h observation policy:
+- monitor `arca` and `bahamut` low-volume behavior and disable per-source if persistent degradation continues
+
+## Step 5D Runtime Stability Update (2026-04-18, API Fresh/Stale Fallback)
+### Newly completed
+- API empty-state hardening:
+  - `/api/topics`: switched from strict period-only batch selection to `fresh-first + stale-fallback`.
+  - `/api/regions`: same fallback policy for region heat/active topic metrics and topTopics.
+  - `/api/global-topics`: if active rows are empty, fallback to latest historical global topics.
+- Response metadata extended:
+  - `meta.dataState`: `fresh | stale | empty`
+  - `stale`: boolean flag
+  - topics API additionally returns `meta.selectedBatchCreatedAt` and `meta.periodStart`.
+
+### Why this step
+- Dashboard showed zero activity when collector/analyzer was temporarily delayed beyond the selected period.
+- With fallback, the UI keeps showing last-known valid data instead of collapsing to all-zero cards.
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Remaining
+1. EC2 deploy + runtime verify:
+- `git pull --ff-only`
+- `npm run build`
+- `sudo systemctl restart global-pulse-web.service`
+2. External endpoint check after deploy:
+- `/pulse/api/topics?region=kr&limit=5` returns `meta.dataState` and non-zero `total` when stale data exists
+- `/pulse/api/regions` returns non-zero `activeTopics/totalHeatScore` in stale mode
+- `/pulse/api/global-topics` returns fallback rows with `stale=true` when fresh rows are absent

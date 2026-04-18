@@ -1,24 +1,38 @@
 import { DISABLED_SOURCE_ID_SET, SOURCES, type ScraperResult } from "@global-pulse/shared";
+import { TiebaScraper } from "./scrapers/china/tieba";
 import { WeiboScraper } from "./scrapers/china/weibo";
 import { ZhihuScraper } from "./scrapers/china/zhihu";
+import { GutefrageScraper } from "./scrapers/europe/gutefrage";
+import { MumsnetScraper } from "./scrapers/europe/mumsnet";
 import { ClienScraper } from "./scrapers/korea/clien";
+import { ArcaScraper } from "./scrapers/korea/arca";
 import { DcInsideScraper } from "./scrapers/korea/dcinside";
 import { FmkoreaScraper } from "./scrapers/korea/fmkorea";
+import { InstizScraper } from "./scrapers/korea/instiz";
+import { InvenScraper } from "./scrapers/korea/inven";
 import { PpomppuScraper } from "./scrapers/korea/ppomppu";
 import { RuliwebScraper } from "./scrapers/korea/ruliweb";
 import { TheqooScraper } from "./scrapers/korea/theqoo";
 import { RedditEuropeScraper } from "./scrapers/europe/reddit-europe";
 import { FivechScraper } from "./scrapers/japan/fivech";
+import { GirlschannelScraper } from "./scrapers/japan/girlschannel";
 import { HatenaScraper } from "./scrapers/japan/hatena";
+import { TogetterScraper } from "./scrapers/japan/togetter";
+import { YahooJapanScraper } from "./scrapers/japan/yahoo-japan";
 import { RedditMideastScraper } from "./scrapers/mideast/reddit-mideast";
 import { BilibiliScraper } from "./scrapers/sns/bilibili";
 import { MastodonScraper } from "./scrapers/sns/mastodon";
 import { YoutubeScraper } from "./scrapers/sns/youtube";
+import { BahamutScraper } from "./scrapers/taiwan/bahamut";
 import { DcardScraper } from "./scrapers/taiwan/dcard";
+import { Mobile01Scraper } from "./scrapers/taiwan/mobile01";
 import { PttScraper } from "./scrapers/taiwan/ptt";
+import { FarkScraper } from "./scrapers/us/fark";
 import { FourchanScraper } from "./scrapers/us/fourchan";
 import { HackernewsScraper } from "./scrapers/us/hackernews";
 import { RedditScraper } from "./scrapers/us/reddit";
+import { ReseteraScraper } from "./scrapers/us/resetera";
+import { SlashdotScraper } from "./scrapers/us/slashdot";
 import { Logger } from "./utils/logger";
 import { persistScraperResult } from "./utils/supabase-storage";
 
@@ -104,11 +118,22 @@ async function run(): Promise<void> {
     new PpomppuScraper(),
     new RuliwebScraper(),
     new TheqooScraper(),
+    new InvenScraper(),
+    new InstizScraper(),
+    new ArcaScraper(),
     new FivechScraper(),
     new HatenaScraper(),
+    new YahooJapanScraper(),
+    new GirlschannelScraper(),
+    new TogetterScraper(),
     new PttScraper(),
+    new BahamutScraper(),
+    new Mobile01Scraper(),
     new WeiboScraper(),
+    new TiebaScraper(),
     new ZhihuScraper(),
+    new GutefrageScraper(),
+    new MumsnetScraper(),
     new RedditScraper(),
     new RedditScraper("reddit_worldnews"),
     new RedditScraper("reddit_japan"),
@@ -148,6 +173,9 @@ async function run(): Promise<void> {
     new RedditScraper("reddit_news"),
     new FourchanScraper(),
     new HackernewsScraper(),
+    new SlashdotScraper(),
+    new FarkScraper(),
+    new ReseteraScraper(),
     new YoutubeScraper("youtube_kr"),
     new YoutubeScraper("youtube_jp"),
     new YoutubeScraper("youtube_us"),

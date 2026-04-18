@@ -15,7 +15,7 @@ async function getGlobalTopics(request: Request) {
   const postgres = getPostgresPoolOrNull();
   if (postgres) {
     try {
-      const { rows } = await postgres.query<GlobalTopicRow>(
+      const { rows: freshRows } = await postgres.query<GlobalTopicRow>(
         `
         select
           id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
@@ -27,12 +27,29 @@ async function getGlobalTopics(request: Request) {
         `,
       );
 
-      const mapped = rows.map(mapGlobalTopicRow).filter((topic) => topic.regions.length >= minRegions);
+      let mapped = freshRows.map(mapGlobalTopicRow).filter((topic) => topic.regions.length >= minRegions);
+      let dataState: "fresh" | "stale" | "empty" = mapped.length > 0 ? "fresh" : "empty";
+
+      if (mapped.length === 0) {
+        const { rows: staleRows } = await postgres.query<GlobalTopicRow>(
+          `
+          select
+            id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
+            topic_ids,total_heat_score,first_seen_region,first_seen_at,created_at
+          from global_topics
+          order by created_at desc, total_heat_score desc
+          limit 100
+          `,
+        );
+        mapped = staleRows.map(mapGlobalTopicRow).filter((topic) => topic.regions.length >= minRegions);
+        dataState = mapped.length > 0 ? "stale" : "empty";
+      }
 
       return NextResponse.json({
         globalTopics: mapped.slice(0, limit),
         total: mapped.length,
-        meta: { limit, minRegions },
+        meta: { limit, minRegions, dataState },
+        stale: dataState === "stale",
         configured: true,
         provider: "postgres",
         lastUpdated: new Date().toISOString(),

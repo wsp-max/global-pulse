@@ -4,6 +4,11 @@ import { mapTopicRow, type TopicRow } from "../_shared/mappers";
 import { getPostgresPoolOrNull } from "../_shared/postgres-server";
 import { withApiRequestLog } from "../_shared/route-logger";
 
+interface BatchSelectionRow {
+  selected_created_at: string | null;
+  is_fresh: boolean;
+}
+
 function deriveTopKeywords(topics: ReturnType<typeof mapTopicRow>[]): string[] {
   const counts = new Map<string, number>();
   for (const topic of topics) {
@@ -33,7 +38,7 @@ async function getRegions() {
     const regionRows = await Promise.all(
       regions.map(async (region) => {
         const sourceIds = SOURCES.filter((source) => source.regionId === region.id).map((source) => source.id);
-        const [snapshotResult, topicsResult, metricsResult] = await Promise.all([
+        const [snapshotResult, batchSelectionResult] = await Promise.all([
           postgres.query<{
             total_heat_score: number | string | null;
             active_topics: number | string | null;
@@ -59,24 +64,45 @@ async function getRegions() {
             `,
             [region.id],
           ),
-          postgres.query<TopicRow>(
+          postgres.query<BatchSelectionRow>(
             `
-            with latest_batch as (
-              select max(created_at) as latest_created_at
+            with batch_candidates as (
+              select
+                max(created_at) filter (
+                  where period_end >= now() - interval '24 hours'
+                    and source_ids && $2::text[]
+                ) as latest_fresh_created_at,
+                max(created_at) filter (where source_ids && $2::text[]) as latest_any_created_at
               from topics
               where region_id = $1
             )
+            select
+              coalesce(latest_fresh_created_at, latest_any_created_at) as selected_created_at,
+              latest_fresh_created_at is not null as is_fresh
+            from batch_candidates
+            `,
+            [region.id, sourceIds],
+          ),
+        ]);
+
+        const selectedBatchCreatedAt = batchSelectionResult.rows[0]?.selected_created_at ?? null;
+        const isFresh = batchSelectionResult.rows[0]?.is_fresh ?? false;
+        const dataState = selectedBatchCreatedAt ? (isFresh ? "fresh" : "stale") : "empty";
+
+        const [topicsResult, metricsResult] = await Promise.all([
+          postgres.query<TopicRow>(
+            `
             select
               id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,
               post_count,total_views,total_likes,total_comments,source_ids,rank,period_start,period_end
             from topics
             where region_id = $1
               and source_ids && $2::text[]
-              and created_at = (select latest_created_at from latest_batch)
+              and ($3::timestamptz is not null and created_at = $3::timestamptz)
             order by heat_score desc, rank asc nulls last
             limit 3
             `,
-            [region.id, sourceIds],
+            [region.id, sourceIds, selectedBatchCreatedAt],
           ),
           postgres.query<{
             total_heat_score: number | string | null;
@@ -85,19 +111,12 @@ async function getRegions() {
             sources_active: number | string | null;
           }>(
             `
-            with latest_batch as (
-              select max(created_at) as latest_created_at
-              from topics
-              where region_id = $1
-                and period_end >= now() - interval '24 hours'
-            ),
             filtered as (
               select heat_score, sentiment, source_ids
               from topics
               where region_id = $1
-                and period_end >= now() - interval '24 hours'
                 and source_ids && $2::text[]
-                and created_at = (select latest_created_at from latest_batch)
+                and ($3::timestamptz is not null and created_at = $3::timestamptz)
             )
             select
               coalesce(sum(heat_score), 0) as total_heat_score,
@@ -107,7 +126,7 @@ async function getRegions() {
             from filtered
             left join lateral unnest(coalesce(source_ids, '{}'::text[])) as src(sid) on true
             `,
-            [region.id, sourceIds],
+            [region.id, sourceIds, selectedBatchCreatedAt],
           ),
         ]);
 
@@ -123,7 +142,9 @@ async function getRegions() {
           topKeywords: hasMetrics && topTopics.length > 0 ? deriveTopKeywords(topTopics) : [],
           sourcesActive: Number(hasMetrics ? metrics?.sources_active ?? 0 : 0),
           sourcesTotal: Number(snapshot?.sources_total ?? sourceIds.length),
-          snapshotAt: snapshot?.snapshot_at ?? null,
+          snapshotAt: snapshot?.snapshot_at ?? selectedBatchCreatedAt ?? null,
+          dataState,
+          stale: dataState === "stale",
           topTopics,
         };
       }),

@@ -3796,7 +3796,7 @@
 - After:
   - EC2 runtime source sync executed: 
 pm run seed:regions
-  - runtime registry aligned: sources=56, ctive_sources=56
+  - runtime registry aligned: sources=56, ctive_sources=56
   - implemented Zhihu hot-list scraper against public endpoint https://api.zhihu.com/topstory/hot-list
   - wired Zhihu into collector execution and scraper test harness
 
@@ -3896,3 +3896,88 @@ pm run ops:snapshot -> completed (egions=6)
 
 ### Remaining Constraint
 - Current failures are now concentrated on Reddit family (`37` sources) due EC2 egress/API limitations.
+## GP-20260418-91 (Source Expansion Batch A/B/C: KR/JP/US + TW/CN/EU)
+### Before -> After
+- Before:
+  - `tieba`, `gutefrage`, `yahoo_japan` were stubs (`return []`).
+  - Expansion targets (`inven`, `instiz`, `arca`, `girlschannel`, `togetter`, `slashdot`, `fark`, `resetera`, `bahamut`, `mobile01`, `mumsnet`) were not implemented/wired.
+  - Collector/test runner/constants/analyzer weights were missing these 14 source IDs.
+- After:
+  - Implemented or completed all 14 target source scrapers.
+  - Wired all targets into:
+    - `packages/collector/src/run.ts`
+    - `scripts/test-scraper.ts`
+    - `packages/shared/src/constants.ts`
+  - Added source-weight and low-signal-token tuning in `topic-clusterer.ts` to reduce fragmented topic labels.
+  - Added source verification note:
+    - `docs/source-notes/source-expansion-kr-jp-us-tw-cn-eu-2026-04-18.md`
+
+### Changed Files
+- `packages/collector/src/scrapers/china/tieba.ts`
+- `packages/collector/src/scrapers/europe/gutefrage.ts`
+- `packages/collector/src/scrapers/japan/yahoo-japan.ts`
+- `packages/collector/src/scrapers/korea/inven.ts`
+- `packages/collector/src/scrapers/korea/instiz.ts`
+- `packages/collector/src/scrapers/korea/arca.ts`
+- `packages/collector/src/scrapers/japan/girlschannel.ts`
+- `packages/collector/src/scrapers/japan/togetter.ts`
+- `packages/collector/src/scrapers/us/slashdot.ts`
+- `packages/collector/src/scrapers/us/fark.ts`
+- `packages/collector/src/scrapers/us/resetera.ts`
+- `packages/collector/src/scrapers/taiwan/bahamut.ts`
+- `packages/collector/src/scrapers/taiwan/mobile01.ts`
+- `packages/collector/src/scrapers/europe/mumsnet.ts`
+- `packages/collector/src/run.ts`
+- `scripts/test-scraper.ts`
+- `packages/shared/src/constants.ts`
+- `packages/analyzer/src/topic-clusterer.ts`
+- `packages/collector/src/index.ts`
+- `docs/source-notes/source-expansion-kr-jp-us-tw-cn-eu-2026-04-18.md`
+
+### Validation
+- Quality gate:
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+- Source gate (`npm run test:scraper -- --source <id>`) summary:
+  - `tieba=29`, `gutefrage=16`, `yahoo_japan=50`, `togetter=50`, `slashdot=15`
+  - `inven=21`, `instiz=41`, `arca=1`, `bahamut=8`, `mobile01=30`
+  - `girlschannel=50`, `mumsnet=27`, `fark=50`, `resetera=39`
+- Batch collect gate:
+  - Batch A -> `5/5 succeeded`
+  - Batch B -> `5/5 succeeded`
+  - Batch C -> `4/4 succeeded`
+
+### Notes
+- Local environment has no PostgreSQL runtime vars, so collect persistence was skipped with warning:
+  - `PostgreSQL configuration unavailable. Skipping persistence.`
+- `ops:source:report` and per-region `analyze` require DB env and should be rerun on EC2 runtime.
+- Low-volume exceptions tracked for 24h observation:
+  - `arca` (challenge/fallback constrained)
+  - `bahamut` (direct GNN-only footprint)
+## GP-20260418-92 (API Fresh/Stale Fallback for Dashboard Stability)
+### Before -> After
+- Before:
+  - /api/topics returned empty when no batch existed in the requested period window.
+  - /api/regions metrics dropped to zero when the 24h window had no recent batch, even though historical topics existed.
+  - /api/global-topics returned empty when only expired/fresh-miss state existed.
+- After:
+  - /api/topics: select latest fresh batch first, then fallback to latest available batch (stale mode).
+  - /api/regions: same fresh/stale selection for top topics and aggregated metrics.
+  - /api/global-topics: fallback to latest historical rows when fresh set is empty.
+  - Added response metadata: meta.dataState (fresh|stale|empty) and stale boolean.
+
+### Changed Files
+- app/api/topics/route.ts
+- app/api/regions/route.ts
+- app/api/global-topics/route.ts
+- docs/DELIVERY_STATUS.md
+
+### Validation
+- npm run lint -> pass
+- npm run build -> pass
+
+### Runtime Follow-up
+- Deploy this commit to EC2 and verify:
+  - /pulse/api/topics?region=kr&limit=5 includes meta.dataState.
+  - /pulse/api/regions keeps non-zero cards in stale mode when fresh window is empty.
+  - /pulse/api/global-topics serves fallback rows with stale=true when needed.

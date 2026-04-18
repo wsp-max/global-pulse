@@ -1,23 +1,37 @@
 import { ClienScraper } from "../packages/collector/src/scrapers/korea/clien";
+import { ArcaScraper } from "../packages/collector/src/scrapers/korea/arca";
 import { DcInsideScraper } from "../packages/collector/src/scrapers/korea/dcinside";
 import { RedditEuropeScraper } from "../packages/collector/src/scrapers/europe/reddit-europe";
 import { FivechScraper } from "../packages/collector/src/scrapers/japan/fivech";
+import { GirlschannelScraper } from "../packages/collector/src/scrapers/japan/girlschannel";
 import { HatenaScraper } from "../packages/collector/src/scrapers/japan/hatena";
 import { FmkoreaScraper } from "../packages/collector/src/scrapers/korea/fmkorea";
+import { InstizScraper } from "../packages/collector/src/scrapers/korea/instiz";
+import { InvenScraper } from "../packages/collector/src/scrapers/korea/inven";
 import { PpomppuScraper } from "../packages/collector/src/scrapers/korea/ppomppu";
 import { RuliwebScraper } from "../packages/collector/src/scrapers/korea/ruliweb";
 import { TheqooScraper } from "../packages/collector/src/scrapers/korea/theqoo";
+import { TogetterScraper } from "../packages/collector/src/scrapers/japan/togetter";
+import { YahooJapanScraper } from "../packages/collector/src/scrapers/japan/yahoo-japan";
 import { RedditMideastScraper } from "../packages/collector/src/scrapers/mideast/reddit-mideast";
 import { WeiboScraper } from "../packages/collector/src/scrapers/china/weibo";
 import { ZhihuScraper } from "../packages/collector/src/scrapers/china/zhihu";
+import { TiebaScraper } from "../packages/collector/src/scrapers/china/tieba";
+import { GutefrageScraper } from "../packages/collector/src/scrapers/europe/gutefrage";
+import { MumsnetScraper } from "../packages/collector/src/scrapers/europe/mumsnet";
 import { BilibiliScraper } from "../packages/collector/src/scrapers/sns/bilibili";
 import { MastodonScraper } from "../packages/collector/src/scrapers/sns/mastodon";
 import { YoutubeScraper } from "../packages/collector/src/scrapers/sns/youtube";
+import { BahamutScraper } from "../packages/collector/src/scrapers/taiwan/bahamut";
 import { DcardScraper } from "../packages/collector/src/scrapers/taiwan/dcard";
+import { Mobile01Scraper } from "../packages/collector/src/scrapers/taiwan/mobile01";
 import { PttScraper } from "../packages/collector/src/scrapers/taiwan/ptt";
+import { FarkScraper } from "../packages/collector/src/scrapers/us/fark";
 import { FourchanScraper } from "../packages/collector/src/scrapers/us/fourchan";
 import { HackernewsScraper } from "../packages/collector/src/scrapers/us/hackernews";
 import { RedditScraper } from "../packages/collector/src/scrapers/us/reddit";
+import { ReseteraScraper } from "../packages/collector/src/scrapers/us/resetera";
+import { SlashdotScraper } from "../packages/collector/src/scrapers/us/slashdot";
 import { getLogger } from "@global-pulse/shared/server-logger";
 
 const logger = getLogger("scripts:test-scraper");
@@ -43,11 +57,22 @@ async function run(): Promise<void> {
     ppomppu: new PpomppuScraper(),
     ruliweb: new RuliwebScraper(),
     theqoo: new TheqooScraper(),
+    inven: new InvenScraper(),
+    instiz: new InstizScraper(),
+    arca: new ArcaScraper(),
     fivech: new FivechScraper(),
     hatena: new HatenaScraper(),
+    yahoo_japan: new YahooJapanScraper(),
+    girlschannel: new GirlschannelScraper(),
+    togetter: new TogetterScraper(),
     ptt: new PttScraper(),
+    bahamut: new BahamutScraper(),
+    mobile01: new Mobile01Scraper(),
     weibo: new WeiboScraper(),
+    tieba: new TiebaScraper(),
     zhihu: new ZhihuScraper(),
+    gutefrage: new GutefrageScraper(),
+    mumsnet: new MumsnetScraper(),
     reddit: new RedditScraper(),
     reddit_worldnews: new RedditScraper("reddit_worldnews"),
     reddit_japan: new RedditScraper("reddit_japan"),
@@ -87,6 +112,9 @@ async function run(): Promise<void> {
     reddit_russian: new RedditScraper("reddit_russian"),
     fourchan: new FourchanScraper(),
     hackernews: new HackernewsScraper(),
+    slashdot: new SlashdotScraper(),
+    fark: new FarkScraper(),
+    resetera: new ReseteraScraper(),
     youtube_kr: new YoutubeScraper(),
     youtube_jp: new YoutubeScraper("youtube_jp"),
     youtube_us: new YoutubeScraper("youtube_us"),
