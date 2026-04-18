@@ -29,6 +29,7 @@ async function getGlobalTopics(request: Request) {
 
       let mapped = freshRows.map(mapGlobalTopicRow).filter((topic) => topic.regions.length >= minRegions);
       let dataState: "fresh" | "stale" | "empty" = mapped.length > 0 ? "fresh" : "empty";
+      let supplementedFromHistory = false;
 
       if (mapped.length === 0) {
         const { rows: staleRows } = await postgres.query<GlobalTopicRow>(
@@ -43,12 +44,43 @@ async function getGlobalTopics(request: Request) {
         );
         mapped = staleRows.map(mapGlobalTopicRow).filter((topic) => topic.regions.length >= minRegions);
         dataState = mapped.length > 0 ? "stale" : "empty";
+      } else if (mapped.length < limit) {
+        const { rows: staleRows } = await postgres.query<GlobalTopicRow>(
+          `
+          select
+            id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
+            topic_ids,total_heat_score,first_seen_region,first_seen_at,created_at
+          from global_topics
+          order by created_at desc, total_heat_score desc
+          limit 200
+          `,
+        );
+
+        const seenKeys = new Set<string>(
+          mapped.map((topic) => `${topic.id ?? topic.nameEn}|${topic.nameKo}`.toLowerCase()),
+        );
+
+        for (const topic of staleRows.map(mapGlobalTopicRow)) {
+          if (topic.regions.length < minRegions) {
+            continue;
+          }
+          const key = `${topic.id ?? topic.nameEn}|${topic.nameKo}`.toLowerCase();
+          if (seenKeys.has(key)) {
+            continue;
+          }
+          seenKeys.add(key);
+          mapped.push(topic);
+          supplementedFromHistory = true;
+          if (mapped.length >= limit) {
+            break;
+          }
+        }
       }
 
       return NextResponse.json({
         globalTopics: mapped.slice(0, limit),
         total: mapped.length,
-        meta: { limit, minRegions, dataState },
+        meta: { limit, minRegions, dataState, supplementedFromHistory },
         stale: dataState === "stale",
         configured: true,
         provider: "postgres",

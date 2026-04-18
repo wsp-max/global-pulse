@@ -2477,3 +2477,16 @@
 ### Remaining
 1. Deploy this follow-up commit and verify movement density at `/pulse`.
 2. Observe 24h and disable noisy keywords if any false spread appears.
+
+## API Density Follow-up (2026-04-18, global topics backfill)
+### Newly completed
+- `/api/global-topics` now supplements low fresh result sets with deduped recent historical rows.
+- Added response metadata `meta.supplementedFromHistory`.
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Remaining
+1. Deploy and verify `/pulse/api/global-topics?limit=20` returns richer set in low fresh windows.
+2. Continue improving true fresh cross-region match rate (Gemini endpoint/env correction + source diversity).

@@ -4155,3 +4155,22 @@ pm run ops:snapshot -> completed (egions=6)
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
+
+## GP-20260418-101 (Global Topics API Density Backfill)
+### Before -> After
+- Before:
+  - `/api/global-topics` returned only fresh active rows when any fresh row existed.
+  - In low-match windows, fresh global topics could drop to 1~2 and reduce map/propagation density.
+- After:
+  - Added density backfill logic:
+    - keep fresh-first behavior,
+    - when fresh rows are below requested `limit`, supplement from latest historical rows (deduped),
+    - preserve stale-only fallback when fresh is empty.
+  - Added `meta.supplementedFromHistory` for observability.
+
+### Changed Files
+- `app/api/global-topics/route.ts`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
