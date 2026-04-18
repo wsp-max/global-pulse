@@ -4096,3 +4096,41 @@ pm run ops:snapshot -> completed (egions=6)
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
+
+## GP-20260418-99 (Propagation Direction Stabilization + Data Density + UTF-8 Recovery)
+### Before -> After
+- Before:
+  - Map/stream propagation could look like random back-and-forth movement because direction was partly presentation-driven.
+  - Home dashboard fetched only a small global-topic window (`limit=5`), reducing visible cross-region signals.
+  - Region summary fetched only top 3 topics per region for cards/keywords, causing thin keyword ranking lists.
+  - Multiple dashboard/region UI strings were mojibake-corrupted and displayed as broken text (`??`-style output).
+  - Global analysis used only the latest single region batch, limiting cross-region matching candidates.
+- After:
+  - Map flow edges are now origin-driven: per topic `firstSeenRegion -> other regions`, then deduped per undirected pair to one stable direction.
+  - Propagation stream keyword motion now uses only confirmed cross-region global topics (no synthetic alternation).
+  - Direction in stream is derived from origin/target longitude, not index parity.
+  - Home global-topic fetch increased to `limit=20`.
+  - `/api/regions` top topic fetch increased from `3 -> 8` for richer summary keyword extraction.
+  - Global analyzer input expanded to latest **3** batches per region (within window) to improve mapping volume.
+  - UTF-8 text recovery applied to key dashboard/region components to remove broken Korean strings.
+
+### Changed Files
+- `components/dashboard/WorldHeatMap.tsx`
+- `components/dashboard/PropagationStream.tsx`
+- `components/dashboard/PulseSignalBoard.tsx`
+- `components/dashboard/RegionCard.tsx`
+- `components/region/RegionPageClient.tsx`
+- `components/region/TopicList.tsx`
+- `app/page.tsx`
+- `app/api/regions/route.ts`
+- `packages/analyzer/src/run-global-analysis.ts`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Runtime Follow-up
+- Deploy and verify:
+  - `/pulse` map shows one-way country-to-country paths (no mirrored pair oscillation in same refresh).
+  - `/pulse` keyword and cross-signal panels show increased item count.
+  - `/pulse/api/global-topics?limit=20` returns expanded candidate set.

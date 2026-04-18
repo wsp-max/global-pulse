@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import type { Topic } from "@global-pulse/shared";
@@ -17,7 +17,7 @@ interface RegionPageClientProps {
 }
 
 export function RegionPageClient({ regionId }: RegionPageClientProps) {
-  const { data, isLoading, error } = useTopics(regionId, 20);
+  const { data, isLoading, error } = useTopics(regionId, 30);
   const topics = useMemo(() => data?.topics ?? [], [data?.topics]);
 
   const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
@@ -43,7 +43,7 @@ export function RegionPageClient({ regionId }: RegionPageClientProps) {
       {error && (
         <EmptyState
           title="리전 토픽을 불러오지 못했습니다."
-          description="잠시 후 자동으로 재시도합니다. 지속되면 API 상태를 확인해 주세요."
+          description="잠시 후 자동으로 다시 시도합니다. 문제가 계속되면 API 상태를 확인해 주세요."
         />
       )}
 
@@ -61,7 +61,11 @@ export function RegionPageClient({ regionId }: RegionPageClientProps) {
             {isLoading ? (
               <LoadingSkeleton className="h-44" lines={5} />
             ) : (
-              <TopicList topics={topics} selectedTopicId={selectedTopic?.id} onSelect={(topic: Topic) => setSelectedTopicId(topic.id)} />
+              <TopicList
+                topics={topics}
+                selectedTopicId={selectedTopic?.id}
+                onSelect={(topic: Topic) => setSelectedTopicId(topic.id)}
+              />
             )}
           </div>
 
@@ -73,7 +77,7 @@ export function RegionPageClient({ regionId }: RegionPageClientProps) {
             <SentimentGauge value={selectedTopic?.sentiment ?? 0} />
             <SourceBreakdown sourceIds={selectedTopic?.sourceIds ?? []} />
             <div className="text-xs text-[var(--text-tertiary)]">
-              게시글 {selectedTopic?.postCount ?? 0} · 댓글 {selectedTopic?.totalComments ?? 0}
+              게시글 {selectedTopic?.postCount ?? 0} / 댓글 {selectedTopic?.totalComments ?? 0}
             </div>
           </div>
         </section>
@@ -81,4 +85,3 @@ export function RegionPageClient({ regionId }: RegionPageClientProps) {
     </main>
   );
 }
-

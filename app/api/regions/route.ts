@@ -104,7 +104,7 @@ async function getRegions() {
                 and $3::timestamptz + interval '1 second'
               )
             order by heat_score desc, rank asc nulls last
-            limit 3
+            limit 8
             `,
             [region.id, sourceIds, selectedBatchCreatedAt],
           ),

@@ -223,21 +223,32 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
     async fetchTopics(periodStartIso) {
       const { rows } = await pool.query<TopicRow>(
         `
-        with latest_region_batch as (
-          select region_id, max(created_at) as latest_created_at
+        with distinct_region_batches as (
+          select distinct region_id, created_at
           from topics
           where period_end >= $1
-          group by region_id
+        ),
+        latest_region_batches as (
+          select
+            region_id,
+            created_at,
+            row_number() over (partition by region_id order by created_at desc) as rn
+          from distinct_region_batches
+        ),
+        selected_region_batches as (
+          select region_id, created_at
+          from latest_region_batches
+          where rn <= 3
         )
         select
           t.id,t.region_id,t.name_ko,t.name_en,t.summary_ko,t.summary_en,t.keywords,t.sentiment,t.heat_score,t.post_count,
           t.total_views,t.total_likes,t.total_comments,t.source_ids,t.rank,t.period_start,t.period_end
         from topics t
-        join latest_region_batch b
+        join selected_region_batches b
           on t.region_id = b.region_id
-         and t.created_at = b.latest_created_at
+         and t.created_at = b.created_at
         order by t.heat_score desc nulls last
-        limit 1500
+        limit 4500
         `,
         [periodStartIso],
       );

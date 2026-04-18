@@ -20,7 +20,7 @@ export default function HomePage() {
     data: globalTopicsData,
     isLoading: isGlobalLoading,
     error: globalError,
-  } = useGlobalTopics(5);
+  } = useGlobalTopics(20);
 
   const regions = regionsData?.regions ?? [];
   const sortedRegions = [...regions].sort((a, b) => b.totalHeatScore - a.totalHeatScore);

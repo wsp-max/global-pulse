@@ -1,4 +1,4 @@
-import type { GlobalTopic } from "@global-pulse/shared";
+﻿import type { GlobalTopic } from "@global-pulse/shared";
 import type { RegionDashboardRow } from "@/lib/types/api";
 
 interface PulseSignalBoardProps {
@@ -32,11 +32,11 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
   const averageSentiment = sentimentWeight > 0 ? weightedSentiment / sentimentWeight : 0;
 
   const maxHeat = Math.max(...regions.map((region) => region.totalHeatScore), 1);
-  const hottestRegions = [...regions].sort((a, b) => b.totalHeatScore - a.totalHeatScore).slice(0, 5);
+  const hottestRegions = [...regions].sort((a, b) => b.totalHeatScore - a.totalHeatScore).slice(0, 6);
 
   const keywordCounts = new Map<string, number>();
   for (const region of regions) {
-    for (const keyword of region.topKeywords.slice(0, 5)) {
+    for (const keyword of region.topKeywords.slice(0, 12)) {
       const normalized = keyword.trim();
       if (!normalized) {
         continue;
@@ -46,11 +46,11 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
   }
   const keywordRows = [...keywordCounts.entries()]
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 10);
+    .slice(0, 20);
 
   const leadGlobal = globalTopics[0] ?? null;
   const leadGlobalRegionText =
-    leadGlobal?.regions.slice(0, 4).map((regionId) => regionId.toUpperCase()).join(" · ") ?? "";
+    leadGlobal?.regions.slice(0, 6).map((regionId) => regionId.toUpperCase()).join(" -> ") ?? "";
 
   return (
     <section className="panel-grid relative h-full overflow-hidden rounded-xl border border-[var(--border-default)] bg-[linear-gradient(180deg,rgba(7,23,45,0.86),rgba(10,14,23,0.98))] p-4">
@@ -60,9 +60,7 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-display text-sm tracking-[0.2em] text-[var(--text-accent)]">SIGNAL BOARD</p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              지도 아래 글로벌 펄스와 리전 동조 신호를 요약합니다.
-            </p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">지금 이 순간 글로벌 리전 동조 신호를 요약합니다.</p>
           </div>
           <div
             className="rounded-full border px-2 py-1 text-[11px] font-semibold"
@@ -71,7 +69,7 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
               color: sentimentAccent(averageSentiment),
             }}
           >
-            Sentiment {averageSentiment.toFixed(2)} · {toSentimentLabel(averageSentiment)}
+            Sentiment {averageSentiment.toFixed(2)} / {toSentimentLabel(averageSentiment)}
           </div>
         </div>
 
@@ -131,7 +129,7 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
               <div className="mt-2 rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.8)] p-2.5">
                 <p className="text-xs text-[var(--text-primary)]">{leadGlobal.nameKo || leadGlobal.nameEn}</p>
                 <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
-                  {leadGlobalRegionText || "region mapping pending"} · Heat {Math.round(leadGlobal.totalHeatScore)}
+                  {leadGlobalRegionText || "region mapping pending"} / Heat {Math.round(leadGlobal.totalHeatScore)}
                 </p>
               </div>
             ) : (
@@ -148,7 +146,7 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
                     className="rounded-full border border-[var(--border-default)] bg-[rgba(30,41,59,0.7)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
                   >
                     {keyword}
-                    <span className="ml-1 text-[var(--text-accent)]">×{hits}</span>
+                    <span className="ml-1 text-[var(--text-accent)]">x{hits}</span>
                   </span>
                 ))
               )}
@@ -159,4 +157,3 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
     </section>
   );
 }
-

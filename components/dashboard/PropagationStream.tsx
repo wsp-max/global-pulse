@@ -26,6 +26,17 @@ interface PropagationLane {
   regionIds: string[];
 }
 
+const REGION_LONGITUDE: Record<string, number> = {
+  kr: 127.8,
+  jp: 138.3,
+  tw: 121.0,
+  cn: 104.2,
+  us: -98.6,
+  eu: 10.0,
+  me: 45.0,
+  ru: 90.0,
+};
+
 function normalizeKeyword(raw: string): string {
   return raw.replace(/\s+/g, " ").trim();
 }
@@ -38,6 +49,25 @@ function isMeaningfulKeyword(keyword: string): boolean {
   return true;
 }
 
+function resolveSignalDirection(originRegionId: string, regionIds: Set<string>): "left" | "right" {
+  const originLon = REGION_LONGITUDE[originRegionId];
+  if (originLon === undefined) {
+    return "right";
+  }
+
+  const targetLons = [...regionIds]
+    .filter((regionId) => regionId !== originRegionId)
+    .map((regionId) => REGION_LONGITUDE[regionId])
+    .filter((value): value is number => Number.isFinite(value));
+
+  if (targetLons.length === 0) {
+    return "right";
+  }
+
+  const avgTargetLon = targetLons.reduce((sum, value) => sum + value, 0) / targetLons.length;
+  return avgTargetLon >= originLon ? "right" : "left";
+}
+
 function getKeywordSignals(regions: RegionDashboardRow[], globalTopics: GlobalTopic[]): KeywordSignal[] {
   const regionColorMap = new Map(regions.map((region) => [region.id, region.color]));
   const signals = new Map<
@@ -46,10 +76,11 @@ function getKeywordSignals(regions: RegionDashboardRow[], globalTopics: GlobalTo
       regionIds: Set<string>;
       heat: number;
       regionColor: string;
+      originRegionId: string;
     }
   >();
 
-  for (const topic of globalTopics) {
+  for (const topic of globalTopics.slice(0, 24)) {
     if (topic.regions.length < 2) {
       continue;
     }
@@ -65,35 +96,16 @@ function getKeywordSignals(regions: RegionDashboardRow[], globalTopics: GlobalTo
     if (existing) {
       topic.regions.forEach((regionId) => existing.regionIds.add(regionId));
       existing.heat += topic.totalHeatScore;
+      if (topic.firstSeenRegion) {
+        existing.originRegionId = topic.firstSeenRegion;
+      }
     } else {
       signals.set(label, {
         regionIds: new Set(topic.regions),
         heat: topic.totalHeatScore,
         regionColor: leadColor,
+        originRegionId: leadRegionId,
       });
-    }
-  }
-
-  for (const region of regions) {
-    for (const topic of region.topTopics.slice(0, 5)) {
-      for (const keyword of topic.keywords.slice(0, 6)) {
-        const normalized = normalizeKeyword(keyword);
-        if (!isMeaningfulKeyword(normalized)) {
-          continue;
-        }
-
-        const existing = signals.get(normalized);
-        if (existing) {
-          existing.regionIds.add(region.id);
-          existing.heat += topic.heatScore * 0.25;
-        } else {
-          signals.set(normalized, {
-            regionIds: new Set([region.id]),
-            heat: topic.heatScore * 0.25,
-            regionColor: region.color,
-          });
-        }
-      }
     }
   }
 
@@ -105,31 +117,29 @@ function getKeywordSignals(regions: RegionDashboardRow[], globalTopics: GlobalTo
       }
       return b[1].heat - a[1].heat;
     })
-    .slice(0, 18)
+    .slice(0, 30)
     .map(([label, meta], index) => ({
       key: `${label}-${index}`,
       label,
       hits: meta.regionIds.size,
       color: meta.regionColor,
       lane: ((index * 17) % 78) + 6,
-      direction: index % 2 === 0 ? "left" : "right",
-      durationSec: 13 + (index % 5) * 1.5,
-      delaySec: index * 0.45,
+      direction: resolveSignalDirection(meta.originRegionId, meta.regionIds),
+      durationSec: 12 + (index % 6) * 1.4,
+      delaySec: index * 0.3,
     }));
 }
 
 function getPropagationLanes(globalTopics: GlobalTopic[]): PropagationLane[] {
   return globalTopics
     .filter((topic) => topic.regions.length >= 2)
-    .slice(0, 4)
+    .slice(0, 8)
     .map((topic) => {
-      const ordered = new Set<string>();
-      if (topic.firstSeenRegion) {
-        ordered.add(topic.firstSeenRegion);
-      }
-      for (const regionId of topic.regions) {
-        ordered.add(regionId);
-      }
+      const origin = topic.firstSeenRegion ?? topic.regions[0];
+      const tail = topic.regions
+        .filter((regionId) => regionId !== origin)
+        .sort((a, b) => (topic.regionalHeatScores[b] ?? 0) - (topic.regionalHeatScores[a] ?? 0));
+      const ordered = [origin, ...tail];
 
       return {
         key: `global-${topic.id ?? topic.nameEn}`,

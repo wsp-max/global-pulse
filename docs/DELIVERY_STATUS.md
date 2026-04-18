@@ -2441,3 +2441,23 @@
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
+
+## UI/Data Quality Update (2026-04-18, propagation stability + density)
+### Newly completed
+- Stabilized propagation direction to reduce random-looking back-and-forth paths.
+- Increased dashboard signal density:
+  - Home global topics fetch `5 -> 20`
+  - Region summary topic fetch `3 -> 8`
+  - Wider keyword extraction window for signal board.
+- Expanded global analysis candidate window:
+  - latest `1 -> 3` batches per region in global mapping input.
+- Recovered UTF-8 text in key dashboard/region UI components to remove mojibake output.
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Remaining
+1. Deploy to EC2 and run manual visual check on `/pulse` for one-way propagation behavior.
+2. Execute one collector+analyzer+global-analyzer cycle on EC2 to increase fresh cross-region movement evidence.
+3. Re-check `/pulse/api/global-topics?limit=20` and confirm movement lanes increase accordingly.

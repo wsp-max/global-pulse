@@ -32,39 +32,64 @@ function getHeatColor(score: number): string {
 }
 
 function getFlowPairs(globalTopics: GlobalTopic[]): Array<[string, string]> {
-  const pairs: Array<[string, string]> = [];
-  const seen = new Set<string>();
+  const directedScore = new Map<string, number>();
+  const directedCount = new Map<string, number>();
 
-  for (const topic of globalTopics.slice(0, 4)) {
+  for (const topic of globalTopics.slice(0, 24)) {
     if (topic.regions.length < 2) {
       continue;
     }
 
-    const ordered = new Set<string>();
-    if (topic.firstSeenRegion) {
-      ordered.add(topic.firstSeenRegion);
-    }
-    for (const regionId of topic.regions) {
-      ordered.add(regionId);
-    }
-
-    const chain = [...ordered].filter((regionId) => REGION_COORDINATES[regionId]);
-    if (chain.length < 2) {
+    const origin = topic.firstSeenRegion && REGION_COORDINATES[topic.firstSeenRegion]
+      ? topic.firstSeenRegion
+      : topic.regions.find((regionId) => REGION_COORDINATES[regionId]);
+    if (!origin) {
       continue;
     }
 
-    for (let i = 0; i < chain.length - 1; i += 1) {
-      const from = chain[i];
-      const to = chain[i + 1];
-      const key = `${from}->${to}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        pairs.push([from, to]);
-      }
+    const destinations = topic.regions
+      .filter((regionId) => regionId !== origin)
+      .filter((regionId) => REGION_COORDINATES[regionId]);
+    if (destinations.length === 0) {
+      continue;
+    }
+
+    for (const to of destinations) {
+      const edgeKey = `${origin}__${to}`;
+      directedScore.set(edgeKey, (directedScore.get(edgeKey) ?? 0) + topic.totalHeatScore);
+      directedCount.set(edgeKey, (directedCount.get(edgeKey) ?? 0) + 1);
     }
   }
 
-  return pairs;
+  const bestByUndirected = new Map<
+    string,
+    {
+      from: string;
+      to: string;
+      score: number;
+    }
+  >();
+
+  for (const [edgeKey, score] of directedScore.entries()) {
+    const [from, to] = edgeKey.split("__");
+    if (!from || !to) {
+      continue;
+    }
+
+    const directionalVotes = directedCount.get(edgeKey) ?? 0;
+    const stableScore = score + directionalVotes * 80;
+    const undirectedKey = [from, to].sort().join("__");
+    const current = bestByUndirected.get(undirectedKey);
+
+    if (!current || stableScore > current.score) {
+      bestByUndirected.set(undirectedKey, { from, to, score: stableScore });
+    }
+  }
+
+  return [...bestByUndirected.values()]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 16)
+    .map((edge) => [edge.from, edge.to]);
 }
 
 export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) {

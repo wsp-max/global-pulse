@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { HeatBadge } from "@/components/shared/HeatBadge";
 import type { RegionDashboardRow } from "@/lib/types/api";
 
@@ -9,7 +9,7 @@ interface RegionCardProps {
 export function RegionCard({ region }: RegionCardProps) {
   const heatScore = Math.round(region.totalHeatScore);
   const sentimentPercent = Math.round(((region.avgSentiment + 1) / 2) * 100);
-  const topKeywords = region.topKeywords.slice(0, 3);
+  const topKeywords = region.topKeywords.slice(0, 5);
 
   return (
     <Link
@@ -26,7 +26,7 @@ export function RegionCard({ region }: RegionCardProps) {
       </div>
 
       <div className="mt-3 text-xs text-[var(--text-secondary)]">
-        TOP: {topKeywords.length > 0 ? topKeywords.join(" · ") : "데이터 수집 중"}
+        TOP: {topKeywords.length > 0 ? topKeywords.join(" / ") : "데이터 수집 중"}
       </div>
 
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
@@ -44,4 +44,3 @@ export function RegionCard({ region }: RegionCardProps) {
     </Link>
   );
 }
-

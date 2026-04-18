@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { Topic } from "@global-pulse/shared";
 import { TopicCard } from "./TopicCard";
@@ -29,4 +29,3 @@ export function TopicList({ topics, selectedTopicId, onSelect }: TopicListProps)
     </div>
   );
 }
-
