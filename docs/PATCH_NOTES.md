@@ -4222,3 +4222,21 @@ pm run ops:snapshot -> completed (egions=6)
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
+
+## GP-20260419-104 (Global Topics API Final Dedup Guard)
+### Before -> After
+- Before:
+  - `/api/global-topics` could still return duplicate labels when historical/fresh rows overlapped with slight identity variance.
+- After:
+  - Added final response dedup pass by canonical key:
+    - normalized `nameEn`
+    - normalized `nameKo`
+    - sorted region set
+  - Keeps higher-heat row when collisions occur.
+
+### Changed Files
+- `app/api/global-topics/route.ts`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass

@@ -3,6 +3,10 @@ import { getPostgresPoolOrNull } from "../_shared/postgres-server";
 import { withApiRequestLog } from "../_shared/route-logger";
 import { mapGlobalTopicRow, type GlobalTopicRow } from "../_shared/mappers";
 
+function normalizeTopicIdentity(value: string | undefined): string {
+  return (value ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 export async function GET(request: Request) {
   return withApiRequestLog(request, "/api/global-topics", () => getGlobalTopics(request));
 }
@@ -76,6 +80,21 @@ async function getGlobalTopics(request: Request) {
           }
         }
       }
+
+      const dedupedMap = new Map<string, (typeof mapped)[number]>();
+      for (const topic of mapped) {
+        const key = [
+          normalizeTopicIdentity(topic.nameEn),
+          normalizeTopicIdentity(topic.nameKo),
+          [...topic.regions].sort().join(","),
+        ].join("|");
+        const existing = dedupedMap.get(key);
+        if (!existing || topic.totalHeatScore > existing.totalHeatScore) {
+          dedupedMap.set(key, topic);
+        }
+      }
+
+      mapped = [...dedupedMap.values()].sort((a, b) => b.totalHeatScore - a.totalHeatScore);
 
       return NextResponse.json({
         globalTopics: mapped.slice(0, limit),

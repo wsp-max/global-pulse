@@ -2459,3 +2459,24 @@
 ### Remaining
 1. Deploy and run `npm run analyze:gemini -- --hours 24` on EC2.
 2. Confirm 404 disappearance and check whether fresh cross-region global topics increase.
+
+## Analyzer Density Update (2026-04-18)
+### Newly completed
+- Added env-based analyzer density controls for raw-post intake and cluster output size.
+- Increased default topic density for region rankings.
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Remaining
+1. Deploy and run analyzer once to confirm region topic counts increase in runtime.
+2. Observe for over-fragmentation and tune env limits if needed.
+
+## API Follow-up (2026-04-19)
+### Newly completed
+- Added final dedupe guard on `/api/global-topics` response to remove duplicate labels in stale/fresh overlap windows.
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
