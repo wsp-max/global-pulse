@@ -4240,3 +4240,46 @@ pm run ops:snapshot -> completed (egions=6)
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
+
+## GP-20260419-105 (Cross-Region Tuning + ME/RU Source Expansion + Propagation Stabilization)
+### Before -> After
+- Before:
+  - Cross-region mapping threshold was strict, causing sparse global-topic linkage in low-overlap windows.
+  - `me`/`ru` regions had limited non-Reddit source diversity and lower ingest resilience.
+  - Propagation visuals could look random because map edges were mixed with keyword-only spread heuristics.
+- After:
+  - Cross-region matcher tuned for higher recall:
+    - default similarity `0.32 -> 0.24`
+    - additional similarity shortcuts for shared token/keyword cases
+    - relaxed early-reject rules
+  - Expanded `me`/`ru` sources and wired collector/test paths:
+    - added `habr` (RU RSS)
+    - added `youtube_me`, `youtube_ru`
+    - added `mastodon_me`, `mastodon_ru` with regional script/keyword filtering
+  - Stabilized propagation animation:
+    - world map flow uses confirmed global-topic routes only
+    - stream lanes use stable hashing to reduce jitter across refreshes
+    - region keyword signals are gated to active movement regions
+
+### Changed Files
+- `packages/analyzer/src/cross-region-mapper.ts`
+- `packages/analyzer/src/run-global-analysis.ts`
+- `packages/analyzer/src/topic-clusterer.ts`
+- `packages/shared/src/constants.ts`
+- `packages/collector/src/scrapers/sns/youtube.ts`
+- `packages/collector/src/scrapers/sns/mastodon.ts`
+- `packages/collector/src/scrapers/russia/habr.ts` (new)
+- `packages/collector/src/run.ts`
+- `packages/collector/src/index.ts`
+- `scripts/test-scraper.ts`
+- `components/dashboard/WorldHeatMap.tsx`
+- `components/dashboard/PropagationStream.tsx`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm run test:scraper -- --source habr` -> pass (`postCount=40`)
+- `npm run test:scraper -- --source mastodon_me` -> pass (`postCount=2`)
+- `npm run test:scraper -- --source mastodon_ru` -> pass (`postCount=1`)
+- `npm run test:scraper -- --source youtube_me` -> fail in local (`YOUTUBE_API_KEY is missing`)
+- `npm run test:scraper -- --source youtube_ru` -> fail in local (`YOUTUBE_API_KEY is missing`)

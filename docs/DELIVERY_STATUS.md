@@ -2480,3 +2480,28 @@
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
+
+## Expansion Update (2026-04-19, 3-point batch)
+### Completed in this batch
+- Cross-region mapping recall tuned (`similarity default 0.24`) with relaxed matching heuristics.
+- ME/RU source expansion wired end-to-end:
+  - added `habr`, `youtube_me`, `youtube_ru`, `mastodon_me`, `mastodon_ru`
+  - collector runner + test runner mapping + analyzer source weights updated
+- Propagation behavior stabilization:
+  - map movement now based on confirmed global-topic routes only
+  - stream lane jitter reduced with stable key hashing and active-region gating
+
+### Local validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- scraper tests:
+  - `habr` pass (40)
+  - `mastodon_me` pass (2)
+  - `mastodon_ru` pass (1)
+  - `youtube_me`, `youtube_ru` require runtime `YOUTUBE_API_KEY`
+
+### Next operational check on EC2
+1. Pull + build + restart `global-pulse-web` (pulse-only route).
+2. Seed new sources and run collector/analyzer cycle.
+3. Verify `/pulse/api/regions` and `/pulse/api/global-topics` reflect ME/RU activity.
+4. Confirm `/stock` endpoint health is unchanged.

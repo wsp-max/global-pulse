@@ -300,12 +300,12 @@ async function runGlobalAnalysis(): Promise<void> {
   const hours = Number(parseArg("--hours") ?? 24);
   const limit = Math.min(Number(parseArg("--limit") ?? 25), 100);
   const minRegions = Math.max(Number(parseArg("--min-regions") ?? 2), 2);
-  const similarity = Number(parseArg("--similarity") ?? 0.32);
+  const similarity = Number(parseArg("--similarity") ?? 0.24);
 
   const windowHours = Number.isFinite(hours) && hours > 0 ? Math.min(hours, 168) : 24;
   const threshold = Number.isFinite(similarity)
     ? Math.max(0.05, Math.min(similarity, 0.95))
-    : 0.32;
+    : 0.24;
 
   const storage = resolveStorage();
   if (!storage) {

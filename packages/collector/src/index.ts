@@ -16,6 +16,7 @@ export * from "./scrapers/japan/hatena";
 export * from "./scrapers/japan/togetter";
 export * from "./scrapers/japan/yahoo-japan";
 export * from "./scrapers/mideast/reddit-mideast";
+export * from "./scrapers/russia/habr";
 export * from "./scrapers/sns/bilibili";
 export * from "./scrapers/sns/mastodon";
 export * from "./scrapers/sns/youtube";

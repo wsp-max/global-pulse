@@ -41,10 +41,18 @@ function normalizeKeyword(raw: string): string {
   return raw.replace(/\s+/g, " ").trim();
 }
 
+function hashKeyword(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 33 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
 function isMeaningfulKeyword(keyword: string): boolean {
   const normalized = normalizeKeyword(keyword);
   if (!normalized) return false;
-  if (normalized.length < 2) return false;
+  if (normalized.length < 3) return false;
   if (/^[0-9]+$/.test(normalized)) return false;
   return true;
 }
@@ -71,6 +79,11 @@ function resolveSignalDirection(originRegionId: string, regionIds: Set<string>):
 function getKeywordSignals(regions: RegionDashboardRow[], globalTopics: GlobalTopic[]): KeywordSignal[] {
   const regionColorMap = new Map(regions.map((region) => [region.id, region.color]));
   const regionHeatMap = new Map(regions.map((region) => [region.id, region.totalHeatScore]));
+  const activeMovementRegions = new Set(
+    globalTopics
+      .filter((topic) => topic.regions.length >= 2)
+      .flatMap((topic) => topic.regions),
+  );
   const signals = new Map<
     string,
     {
@@ -111,6 +124,9 @@ function getKeywordSignals(regions: RegionDashboardRow[], globalTopics: GlobalTo
   }
 
   for (const region of regions) {
+    if (!activeMovementRegions.has(region.id)) {
+      continue;
+    }
     for (const keyword of region.topKeywords.slice(0, 14)) {
       const normalizedKeyword = normalizeKeyword(keyword);
       if (!isMeaningfulKeyword(normalizedKeyword)) {
@@ -144,19 +160,26 @@ function getKeywordSignals(regions: RegionDashboardRow[], globalTopics: GlobalTo
       if (b[1].regionIds.size !== a[1].regionIds.size) {
         return b[1].regionIds.size - a[1].regionIds.size;
       }
-      return b[1].heat - a[1].heat;
+      if (b[1].heat !== a[1].heat) {
+        return b[1].heat - a[1].heat;
+      }
+      return a[0].localeCompare(b[0]);
     })
     .slice(0, 40)
-    .map(([label, meta], index) => ({
-      key: `${label}-${index}`,
+    .map(([label, meta], index) => {
+      const hash = hashKeyword(label);
+      const stableLane = (hash % 78) + 6;
+      return {
+      key: label,
       label,
       hits: meta.regionIds.size,
       color: meta.regionColor,
-      lane: ((index * 17) % 78) + 6,
+      lane: stableLane,
       direction: resolveSignalDirection(meta.originRegionId, meta.regionIds),
-      durationSec: 12 + (index % 6) * 1.4,
-      delaySec: index * 0.3,
-    }));
+      durationSec: 11 + (hash % 6) * 1.1,
+      delaySec: (index % 10) * 0.22,
+    };
+    });
 }
 
 function getPropagationLanes(globalTopics: GlobalTopic[]): PropagationLane[] {

@@ -4,13 +4,15 @@ import { fetchWithRetry } from "../../utils/http-client";
 import { cleanText } from "../../utils/text-cleaner";
 
 const YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/videos";
-const YOUTUBE_SOURCE_IDS = ["youtube_kr", "youtube_jp", "youtube_us"] as const;
+const YOUTUBE_SOURCE_IDS = ["youtube_kr", "youtube_jp", "youtube_us", "youtube_me", "youtube_ru"] as const;
 type YoutubeSourceId = (typeof YOUTUBE_SOURCE_IDS)[number];
 
 const YOUTUBE_REGION_CODE_OVERRIDES: Readonly<Record<YoutubeSourceId, string>> = {
   youtube_kr: "KR",
   youtube_jp: "JP",
   youtube_us: "US",
+  youtube_me: "AE",
+  youtube_ru: "RU",
 };
 
 interface YoutubeTrendingResponse {

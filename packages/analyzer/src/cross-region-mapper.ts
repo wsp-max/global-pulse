@@ -286,6 +286,10 @@ function areTopicsSimilar(a: TopicNode, b: TopicNode, threshold: number): boolea
 
   const metrics = computeSimilarity(a, b);
 
+  if (metrics.sharedTokens >= 3 && metrics.score >= Math.max(0.18, threshold * 0.7)) {
+    return true;
+  }
+
   if (metrics.hasStrongNameContainment && metrics.score >= Math.max(0.22, threshold * 0.75)) {
     return true;
   }
@@ -296,16 +300,32 @@ function areTopicsSimilar(a: TopicNode, b: TopicNode, threshold: number): boolea
 
   if (
     metrics.hasExactKeywordPhrase &&
-    (metrics.keywordJaccard >= 0.16 || metrics.tokenJaccard >= 0.2) &&
-    metrics.score >= Math.max(0.2, threshold * 0.75)
+    (metrics.keywordJaccard >= 0.13 || metrics.tokenJaccard >= 0.16) &&
+    metrics.score >= Math.max(0.18, threshold * 0.7)
   ) {
     return true;
   }
 
   if (
-    metrics.sharedTokens < 2 &&
+    metrics.sharedTokens >= 1 &&
+    metrics.keywordJaccard >= 0.11 &&
+    metrics.score >= Math.max(0.17, threshold * 0.68)
+  ) {
+    return true;
+  }
+
+  if (
+    metrics.nameDice >= 0.36 &&
+    metrics.tokenJaccard >= 0.09 &&
+    metrics.score >= Math.max(0.16, threshold * 0.62)
+  ) {
+    return true;
+  }
+
+  if (
+    metrics.sharedTokens < 1 &&
     !metrics.hasExactKeywordPhrase &&
-    metrics.nameDice < 0.42 &&
+    metrics.nameDice < 0.3 &&
     !metrics.hasStrongNameContainment &&
     !metrics.hasPrimaryNameTokenMatch
   ) {
@@ -480,7 +500,7 @@ export function mapCrossRegionTopics(
     return [];
   }
 
-  const similarityThreshold = options.similarityThreshold ?? 0.32;
+  const similarityThreshold = options.similarityThreshold ?? 0.24;
   const minRegions = options.minRegions ?? 2;
 
   const nodes: TopicNode[] = topics.map((topic) => toNode(topic));

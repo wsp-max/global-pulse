@@ -23,6 +23,7 @@ import { RedditMideastScraper } from "./scrapers/mideast/reddit-mideast";
 import { BilibiliScraper } from "./scrapers/sns/bilibili";
 import { MastodonScraper } from "./scrapers/sns/mastodon";
 import { YoutubeScraper } from "./scrapers/sns/youtube";
+import { HabrScraper } from "./scrapers/russia/habr";
 import { BahamutScraper } from "./scrapers/taiwan/bahamut";
 import { DcardScraper } from "./scrapers/taiwan/dcard";
 import { Mobile01Scraper } from "./scrapers/taiwan/mobile01";
@@ -169,6 +170,7 @@ async function run(): Promise<void> {
     new RedditScraper("reddit_ukraine"),
     new RedditScraper("reddit_belarus"),
     new RedditScraper("reddit_russian"),
+    new HabrScraper(),
     new RedditScraper("reddit_politics"),
     new RedditScraper("reddit_news"),
     new FourchanScraper(),
@@ -179,8 +181,12 @@ async function run(): Promise<void> {
     new YoutubeScraper("youtube_kr"),
     new YoutubeScraper("youtube_jp"),
     new YoutubeScraper("youtube_us"),
+    new YoutubeScraper("youtube_me"),
+    new YoutubeScraper("youtube_ru"),
     new BilibiliScraper(),
     new MastodonScraper(),
+    new MastodonScraper("mastodon_me"),
+    new MastodonScraper("mastodon_ru"),
     new DcardScraper(),
   ];
 

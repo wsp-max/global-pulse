@@ -14,6 +14,7 @@ import { TheqooScraper } from "../packages/collector/src/scrapers/korea/theqoo";
 import { TogetterScraper } from "../packages/collector/src/scrapers/japan/togetter";
 import { YahooJapanScraper } from "../packages/collector/src/scrapers/japan/yahoo-japan";
 import { RedditMideastScraper } from "../packages/collector/src/scrapers/mideast/reddit-mideast";
+import { HabrScraper } from "../packages/collector/src/scrapers/russia/habr";
 import { WeiboScraper } from "../packages/collector/src/scrapers/china/weibo";
 import { ZhihuScraper } from "../packages/collector/src/scrapers/china/zhihu";
 import { TiebaScraper } from "../packages/collector/src/scrapers/china/tieba";
@@ -107,6 +108,7 @@ async function run(): Promise<void> {
     reddit_turkey: new RedditScraper("reddit_turkey"),
     reddit_middleeast: new RedditScraper("reddit_middleeast"),
     reddit_russia: new RedditScraper("reddit_russia"),
+    habr: new HabrScraper(),
     reddit_ukraine: new RedditScraper("reddit_ukraine"),
     reddit_belarus: new RedditScraper("reddit_belarus"),
     reddit_russian: new RedditScraper("reddit_russian"),
@@ -118,8 +120,12 @@ async function run(): Promise<void> {
     youtube_kr: new YoutubeScraper(),
     youtube_jp: new YoutubeScraper("youtube_jp"),
     youtube_us: new YoutubeScraper("youtube_us"),
+    youtube_me: new YoutubeScraper("youtube_me"),
+    youtube_ru: new YoutubeScraper("youtube_ru"),
     bilibili: new BilibiliScraper(),
     mastodon: new MastodonScraper(),
+    mastodon_me: new MastodonScraper("mastodon_me"),
+    mastodon_ru: new MastodonScraper("mastodon_ru"),
     dcard: new DcardScraper(),
   } as const;
 

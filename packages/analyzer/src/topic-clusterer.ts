@@ -60,6 +60,7 @@ const SOURCE_WEIGHT_MAP: Record<string, number> = {
   reddit_russia: 1.05,
   reddit_russian: 1.0,
   reddit_ukraine: 1.0,
+  habr: 1.08,
   slashdot: 1.05,
   fark: 0.92,
   resetera: 1.0,
@@ -68,7 +69,11 @@ const SOURCE_WEIGHT_MAP: Record<string, number> = {
   youtube_kr: 0.45,
   youtube_jp: 0.45,
   youtube_us: 0.45,
+  youtube_me: 0.45,
+  youtube_ru: 0.45,
   mastodon: 0.8,
+  mastodon_me: 0.82,
+  mastodon_ru: 0.82,
   bilibili: 0.8,
 };
 

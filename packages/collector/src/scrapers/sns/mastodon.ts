@@ -4,6 +4,8 @@ import { fetchWithRetry } from "../../utils/http-client";
 import { cleanText, cleanUrl } from "../../utils/text-cleaner";
 
 const MASTODON_TRENDS_URL = "https://mastodon.social/api/v1/trends/statuses?limit=30";
+const MASTODON_SOURCE_IDS = ["mastodon", "mastodon_me", "mastodon_ru"] as const;
+type MastodonSourceId = (typeof MASTODON_SOURCE_IDS)[number];
 
 interface MastodonTrendStatus {
   id?: string;
@@ -25,8 +27,33 @@ function toNumber(value: unknown): number {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
+function filterByRegionScript(sourceId: MastodonSourceId, text: string): boolean {
+  const normalized = text.toLowerCase();
+  if (sourceId === "mastodon_me") {
+    return (
+      /[\u0600-\u06FF]/u.test(text) ||
+      /(gaza|israel|iran|saudi|uae|dubai|qatar|lebanon|palestin|middle east|arab)/u.test(normalized)
+    );
+  }
+  if (sourceId === "mastodon_ru") {
+    return (
+      /[\u0400-\u04FF]/u.test(text) ||
+      /(russia|ukraine|moscow|kremlin|putin|россия|украин|москва)/u.test(normalized)
+    );
+  }
+  return true;
+}
+
 export class MastodonScraper extends BaseScraper {
-  sourceId = "mastodon";
+  sourceId: MastodonSourceId;
+
+  constructor(sourceId: MastodonSourceId = "mastodon") {
+    super();
+    if (!MASTODON_SOURCE_IDS.includes(sourceId)) {
+      throw new Error(`Unsupported Mastodon source: ${sourceId}`);
+    }
+    this.sourceId = sourceId;
+  }
 
   async fetchAndParse(): Promise<ScrapedPost[]> {
     const response = await fetchWithRetry<MastodonTrendStatus[]>(MASTODON_TRENDS_URL, {
@@ -46,6 +73,9 @@ export class MastodonScraper extends BaseScraper {
       const externalId = cleanText(item.id);
       const content = cleanText(item.content);
       if (!externalId || !content) {
+        continue;
+      }
+      if (!filterByRegionScript(this.sourceId, content)) {
         continue;
       }
 
