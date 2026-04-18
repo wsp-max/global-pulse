@@ -4042,3 +4042,22 @@ pm run ops:snapshot -> completed (egions=6)
 - Runtime:
   - `/pulse/api/topics?region=kr&limit=5` -> topics populated
   - `/pulse/api/regions` -> non-zero heat/topics recovered
+
+## GP-20260418-96 (Mobile World Map + In-Map Propagation Motion)
+### Before -> After
+- Before:
+  - Main world map panel was hidden on mobile (`hidden md:flex`).
+  - Propagation was shown only as separate text/track panel, not visually over the map.
+- After:
+  - World map panel is now visible on mobile.
+  - Added in-map propagation overlay: animated route lines and destination pulse dots using global-topic spread chains.
+  - Added responsive map height (`220px` mobile / `300px` sm+).
+
+### Changed Files
+- `app/page.tsx`
+- `components/dashboard/WorldHeatMap.tsx`
+- `app/globals.css`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass

@@ -60,12 +60,12 @@ export default function HomePage() {
 
       {!regionsError && sortedRegions.length > 0 && (
         <section className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
-          <div className="hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-card)] md:flex md:flex-col">
-            <WorldHeatMap regions={sortedRegions} />
+          <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3 shadow-[var(--shadow-card)] sm:p-4 md:flex md:flex-col">
+            <WorldHeatMap regions={sortedRegions} globalTopics={globalTopicsData?.globalTopics ?? []} />
             <div className="mt-4">
               <LivePulseIndicator />
             </div>
-            <div className="mt-4 min-h-[260px] flex-1">
+            <div className="mt-4 min-h-[220px] flex-1 md:min-h-[260px]">
               <PulseSignalBoard regions={sortedRegions} globalTopics={globalTopicsData?.globalTopics ?? []} />
             </div>
           </div>

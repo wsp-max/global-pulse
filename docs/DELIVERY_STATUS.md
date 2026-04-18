@@ -2408,3 +2408,17 @@
 ### Remaining
 1. Continue analyzer quality tuning for label readability.
 2. Keep source connectivity/collection watch loop running.
+
+## UI Update (2026-04-18, mobile map + in-map spread motion)
+### Newly completed
+- Enabled dashboard world map panel on mobile layout.
+- Added map-overlay spread motion lines/dots derived from cross-region topic paths.
+- Kept API contract unchanged; visualization uses existing regions/globalTopics payload.
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Remaining
+1. Deploy to EC2 and verify mobile rendering on `/pulse`.
+2. Fine-tune route anchor points if any country marker overlap is visually dense.

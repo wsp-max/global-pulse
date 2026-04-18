@@ -133,6 +133,26 @@ a {
   animation-delay: var(--dot-delay, 0s);
 }
 
+.map-flow-line {
+  stroke: rgba(56, 189, 248, 0.85);
+  stroke-width: 0.45;
+  stroke-linecap: round;
+  stroke-dasharray: 7 9;
+  animation: map-flow-dash var(--map-flow-duration, 5s) linear infinite;
+}
+
+.map-flow-dot {
+  fill: rgba(52, 211, 153, 0.95);
+  filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.85));
+  animation: map-flow-dot var(--map-flow-dot-duration, 4s) ease-in-out infinite;
+  animation-delay: var(--map-flow-dot-delay, 0s);
+}
+
+.map-node-pulse {
+  animation: map-node-pulse 2.1s ease-in-out infinite;
+  transform-origin: center;
+}
+
 @keyframes keyword-stream-left {
   0% {
     transform: translateX(112%);
@@ -186,6 +206,50 @@ a {
   100% {
     left: calc(100% - 0.45rem);
     opacity: 0.2;
+  }
+}
+
+@keyframes map-flow-dash {
+  0% {
+    stroke-dashoffset: 0;
+  }
+
+  100% {
+    stroke-dashoffset: -48;
+  }
+}
+
+@keyframes map-flow-dot {
+  0% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+
+  45% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes map-node-pulse {
+  0% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
   }
 }
 
