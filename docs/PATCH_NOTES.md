@@ -4174,3 +4174,8 @@ pm run ops:snapshot -> completed (egions=6)
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
+
+### GP-20260418-101A (Backfill Dedup Fix)
+- Adjusted global-topic backfill dedupe key from `id+name` to `nameEn+nameKo`.
+- Effect: prevents duplicate labels from appearing when fresh and historical rows have different IDs.
+- Validation: `npm run lint`, `npm run build` pass.

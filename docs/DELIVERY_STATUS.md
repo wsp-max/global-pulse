@@ -2490,3 +2490,6 @@
 ### Remaining
 1. Deploy and verify `/pulse/api/global-topics?limit=20` returns richer set in low fresh windows.
 2. Continue improving true fresh cross-region match rate (Gemini endpoint/env correction + source diversity).
+
+### Follow-up
+- Backfill dedupe refined to name-based key to avoid duplicate global labels across fresh/history rows.

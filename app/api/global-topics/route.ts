@@ -57,14 +57,14 @@ async function getGlobalTopics(request: Request) {
         );
 
         const seenKeys = new Set<string>(
-          mapped.map((topic) => `${topic.id ?? topic.nameEn}|${topic.nameKo}`.toLowerCase()),
+          mapped.map((topic) => `${topic.nameEn}|${topic.nameKo}`.toLowerCase()),
         );
 
         for (const topic of staleRows.map(mapGlobalTopicRow)) {
           if (topic.regions.length < minRegions) {
             continue;
           }
-          const key = `${topic.id ?? topic.nameEn}|${topic.nameKo}`.toLowerCase();
+          const key = `${topic.nameEn}|${topic.nameKo}`.toLowerCase();
           if (seenKeys.has(key)) {
             continue;
           }
