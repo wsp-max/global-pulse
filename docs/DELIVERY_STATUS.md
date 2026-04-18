@@ -2422,3 +2422,13 @@
 ### Remaining
 1. Deploy to EC2 and verify mobile rendering on `/pulse`.
 2. Fine-tune route anchor points if any country marker overlap is visually dense.
+
+## UI Behavior Update (2026-04-18, actual movement gating)
+### Newly completed
+- Propagation animation is now evidence-driven only.
+- Removed fallback visual movement when cross-region propagation is not confirmed.
+- Added explicit static-status messaging for no-movement intervals.
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass

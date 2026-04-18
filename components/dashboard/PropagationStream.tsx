@@ -38,31 +38,78 @@ function isMeaningfulKeyword(keyword: string): boolean {
   return true;
 }
 
-function getKeywordSignals(regions: RegionDashboardRow[]): KeywordSignal[] {
-  const signals = new Map<string, { hits: number; regionColor: string }>();
+function getKeywordSignals(regions: RegionDashboardRow[], globalTopics: GlobalTopic[]): KeywordSignal[] {
+  const regionColorMap = new Map(regions.map((region) => [region.id, region.color]));
+  const signals = new Map<
+    string,
+    {
+      regionIds: Set<string>;
+      heat: number;
+      regionColor: string;
+    }
+  >();
+
+  for (const topic of globalTopics) {
+    if (topic.regions.length < 2) {
+      continue;
+    }
+
+    const label = normalizeKeyword(topic.nameKo || topic.nameEn);
+    if (!isMeaningfulKeyword(label)) {
+      continue;
+    }
+
+    const leadRegionId = topic.firstSeenRegion ?? topic.regions[0];
+    const leadColor = regionColorMap.get(leadRegionId) ?? "var(--text-accent)";
+    const existing = signals.get(label);
+    if (existing) {
+      topic.regions.forEach((regionId) => existing.regionIds.add(regionId));
+      existing.heat += topic.totalHeatScore;
+    } else {
+      signals.set(label, {
+        regionIds: new Set(topic.regions),
+        heat: topic.totalHeatScore,
+        regionColor: leadColor,
+      });
+    }
+  }
 
   for (const region of regions) {
-    for (const keyword of region.topKeywords.slice(0, 7)) {
-      const normalized = normalizeKeyword(keyword);
-      if (!isMeaningfulKeyword(normalized)) {
-        continue;
-      }
-      const existing = signals.get(normalized);
-      if (existing) {
-        existing.hits += 1;
-      } else {
-        signals.set(normalized, { hits: 1, regionColor: region.color });
+    for (const topic of region.topTopics.slice(0, 5)) {
+      for (const keyword of topic.keywords.slice(0, 6)) {
+        const normalized = normalizeKeyword(keyword);
+        if (!isMeaningfulKeyword(normalized)) {
+          continue;
+        }
+
+        const existing = signals.get(normalized);
+        if (existing) {
+          existing.regionIds.add(region.id);
+          existing.heat += topic.heatScore * 0.25;
+        } else {
+          signals.set(normalized, {
+            regionIds: new Set([region.id]),
+            heat: topic.heatScore * 0.25,
+            regionColor: region.color,
+          });
+        }
       }
     }
   }
 
   return [...signals.entries()]
-    .sort((a, b) => b[1].hits - a[1].hits)
+    .filter(([, meta]) => meta.regionIds.size >= 2)
+    .sort((a, b) => {
+      if (b[1].regionIds.size !== a[1].regionIds.size) {
+        return b[1].regionIds.size - a[1].regionIds.size;
+      }
+      return b[1].heat - a[1].heat;
+    })
     .slice(0, 18)
     .map(([label, meta], index) => ({
       key: `${label}-${index}`,
       label,
-      hits: meta.hits,
+      hits: meta.regionIds.size,
       color: meta.regionColor,
       lane: ((index * 17) % 78) + 6,
       direction: index % 2 === 0 ? "left" : "right",
@@ -71,50 +118,33 @@ function getKeywordSignals(regions: RegionDashboardRow[]): KeywordSignal[] {
     }));
 }
 
-function getPropagationLanes(regions: RegionDashboardRow[], globalTopics: GlobalTopic[]): PropagationLane[] {
-  const topicLanes = globalTopics.slice(0, 4).map((topic) => {
-    const ordered = new Set<string>();
-    if (topic.firstSeenRegion) {
-      ordered.add(topic.firstSeenRegion);
-    }
-    for (const regionId of topic.regions) {
-      ordered.add(regionId);
-    }
-
-    return {
-      key: `global-${topic.id ?? topic.nameEn}`,
-      label: topic.nameKo || topic.nameEn,
-      heat: topic.totalHeatScore,
-      regionIds: [...ordered].slice(0, 5),
-    };
-  });
-
-  if (topicLanes.length > 0) {
-    return topicLanes;
-  }
-
-  const fallbackRegions = [...regions]
-    .sort((a, b) => b.totalHeatScore - a.totalHeatScore)
+function getPropagationLanes(globalTopics: GlobalTopic[]): PropagationLane[] {
+  return globalTopics
+    .filter((topic) => topic.regions.length >= 2)
     .slice(0, 4)
-    .map((region) => region.id);
+    .map((topic) => {
+      const ordered = new Set<string>();
+      if (topic.firstSeenRegion) {
+        ordered.add(topic.firstSeenRegion);
+      }
+      for (const regionId of topic.regions) {
+        ordered.add(regionId);
+      }
 
-  if (fallbackRegions.length === 0) {
-    return [];
-  }
-
-  return [
-    {
-      key: "regional-heat-wave",
-      label: "Regional Heat Wave",
-      heat: regions.reduce((sum, region) => sum + region.totalHeatScore, 0),
-      regionIds: fallbackRegions,
-    },
-  ];
+      return {
+        key: `global-${topic.id ?? topic.nameEn}`,
+        label: topic.nameKo || topic.nameEn,
+        heat: topic.totalHeatScore,
+        regionIds: [...ordered].slice(0, 5),
+      };
+    })
+    .filter((lane) => lane.regionIds.length >= 2);
 }
 
 export function PropagationStream({ regions, globalTopics }: PropagationStreamProps) {
-  const keywordSignals = useMemo(() => getKeywordSignals(regions), [regions]);
-  const propagationLanes = useMemo(() => getPropagationLanes(regions, globalTopics), [regions, globalTopics]);
+  const keywordSignals = useMemo(() => getKeywordSignals(regions, globalTopics), [regions, globalTopics]);
+  const propagationLanes = useMemo(() => getPropagationLanes(globalTopics), [globalTopics]);
+  const hasActualMovement = keywordSignals.length > 0 || propagationLanes.length > 0;
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[linear-gradient(180deg,rgba(11,24,39,0.88),rgba(10,14,23,0.98))] p-4 shadow-[var(--shadow-card)]">
@@ -128,7 +158,7 @@ export function PropagationStream({ regions, globalTopics }: PropagationStreamPr
             </p>
           </div>
           <span className="rounded-full border border-[var(--border-default)] bg-[rgba(15,23,42,0.7)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
-            Live Signals {keywordSignals.length}
+            {hasActualMovement ? `Live Signals ${keywordSignals.length}` : "No Active Propagation"}
           </span>
         </div>
 
@@ -137,7 +167,7 @@ export function PropagationStream({ regions, globalTopics }: PropagationStreamPr
             <div className="pointer-events-none absolute inset-0 panel-grid opacity-50" />
             {keywordSignals.length === 0 ? (
               <div className="flex h-full items-center justify-center px-3 text-xs text-[var(--text-secondary)]">
-                Keyword stream is warming up from the latest region data.
+                No shared cross-region keyword movement detected in the current batch.
               </div>
             ) : (
               keywordSignals.map((signal) => {

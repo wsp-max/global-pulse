@@ -4061,3 +4061,21 @@ pm run ops:snapshot -> completed (egions=6)
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
+
+## GP-20260418-97 (Propagation Logic Tightening: Actual Movement Only)
+### Before -> After
+- Before:
+  - Propagation visuals used fallback movement (hottest-region chain / generic keyword stream) even without confirmed spread.
+- After:
+  - Removed fallback movement from map and propagation stream.
+  - Map routes animate only when global topics include real multi-region spread chains.
+  - Keyword stream animates only for cross-region shared signals (global-topic names + shared topic keywords with 2+ regions).
+  - If no confirmed movement exists, UI now shows static informative message instead of fake motion.
+
+### Changed Files
+- `components/dashboard/WorldHeatMap.tsx`
+- `components/dashboard/PropagationStream.tsx`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass

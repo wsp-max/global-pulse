@@ -42,11 +42,15 @@ function getHeatColor(score: number): string {
   return "var(--heat-explosive)";
 }
 
-function getFlowPairs(regions: RegionDashboardRow[], globalTopics: GlobalTopic[]): Array<[string, string]> {
+function getFlowPairs(globalTopics: GlobalTopic[]): Array<[string, string]> {
   const pairs: Array<[string, string]> = [];
   const seen = new Set<string>();
 
   for (const topic of globalTopics.slice(0, 4)) {
+    if (topic.regions.length < 2) {
+      continue;
+    }
+
     const ordered = new Set<string>();
     if (topic.firstSeenRegion) {
       ordered.add(topic.firstSeenRegion);
@@ -56,6 +60,10 @@ function getFlowPairs(regions: RegionDashboardRow[], globalTopics: GlobalTopic[]
     }
 
     const chain = [...ordered].filter((regionId) => REGION_COORDINATES[regionId]);
+    if (chain.length < 2) {
+      continue;
+    }
+
     for (let i = 0; i < chain.length - 1; i += 1) {
       const from = chain[i];
       const to = chain[i + 1];
@@ -67,28 +75,13 @@ function getFlowPairs(regions: RegionDashboardRow[], globalTopics: GlobalTopic[]
     }
   }
 
-  if (pairs.length > 0) {
-    return pairs;
-  }
-
-  const fallback = [...regions]
-    .sort((a, b) => b.totalHeatScore - a.totalHeatScore)
-    .slice(0, 4)
-    .map((region) => region.id)
-    .filter((regionId) => REGION_COORDINATES[regionId]);
-
-  for (let i = 0; i < fallback.length - 1; i += 1) {
-    const from = fallback[i];
-    const to = fallback[i + 1];
-    pairs.push([from, to]);
-  }
-
   return pairs;
 }
 
 export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) {
   const maxHeat = Math.max(...regions.map((region) => region.totalHeatScore), 1);
-  const flowPairs = getFlowPairs(regions, globalTopics);
+  const flowPairs = getFlowPairs(globalTopics);
+  const activeFlowRegionIds = new Set(flowPairs.flat());
 
   return (
     <div className="panel-grid relative overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4">
@@ -127,7 +120,7 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
                 return (
                   <Marker key={region.id} coordinates={coordinates}>
                     <circle r={radius} fill={color} fillOpacity={0.22} stroke={color} strokeWidth={1.2} />
-                    <circle r={2.6} fill={color} className="map-node-pulse" />
+                    <circle r={2.6} fill={color} className={activeFlowRegionIds.has(region.id) ? "map-node-pulse" : ""} />
                     <text y={-radius - 4} textAnchor="middle" className="fill-slate-200 text-[10px] font-medium">
                       {region.flagEmoji} {Math.round(region.totalHeatScore)}
                     </text>
@@ -173,6 +166,12 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
                 );
               })}
             </svg>
+
+            {flowPairs.length === 0 && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-2 text-center text-[10px] text-[var(--text-tertiary)]">
+                No confirmed cross-region propagation in the current batch.
+              </div>
+            )}
           </div>
         </div>
       </div>
