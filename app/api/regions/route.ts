@@ -111,7 +111,7 @@ async function getRegions() {
             sources_active: number | string | null;
           }>(
             `
-            filtered as (
+            with filtered as (
               select heat_score, sentiment, source_ids
               from topics
               where region_id = $1
