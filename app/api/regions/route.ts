@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { SOURCES, getAllRegions } from "@global-pulse/shared";
 import { mapTopicRow, type TopicRow } from "../_shared/mappers";
 import { getPostgresPoolOrNull } from "../_shared/postgres-server";
@@ -98,7 +98,11 @@ async function getRegions() {
             from topics
             where region_id = $1
               and source_ids && $2::text[]
-              and ($3::timestamptz is not null and created_at = $3::timestamptz)
+              and (
+                $3::timestamptz is not null
+                and created_at between $3::timestamptz - interval '1 second'
+                and $3::timestamptz + interval '1 second'
+              )
             order by heat_score desc, rank asc nulls last
             limit 3
             `,
@@ -116,7 +120,11 @@ async function getRegions() {
               from topics
               where region_id = $1
                 and source_ids && $2::text[]
-                and ($3::timestamptz is not null and created_at = $3::timestamptz)
+                and (
+                  $3::timestamptz is not null
+                  and created_at between $3::timestamptz - interval '1 second'
+                  and $3::timestamptz + interval '1 second'
+                )
             )
             select
               coalesce(sum(heat_score), 0) as total_heat_score,
@@ -172,5 +180,6 @@ async function getRegions() {
     provider: "none",
   });
 }
+
 
 

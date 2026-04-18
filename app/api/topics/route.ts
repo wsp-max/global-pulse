@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { SOURCES, getRegionById } from "@global-pulse/shared";
 import { mapTopicRow, type TopicRow } from "../_shared/mappers";
 import { getPostgresPoolOrNull } from "../_shared/postgres-server";
@@ -73,7 +73,11 @@ async function getTopics(request: Request) {
             from topics
             where region_id = $1
               and source_ids && $2::text[]
-              and ($3::timestamptz is not null and created_at = $3::timestamptz)
+              and (
+                $3::timestamptz is not null
+                and created_at between $3::timestamptz - interval '1 second'
+                and $3::timestamptz + interval '1 second'
+              )
           ),
           dedup as (
             select distinct on (lower(coalesce(name_en, name_ko)))
@@ -98,7 +102,11 @@ async function getTopics(request: Request) {
             from topics
             where region_id = $1
               and source_ids && $2::text[]
-              and ($3::timestamptz is not null and created_at = $3::timestamptz)
+              and (
+                $3::timestamptz is not null
+                and created_at between $3::timestamptz - interval '1 second'
+                and $3::timestamptz + interval '1 second'
+              )
           ),
           dedup as (
             select distinct on (lower(coalesce(name_en, name_ko)))
@@ -165,5 +173,6 @@ async function getTopics(request: Request) {
     lastUpdated: new Date().toISOString(),
   });
 }
+
 
 
