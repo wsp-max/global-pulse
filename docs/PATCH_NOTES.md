@@ -4283,3 +4283,40 @@ pm run ops:snapshot -> completed (egions=6)
 - `npm run test:scraper -- --source mastodon_ru` -> pass (`postCount=1`)
 - `npm run test:scraper -- --source youtube_me` -> fail in local (`YOUTUBE_API_KEY is missing`)
 - `npm run test:scraper -- --source youtube_ru` -> fail in local (`YOUTUBE_API_KEY is missing`)
+
+## GP-20260419-106 (EC2 Deploy Verification for 3-point Batch)
+### Scope
+- Deployed commit `107a0c6` to EC2 path `/srv/projects/project2/global-pulse` without touching stock-specific nginx edits.
+- Verified 3 requested checks in runtime:
+  1) cross-region mapping tuning applied
+  2) ME/RU source expansion applied
+  3) propagation animation logic constrained to evidence-based routes
+
+### Runtime Notes
+- Initial manual deploy attempt failed because production env omitted devDependencies during build.
+- Resolved by running install with dev deps included (`npm ci --include=dev`) before `npm run build`.
+
+### EC2 Validation
+- Availability:
+  - `http://3.36.83.199/stock` -> 200
+  - `http://3.36.83.199/pulse` -> 200
+  - `http://3.36.83.199/pulse/api/health` -> 200
+  - `http://3.36.83.199/` -> 404 (unchanged)
+- New source ingest tests on EC2:
+  - `youtube_me` 20 posts (success)
+  - `youtube_ru` 20 posts (success)
+  - `habr` 40 posts (success)
+  - `mastodon_me` 2 posts (success)
+  - `mastodon_ru` 1 post (success)
+- Analysis reflectivity after collect/analyze run:
+  - `ME: heat=1161.64, topics=6`
+  - `RU: heat=698.47, topics=10`
+  - `/pulse/api/global-topics?limit=20` returned 6 rows
+
+### Commands Executed (EC2)
+- `npm run seed:regions`
+- `npm run test:scraper -- --source youtube_me|youtube_ru|habr|mastodon_me|mastodon_ru`
+- `npm run collect -- --source habr,youtube_me,youtube_ru,mastodon_me,mastodon_ru`
+- `npm run analyze -- --region me --hours 24`
+- `npm run analyze -- --region ru --hours 24`
+- `npm run analyze:global -- --hours 72 --limit 40 --similarity 0.24 --min-regions 2`

@@ -2505,3 +2505,31 @@
 2. Seed new sources and run collector/analyzer cycle.
 3. Verify `/pulse/api/regions` and `/pulse/api/global-topics` reflect ME/RU activity.
 4. Confirm `/stock` endpoint health is unchanged.
+
+## Deployment Verification (2026-04-19, EC2 runtime)
+### Completed
+- Deployed latest batch (`107a0c6`) to EC2 `/srv/projects/project2/global-pulse`.
+- Protected multi-site coexistence:
+  - `/stock` kept intact
+  - `/pulse` updated only
+- Confirmed endpoint health:
+  - `/stock` 200
+  - `/pulse` 200
+  - `/pulse/api/health` 200
+  - `/` 404 (unchanged)
+
+### Data/Analysis verification
+- Source onboarding confirmed on EC2:
+  - `habr` connected (40)
+  - `youtube_me` connected (20)
+  - `youtube_ru` connected (20)
+  - `mastodon_me` connected (2)
+  - `mastodon_ru` connected (1)
+- Region impact confirmed:
+  - `me` active (`heat=1161.64`, `topics=6`)
+  - `ru` active (`heat=698.47`, `topics=10`)
+- Global topics endpoint active with updated mapping threshold (`6` rows on `limit=20`).
+
+### Operational caveat fixed
+- Production env had `NODE_ENV=production`, so manual `npm ci` omitted dev deps and broke Next build.
+- Runtime deploy command was corrected to `npm ci --include=dev` before build.
