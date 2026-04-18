@@ -3,6 +3,8 @@ declare module "react-simple-maps" {
 
   interface BaseProps {
     children?: React.ReactNode;
+    className?: string;
+    style?: React.CSSProperties;
     [key: string]: unknown;
   }
 
@@ -19,5 +21,15 @@ declare module "react-simple-maps" {
   export const ComposableMap: React.ComponentType<BaseProps>;
   export const Geographies: React.ComponentType<GeographiesProps>;
   export const Geography: React.ComponentType<BaseProps>;
+  export const Line: React.ComponentType<
+    BaseProps & {
+      from?: [number, number];
+      to?: [number, number];
+      coordinates?: [number, number][];
+      stroke?: string;
+      strokeWidth?: number;
+      fill?: string;
+    }
+  >;
   export const Marker: React.ComponentType<BaseProps>;
 }

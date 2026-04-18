@@ -2432,3 +2432,12 @@
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
+
+## UI Geometry Fix (2026-04-18, propagation route alignment)
+### Newly completed
+- Replaced manual overlay route anchors with true map projection route lines.
+- In-map propagation now follows real lon/lat route geometry between regions.
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass

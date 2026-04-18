@@ -4079,3 +4079,20 @@ pm run ops:snapshot -> completed (egions=6)
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
+
+## GP-20260418-98 (Map Route Geometry Fix: true geo-coordinate lines)
+### Before -> After
+- Before:
+  - Propagation routes were rendered with manual overlay anchors, causing perceived mismatch against real country locations.
+- After:
+  - Switched to `react-simple-maps` geo line rendering (`Line`) using true lon/lat pairs.
+  - Added minimal local type declaration support for `Line` in `types/react-simple-maps.d.ts`.
+  - Route endpoints and pulses now align with actual map projection coordinates.
+
+### Changed Files
+- `components/dashboard/WorldHeatMap.tsx`
+- `types/react-simple-maps.d.ts`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass

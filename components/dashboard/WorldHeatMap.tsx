@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 import type { GlobalTopic } from "@global-pulse/shared";
-import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
+import { ComposableMap, Geographies, Geography, Line, Marker } from "react-simple-maps";
 import type { RegionDashboardRow } from "@/lib/types/api";
 
 interface WorldHeatMapProps {
@@ -21,17 +21,6 @@ const REGION_COORDINATES: Record<string, [number, number]> = {
   eu: [10.0, 51.2],
   me: [45.0, 24.0],
   ru: [90.0, 61.0],
-};
-
-const REGION_ANCHORS: Record<string, [number, number]> = {
-  kr: [77, 43],
-  jp: [81, 44],
-  tw: [76, 49],
-  cn: [68, 45],
-  us: [22, 44],
-  eu: [53, 36],
-  me: [59, 50],
-  ru: [67, 24],
 };
 
 function getHeatColor(score: number): string {
@@ -107,6 +96,49 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
                 }
               </Geographies>
 
+              {flowPairs.map(([from, to], index) => {
+                const fromCoord = REGION_COORDINATES[from];
+                const toCoord = REGION_COORDINATES[to];
+                if (!fromCoord || !toCoord) {
+                  return null;
+                }
+
+                const lineStyle = {
+                  ["--map-flow-duration" as string]: `${4 + index * 1.2}s`,
+                } as CSSProperties;
+
+                return (
+                  <Line
+                    key={`${from}-${to}-${index}`}
+                    from={fromCoord}
+                    to={toCoord}
+                    stroke="rgba(56,189,248,0.85)"
+                    strokeWidth={1.35}
+                    fill="none"
+                    className="map-flow-line"
+                    style={lineStyle}
+                  />
+                );
+              })}
+
+              {flowPairs.map(([, to], index) => {
+                const coordinates = REGION_COORDINATES[to];
+                if (!coordinates) {
+                  return null;
+                }
+
+                const dotStyle = {
+                  ["--map-flow-dot-delay" as string]: `${index * 0.35}s`,
+                  ["--map-flow-dot-duration" as string]: `${3.2 + index * 0.9}s`,
+                } as CSSProperties;
+
+                return (
+                  <Marker key={`flow-dot-${to}-${index}`} coordinates={coordinates}>
+                    <circle r={1.4} className="map-flow-dot" style={dotStyle} />
+                  </Marker>
+                );
+              })}
+
               {regions.map((region) => {
                 const coordinates = REGION_COORDINATES[region.id];
                 if (!coordinates) {
@@ -128,44 +160,6 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
                 );
               })}
             </ComposableMap>
-
-            <svg
-              className="pointer-events-none absolute inset-0 z-10"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              {flowPairs.map(([from, to], index) => {
-                const fromAnchor = REGION_ANCHORS[from];
-                const toAnchor = REGION_ANCHORS[to];
-                if (!fromAnchor || !toAnchor) {
-                  return null;
-                }
-
-                const lineStyle = {
-                  ["--map-flow-duration" as string]: `${4 + index * 1.2}s`,
-                } as CSSProperties;
-
-                const dotStyle = {
-                  ["--map-flow-dot-delay" as string]: `${index * 0.35}s`,
-                  ["--map-flow-dot-duration" as string]: `${3.2 + index * 0.9}s`,
-                } as CSSProperties;
-
-                return (
-                  <g key={`${from}-${to}-${index}`}>
-                    <line
-                      className="map-flow-line"
-                      x1={fromAnchor[0]}
-                      y1={fromAnchor[1]}
-                      x2={toAnchor[0]}
-                      y2={toAnchor[1]}
-                      style={lineStyle}
-                    />
-                    <circle className="map-flow-dot" cx={toAnchor[0]} cy={toAnchor[1]} r="0.9" style={dotStyle} />
-                  </g>
-                );
-              })}
-            </svg>
 
             {flowPairs.length === 0 && (
               <div className="pointer-events-none absolute inset-x-0 bottom-2 text-center text-[10px] text-[var(--text-tertiary)]">
