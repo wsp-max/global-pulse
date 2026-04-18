@@ -3981,3 +3981,27 @@ pm run ops:snapshot -> completed (egions=6)
   - /pulse/api/topics?region=kr&limit=5 includes meta.dataState.
   - /pulse/api/regions keeps non-zero cards in stale mode when fresh window is empty.
   - /pulse/api/global-topics serves fallback rows with stale=true when needed.
+
+## GP-20260418-93 (Dashboard Propagation Stream Animation)
+### Before -> After
+- Before:
+  - Dashboard had ticker and cards, but no dedicated visual for moving keywords or issue spread flow.
+- After:
+  - Added `PropagationStream` section to the home dashboard.
+  - Added animated keyword motion layer from region keyword signals.
+  - Added spread-track lanes with an animated propagation dot and region path chips.
+  - API contracts remain unchanged; this reuses existing `regions` and `globalTopics` payloads.
+
+### Changed Files
+- `components/dashboard/PropagationStream.tsx` (new)
+- `components/dashboard/index.ts`
+- `app/page.tsx`
+- `app/globals.css`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Notes
+- UI-only enhancement for visibility of "word motion + spread".
+- When global topics are temporarily empty, fallback lanes still render from regional heat.

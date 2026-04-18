@@ -2378,3 +2378,18 @@
 - `/pulse/api/topics?region=kr&limit=5` returns `meta.dataState` and non-zero `total` when stale data exists
 - `/pulse/api/regions` returns non-zero `activeTopics/totalHeatScore` in stale mode
 - `/pulse/api/global-topics` returns fallback rows with `stale=true` when fresh rows are absent
+
+## Step 6 UI Update (2026-04-18, Propagation Stream)
+### Newly completed
+- Added a new dashboard propagation section for live visual context:
+  - moving keyword stream (region keyword signals)
+  - cross-region spread track (animated flow lane)
+- Integrated into `app/page.tsx` without API schema changes.
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Remaining
+1. Runtime deploy to EC2 and visual confirmation at `/pulse`.
+2. Optional follow-up: tune animation density for low-end mobile devices after runtime observation.

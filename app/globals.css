@@ -99,6 +99,96 @@ a {
   background-size: 16px 16px;
 }
 
+.keyword-stream-word {
+  position: absolute;
+  left: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+  animation-duration: var(--stream-duration, 14s);
+  animation-delay: var(--stream-delay, 0s);
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+.keyword-stream-word--left {
+  animation-name: keyword-stream-left;
+}
+
+.keyword-stream-word--right {
+  animation-name: keyword-stream-right;
+}
+
+.propagation-dot {
+  position: absolute;
+  left: 0.45rem;
+  top: 50%;
+  z-index: 1;
+  height: 0.58rem;
+  width: 0.58rem;
+  transform: translateY(-50%);
+  border-radius: 9999px;
+  background: var(--text-accent);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.85);
+  animation: propagation-run var(--dot-duration, 6s) linear infinite;
+  animation-delay: var(--dot-delay, 0s);
+}
+
+@keyframes keyword-stream-left {
+  0% {
+    transform: translateX(112%);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.92;
+  }
+
+  84% {
+    opacity: 0.92;
+  }
+
+  100% {
+    transform: translateX(-125%);
+    opacity: 0;
+  }
+}
+
+@keyframes keyword-stream-right {
+  0% {
+    transform: translateX(-125%);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.92;
+  }
+
+  84% {
+    opacity: 0.92;
+  }
+
+  100% {
+    transform: translateX(112%);
+    opacity: 0;
+  }
+}
+
+@keyframes propagation-run {
+  0% {
+    left: 0.45rem;
+    opacity: 0.2;
+  }
+
+  14% {
+    opacity: 1;
+  }
+
+  100% {
+    left: calc(100% - 0.45rem);
+    opacity: 0.2;
+  }
+}
+
 @media (max-width: 767px) {
   .desktop-only {
     display: none !important;

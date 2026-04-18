@@ -4,6 +4,7 @@ import {
   GlobalIssuePanel,
   HotTopicTicker,
   LivePulseIndicator,
+  PropagationStream,
   PulseSignalBoard,
   RegionCard,
   WorldHeatMap,
@@ -75,6 +76,10 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+      )}
+
+      {!regionsError && sortedRegions.length > 0 && (
+        <PropagationStream regions={sortedRegions} globalTopics={globalTopicsData?.globalTopics ?? []} />
       )}
 
       {isGlobalLoading && <LoadingSkeleton className="h-28" />}
