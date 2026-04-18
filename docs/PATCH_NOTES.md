@@ -4201,3 +4201,24 @@ pm run ops:snapshot -> completed (egions=6)
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
+
+## GP-20260418-103 (Analyzer Topic Density Controls)
+### Before -> After
+- Before:
+  - Topic clustering and analysis input volume used fixed caps (`raw_posts=1000`, `max topics=15`, `single-post topics<=4`).
+  - Regions with broad source sets still surfaced thin ranking lists.
+- After:
+  - Added runtime-tunable analyzer controls via env vars:
+    - `ANALYZER_RAW_POST_LIMIT` (default 1500)
+    - `ANALYZER_MAX_TOPICS` (default 20)
+    - `ANALYZER_MAX_SINGLE_POST_TOPICS` (default 8)
+    - `ANALYZER_SINGLE_POST_SEED_MIN_KEYWORDS` (default 20)
+  - Relaxed clustering caps to improve topic list density without changing API schema.
+
+### Changed Files
+- `packages/analyzer/src/run-analysis.ts`
+- `packages/analyzer/src/topic-clusterer.ts`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass

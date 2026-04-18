@@ -13,6 +13,12 @@ interface ClusterOptions {
   periodEnd: string;
 }
 
+const ANALYZER_MAX_TOPICS = Number(process.env.ANALYZER_MAX_TOPICS ?? 20);
+const ANALYZER_MAX_SINGLE_POST_TOPICS = Number(process.env.ANALYZER_MAX_SINGLE_POST_TOPICS ?? 8);
+const ANALYZER_SINGLE_POST_SEED_MIN_KEYWORDS = Number(
+  process.env.ANALYZER_SINGLE_POST_SEED_MIN_KEYWORDS ?? 20,
+);
+
 const SOURCE_WEIGHT_MAP: Record<string, number> = {
   dcinside: 1.2,
   reddit: 1.3,
@@ -550,7 +556,7 @@ export async function clusterTopics(
     }
 
     const isPhraseSeed = seed.keyword.includes(" ");
-    if (!isPhraseSeed && seedPosts.size < 2 && keywords.length >= 12) {
+    if (!isPhraseSeed && seedPosts.size < 2 && keywords.length >= ANALYZER_SINGLE_POST_SEED_MIN_KEYWORDS) {
       continue;
     }
 
@@ -614,7 +620,7 @@ export async function clusterTopics(
 
     const hasPhraseKeyword = clusterKeywords.some((keyword) => keyword.includes(" "));
 
-    if (relatedPosts.length < 2 && singlePostTopicCount >= 4) {
+    if (relatedPosts.length < 2 && singlePostTopicCount >= ANALYZER_MAX_SINGLE_POST_TOPICS) {
       continue;
     }
 
@@ -709,7 +715,7 @@ export async function clusterTopics(
     }
 
     deduped.push(topic);
-    if (deduped.length >= 15) {
+    if (deduped.length >= ANALYZER_MAX_TOPICS) {
       break;
     }
   }

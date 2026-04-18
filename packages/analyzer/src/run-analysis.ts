@@ -73,6 +73,8 @@ interface AnalysisStorage {
   insertRegionSnapshot(row: SnapshotInsertRow): Promise<void>;
 }
 
+const ANALYZER_RAW_POST_LIMIT = Number(process.env.ANALYZER_RAW_POST_LIMIT ?? 1500);
+
 function parseArg(flag: string): string | undefined {
   const idx = process.argv.findIndex((arg) => arg === flag);
   if (idx === -1) return undefined;
@@ -141,9 +143,9 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         where source_id = any($1::text[])
           and collected_at >= $2
         order by collected_at desc
-        limit 1000
+        limit $3
         `,
-        [sourceIds, periodStartIso],
+        [sourceIds, periodStartIso, ANALYZER_RAW_POST_LIMIT],
       );
       return rows;
     },
