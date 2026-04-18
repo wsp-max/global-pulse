@@ -4134,3 +4134,24 @@ pm run ops:snapshot -> completed (egions=6)
   - `/pulse` map shows one-way country-to-country paths (no mirrored pair oscillation in same refresh).
   - `/pulse` keyword and cross-signal panels show increased item count.
   - `/pulse/api/global-topics?limit=20` returns expanded candidate set.
+
+## GP-20260418-100 (Propagation Expansion via Cross-Region Shared Keywords)
+### Before -> After
+- Before:
+  - Map propagation relied mostly on global topic mappings, so movement stayed sparse when cross-lingual matching was limited.
+  - Propagation stream signals were improved, but still under-populated in low global-topic periods.
+- After:
+  - Added shared-keyword propagation edges on top of global-topic edges:
+    - detect keywords that appear in 2+ regions,
+    - choose direction by region heat (`high heat -> lower heat`),
+    - merge into existing edge scoring and dedupe to one stable direction per country pair.
+  - Propagation stream now also includes shared regional keywords (`topKeywords`) with deterministic direction by longitude.
+  - Signal cap expanded for higher density (`30 -> 40`).
+
+### Changed Files
+- `components/dashboard/WorldHeatMap.tsx`
+- `components/dashboard/PropagationStream.tsx`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass

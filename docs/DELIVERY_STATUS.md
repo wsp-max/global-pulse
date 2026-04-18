@@ -2461,3 +2461,19 @@
 1. Deploy to EC2 and run manual visual check on `/pulse` for one-way propagation behavior.
 2. Execute one collector+analyzer+global-analyzer cycle on EC2 to increase fresh cross-region movement evidence.
 3. Re-check `/pulse/api/global-topics?limit=20` and confirm movement lanes increase accordingly.
+
+## UI/Data Density Follow-up (2026-04-18, shared-keyword propagation)
+### Newly completed
+- Added cross-region shared-keyword routing to world map propagation overlay.
+- Expanded propagation stream source from `global topics only` to `global topics + shared region keywords`.
+- Direction is stable and evidence-based:
+  - map: high-heat source region -> spread regions
+  - stream: origin/target longitude-based direction
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Remaining
+1. Deploy this follow-up commit and verify movement density at `/pulse`.
+2. Observe 24h and disable noisy keywords if any false spread appears.

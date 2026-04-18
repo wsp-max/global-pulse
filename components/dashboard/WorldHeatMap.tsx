@@ -31,7 +31,21 @@ function getHeatColor(score: number): string {
   return "var(--heat-explosive)";
 }
 
-function getFlowPairs(globalTopics: GlobalTopic[]): Array<[string, string]> {
+function isMeaningfulMapKeyword(keyword: string): boolean {
+  const normalized = keyword.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+  if (normalized.length < 3) {
+    return false;
+  }
+  if (/^\d+$/u.test(normalized)) {
+    return false;
+  }
+  return true;
+}
+
+function getFlowPairs(globalTopics: GlobalTopic[], regions: RegionDashboardRow[]): Array<[string, string]> {
   const directedScore = new Map<string, number>();
   const directedCount = new Map<string, number>();
 
@@ -57,6 +71,49 @@ function getFlowPairs(globalTopics: GlobalTopic[]): Array<[string, string]> {
     for (const to of destinations) {
       const edgeKey = `${origin}__${to}`;
       directedScore.set(edgeKey, (directedScore.get(edgeKey) ?? 0) + topic.totalHeatScore);
+      directedCount.set(edgeKey, (directedCount.get(edgeKey) ?? 0) + 1);
+    }
+  }
+
+  const regionHeatMap = new Map(regions.map((region) => [region.id, region.totalHeatScore]));
+  const keywordRegionMap = new Map<string, Set<string>>();
+
+  for (const region of regions) {
+    for (const keyword of region.topKeywords.slice(0, 14)) {
+      if (!isMeaningfulMapKeyword(keyword)) {
+        continue;
+      }
+      const normalized = keyword.trim().toLowerCase();
+      const existing = keywordRegionMap.get(normalized);
+      if (existing) {
+        existing.add(region.id);
+      } else {
+        keywordRegionMap.set(normalized, new Set([region.id]));
+      }
+    }
+  }
+
+  for (const regionSet of keywordRegionMap.values()) {
+    if (regionSet.size < 2) {
+      continue;
+    }
+
+    const orderedRegions = [...regionSet]
+      .filter((regionId) => REGION_COORDINATES[regionId])
+      .sort((a, b) => (regionHeatMap.get(b) ?? 0) - (regionHeatMap.get(a) ?? 0));
+    if (orderedRegions.length < 2) {
+      continue;
+    }
+
+    const origin = orderedRegions[0]!;
+    const originHeat = regionHeatMap.get(origin) ?? 0;
+
+    for (let index = 1; index < orderedRegions.length; index += 1) {
+      const to = orderedRegions[index]!;
+      const toHeat = regionHeatMap.get(to) ?? 0;
+      const edgeKey = `${origin}__${to}`;
+      const keywordSpreadScore = originHeat * 0.2 + toHeat * 0.08 + 140;
+      directedScore.set(edgeKey, (directedScore.get(edgeKey) ?? 0) + keywordSpreadScore);
       directedCount.set(edgeKey, (directedCount.get(edgeKey) ?? 0) + 1);
     }
   }
@@ -94,7 +151,7 @@ function getFlowPairs(globalTopics: GlobalTopic[]): Array<[string, string]> {
 
 export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) {
   const maxHeat = Math.max(...regions.map((region) => region.totalHeatScore), 1);
-  const flowPairs = getFlowPairs(globalTopics);
+  const flowPairs = getFlowPairs(globalTopics, regions);
   const activeFlowRegionIds = new Set(flowPairs.flat());
 
   return (

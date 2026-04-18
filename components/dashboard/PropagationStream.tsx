@@ -70,6 +70,7 @@ function resolveSignalDirection(originRegionId: string, regionIds: Set<string>):
 
 function getKeywordSignals(regions: RegionDashboardRow[], globalTopics: GlobalTopic[]): KeywordSignal[] {
   const regionColorMap = new Map(regions.map((region) => [region.id, region.color]));
+  const regionHeatMap = new Map(regions.map((region) => [region.id, region.totalHeatScore]));
   const signals = new Map<
     string,
     {
@@ -109,6 +110,34 @@ function getKeywordSignals(regions: RegionDashboardRow[], globalTopics: GlobalTo
     }
   }
 
+  for (const region of regions) {
+    for (const keyword of region.topKeywords.slice(0, 14)) {
+      const normalizedKeyword = normalizeKeyword(keyword);
+      if (!isMeaningfulKeyword(normalizedKeyword)) {
+        continue;
+      }
+
+      const existing = signals.get(normalizedKeyword);
+      if (existing) {
+        existing.regionIds.add(region.id);
+        existing.heat += Math.max(region.totalHeatScore * 0.08, 30);
+
+        const currentOriginHeat = regionHeatMap.get(existing.originRegionId) ?? 0;
+        if (region.totalHeatScore > currentOriginHeat) {
+          existing.originRegionId = region.id;
+          existing.regionColor = region.color;
+        }
+      } else {
+        signals.set(normalizedKeyword, {
+          regionIds: new Set([region.id]),
+          heat: Math.max(region.totalHeatScore * 0.08, 30),
+          regionColor: region.color,
+          originRegionId: region.id,
+        });
+      }
+    }
+  }
+
   return [...signals.entries()]
     .filter(([, meta]) => meta.regionIds.size >= 2)
     .sort((a, b) => {
@@ -117,7 +146,7 @@ function getKeywordSignals(regions: RegionDashboardRow[], globalTopics: GlobalTo
       }
       return b[1].heat - a[1].heat;
     })
-    .slice(0, 30)
+    .slice(0, 40)
     .map(([label, meta], index) => ({
       key: `${label}-${index}`,
       label,
