@@ -1,117 +1,106 @@
-# Global Pulse Delivery Status
+﻿# Global Pulse Delivery Status
 
-## 목적
-- 현재 구현 범위와 남은 작업을 한 번에 확인하기 위한 실행 기준 문서.
-- 패치노트(`docs/PATCH_NOTES.md`)와 함께 업데이트한다.
+## 紐⑹쟻
+- ?꾩옱 援ы쁽 踰붿쐞? ?⑥? ?묒뾽????踰덉뿉 ?뺤씤?섍린 ?꾪븳 ?ㅽ뻾 湲곗? 臾몄꽌.
+- ?⑥튂?명듃(`docs/PATCH_NOTES.md`)? ?④퍡 ?낅뜲?댄듃?쒕떎.
 
-## 현재 단계
-- 기준 날짜: 2026-04-12
-- 현재 진행 단계: **Step 5 확장**
-- 전체 Phase 1 진행률(체크리스트 기준): **약 90%**
+## ?꾩옱 ?④퀎
+- 湲곗? ?좎쭨: 2026-04-12
+- ?꾩옱 吏꾪뻾 ?④퀎: **Step 5 ?뺤옣**
+- ?꾩껜 Phase 1 吏꾪뻾瑜?泥댄겕由ъ뒪??湲곗?): **??90%**
 
-## Phase 1 체크리스트 상태
+## Phase 1 泥댄겕由ъ뒪???곹깭
 
-### Step 1: 프로젝트 초기화
-- 상태: 완료
-- 완료 기준:
-  - Next.js + Tailwind + 모노레포 구조 구성
-  - Supabase 마이그레이션/기본 워크플로우/스크립트 생성
+### Step 1: ?꾨줈?앺듃 珥덇린??- ?곹깭: ?꾨즺
+- ?꾨즺 湲곗?:
+  - Next.js + Tailwind + 紐⑤끂?덊룷 援ъ“ 援ъ꽦
+  - Supabase 留덉씠洹몃젅?댁뀡/湲곕낯 ?뚰겕?뚮줈???ㅽ겕由쏀듃 ?앹꽦
 
-### Step 2: 한국 3개 사이트 수집
-- 상태: 완료
-- 완료 기준:
-  - `dcinside`, `fmkorea`, `clien` 수집 구현
-  - `raw_posts` 저장 + `sources` 상태 업데이트
+### Step 2: ?쒓뎅 3媛??ъ씠???섏쭛
+- ?곹깭: ?꾨즺
+- ?꾨즺 湲곗?:
+  - `dcinside`, `fmkorea`, `clien` ?섏쭛 援ы쁽
+  - `raw_posts` ???+ `sources` ?곹깭 ?낅뜲?댄듃
 
-### Step 3: NLP 분석
-- 상태: 부분 완료
-- 완료 항목:
-  - TF-IDF 키워드 추출
-  - 토픽 클러스터링
-  - heat/sentiment 계산
-  - `topics`, `heat_history`, `region_snapshots` 저장
-  - Gemini 옵션 요약(`--with-gemini`) 연결
-  - 글로벌 분석 실행기(`analyze:global`) 및 워크플로우 연결
-- 남은 항목:
-  - 번역기(`translator`) 실동작 연계
-  - 운영 환경(Supabase)에서 `global_topics` 생성/만료 사이클 검증
+### Step 3: NLP 遺꾩꽍
+- ?곹깭: 遺遺??꾨즺
+- ?꾨즺 ??ぉ:
+  - TF-IDF ?ㅼ썙??異붿텧
+  - ?좏뵿 ?대윭?ㅽ꽣留?  - heat/sentiment 怨꾩궛
+  - `topics`, `heat_history`, `region_snapshots` ???  - Gemini ?듭뀡 ?붿빟(`--with-gemini`) ?곌껐
+  - 湲濡쒕쾶 遺꾩꽍 ?ㅽ뻾湲?`analyze:global`) 諛??뚰겕?뚮줈???곌껐
+- ?⑥? ??ぉ:
+  - 踰덉뿭湲?`translator`) ?ㅻ룞???곌퀎
+  - ?댁쁺 ?섍꼍(Supabase)?먯꽌 `global_topics` ?앹꽦/留뚮즺 ?ъ씠??寃利?
+### Step 4: ?꾨줎?몄뿏??MVP
+- ?곹깭: ?遺遺??꾨즺
+- ?꾨즺 ??ぉ:
+  - ??쒕낫?? 由ъ쟾 ?섏씠吏, 湲濡쒕쾶 ?댁뒋, ??꾨씪?? ?좏뵿 ?곸꽭 ?ㅻ뜲?댄꽣 ?곕룞
+  - ?붾뱶留?李⑦듃 諛섏쁺
+- ?⑥? ??ぉ:
+  - 紐⑤컮???ㅻ퉬寃뚯씠???꾩꽦??蹂닿컯
+  - 而댄룷?뚰듃蹂?UI 誘몄꽭議곗젙(諛??媛?낆꽦)
 
-### Step 4: 프론트엔드 MVP
-- 상태: 대부분 완료
-- 완료 항목:
-  - 대시보드, 리전 페이지, 글로벌 이슈, 타임라인, 토픽 상세 실데이터 연동
-  - 월드맵/차트 반영
-- 남은 항목:
-  - 모바일 네비게이션 완성도 보강
-  - 컴포넌트별 UI 미세조정(밀도/가독성)
+### Step 5: ?뺤옣 以鍮?- ?곹깭: 吏꾪뻾 以?- ?꾨즺 ??ぉ:
+  - `reddit` ?섏쭛 援ы쁽
+  - `reddit_worldnews` ?섏쭛 援ы쁽
+  - `reddit_europe` ?섏쭛 援ы쁽
+  - `reddit_mideast` ?섏쭛 援ы쁽
+  - `fourchan` ?섏쭛 援ы쁽
+  - `hackernews` ?섏쭛 援ы쁽
+  - `youtube_kr/jp/us` ?섏쭛 援ы쁽
+  - Gemini ?붿빟 ?뚯씠?꾨씪???곌껐
+  - US ?섏쭛 ?뚰겕?뚮줈?곗뿉??3媛??뚯뒪 ?숈떆 ?ㅽ뻾 ?뺤씤
+  - EU/ME ?섏쭛 ?뚰겕?뚮줈???ㅽ뻾 寃쎈줈 ?뺤씤
+- ?⑥? ??ぉ:
+  - ? 由ъ쟾 ?ㅽ겕?섑띁(?쇰낯/?留?以묎뎅) ?쒖감 ?숈옉??  - SNS ?뚯뒪(`mastodon`, `bilibili`, `telegram`) ?댁쁺 ?덉젙??
+## 吏湲덈????댁빞 ????(?곗꽑?쒖쐞)
 
-### Step 5: 확장 준비
-- 상태: 진행 중
-- 완료 항목:
-  - `reddit` 수집 구현
-  - `reddit_worldnews` 수집 구현
-  - `reddit_europe` 수집 구현
-  - `reddit_mideast` 수집 구현
-  - `fourchan` 수집 구현
-  - `hackernews` 수집 구현
-  - `youtube_kr/jp/us` 수집 구현
-  - Gemini 요약 파이프라인 연결
-  - US 수집 워크플로우에서 3개 소스 동시 실행 확인
-  - EU/ME 수집 워크플로우 실행 경로 확인
-- 남은 항목:
-  - 타 리전 스크래퍼(일본/대만/중국) 순차 동작화
-  - SNS 소스(`mastodon`, `bilibili`, `telegram`) 운영 안정화
+1. `cross-region-mapper` ?댁쁺 寃利?+ `global_topics` ?먮룞 ?앹꽦 ?덉젙??- ?꾨즺 湲곗?:
+  - 2媛??댁긽 由ъ쟾 ?좏뵿???먮룞 留ㅽ븨?섏뼱 `global_topics` ?앹꽦
+  - `first_seen_region/at`, `regional_sentiments`, `regional_heat_scores` ?뺤긽 湲곕줉
 
-## 지금부터 해야 할 일 (우선순위)
+2. SNS ?뺤옣 ?덉젙??- 紐⑺몴 ?뚯뒪: `mastodon`, `bilibili` (媛?ν븯硫?`telegram`)
+- ?꾨즺 湲곗?:
+  - ?ㅽ뙣 ??graceful fallback
+  - source ?곹깭/?먮윭 濡쒓렇 諛섏쁺
 
-1. `cross-region-mapper` 운영 검증 + `global_topics` 자동 생성 안정화
-- 완료 기준:
-  - 2개 이상 리전 토픽이 자동 매핑되어 `global_topics` 생성
-  - `first_seen_region/at`, `regional_sentiments`, `regional_heat_scores` 정상 기록
+3. ?꾨줎???덉쭏 留덇컧
+- ?꾨즺 湲곗?:
+  - 紐⑤컮??酉곗뿉???듭떖 ?숈꽑(??쒕낫??由ъ쟾/湲濡쒕쾶/??꾨씪?? 臾몄젣 ?놁쓬
+  - API ?덉쇅 ???ъ슜??硫붿떆吏 ?쇨????뺣낫
 
-2. SNS 확장 안정화
-- 목표 소스: `mastodon`, `bilibili` (가능하면 `telegram`)
-- 완료 기준:
-  - 실패 시 graceful fallback
-  - source 상태/에러 로그 반영
+## Phase 1 ?꾨즺???대뵒源뚯? ?댁빞 ?섎뒗吏)
+- ?ㅼ쓬 議곌굔 異⑹” ??Phase 1 ?꾨즺濡?蹂몃떎:
+  - ?쒓뎅/誘멸뎅 ?듭떖 ?섏쭛 ?뚯씠?꾨씪???덉젙 ?숈옉
+  - 湲濡쒕쾶 ?좏뵿 ?먮룞 ?앹꽦(`global_topics`) ?뚯씠?꾨씪???숈옉
+  - ?꾨줎??4媛??듭떖 ?섏씠吏(硫붿씤/由ъ쟾/湲濡쒕쾶?댁뒋/??꾨씪?? ?ㅻ뜲?댄꽣 ?댁쁺 媛??  - GitHub Actions ?ㅼ?以?寃쎈줈媛 ?섏쭛->遺꾩꽍 ?먮쫫?쇰줈 ?곌껐
+  - ?ㅽ뙣 ??濡쒓렇/?곹깭 ?뺤씤 媛??`sources.last_error`, ?뚰겕?뚮줈??寃쎄퀬)
 
-3. 프론트 품질 마감
-- 완료 기준:
-  - 모바일 뷰에서 핵심 동선(대시보드/리전/글로벌/타임라인) 문제 없음
-  - API 예외 시 사용자 메시지 일관성 확보
-
-## Phase 1 완료선(어디까지 해야 하는지)
-- 다음 조건 충족 시 Phase 1 완료로 본다:
-  - 한국/미국 핵심 수집 파이프라인 안정 동작
-  - 글로벌 토픽 자동 생성(`global_topics`) 파이프라인 동작
-  - 프론트 4개 핵심 페이지(메인/리전/글로벌이슈/타임라인) 실데이터 운영 가능
-  - GitHub Actions 스케줄 경로가 수집->분석 흐름으로 연결
-  - 실패 시 로그/상태 확인 가능(`sources.last_error`, 워크플로우 경고)
-
-## 최근 검증 스냅샷 (2026-04-12)
-- 성공
+## 理쒓렐 寃利??ㅻ깄??(2026-04-12)
+- ?깃났
   - `npm run test:scraper -- --source reddit_worldnews`
   - `npm run test:scraper -- --source hackernews`
-  - `npm run collect:us` (reddit/reddit_worldnews/hackernews 3/3 성공)
+  - `npm run collect:us` (reddit/reddit_worldnews/hackernews 3/3 ?깃났)
   - `npm run test:scraper -- --source reddit_europe`
   - `npm run test:scraper -- --source reddit_mideast`
   - `npm run test:scraper -- --source fourchan`
-  - `npm run collect:eu` (reddit_europe 1/1 성공)
-  - `npm run collect:me` (reddit_mideast 1/1 성공)
-  - `npm run collect:us` (reddit/reddit_worldnews/fourchan/hackernews 4/4 성공)
+  - `npm run collect:eu` (reddit_europe 1/1 ?깃났)
+  - `npm run collect:me` (reddit_mideast 1/1 ?깃났)
+  - `npm run collect:us` (reddit/reddit_worldnews/fourchan/hackernews 4/4 ?깃났)
   - `npm run lint`
-  - `npm run build` (재시도 포함 최종 통과)
-  - `npm run analyze:global -- --hours 24 --min-regions 2 --similarity 0.3` 실행 경로 확인
-- 예상 실패(환경 변수 미설정)
+  - `npm run build` (?ъ떆???ы븿 理쒖쥌 ?듦낵)
+  - `npm run analyze:global -- --hours 24 --min-regions 2 --similarity 0.3` ?ㅽ뻾 寃쎈줈 ?뺤씤
+- ?덉긽 ?ㅽ뙣(?섍꼍 蹂??誘몄꽕??
   - `npm run test:scraper -- --source youtube_jp`
   - `npm run test:scraper -- --source youtube_us`
   - `npm run collect:youtube:global`
-  - `npm run analyze:global` 실DB write 검증 (Supabase 키 없음)
+  - `npm run analyze:global` ?짣B write 寃利?(Supabase ???놁쓬)
 
-## 운영 규칙
-- 모든 단계 완료 후:
-  - `docs/PATCH_NOTES.md`에 버전 추가
-  - 이 문서(`docs/DELIVERY_STATUS.md`)의 상태/남은 항목 갱신
+## ?댁쁺 洹쒖튃
+- 紐⑤뱺 ?④퀎 ?꾨즺 ??
+  - `docs/PATCH_NOTES.md`??踰꾩쟾 異붽?
+  - ??臾몄꽌(`docs/DELIVERY_STATUS.md`)???곹깭/?⑥? ??ぉ 媛깆떊
 
 ## EC2 Pivot Status (2026-04-12)
 - Status: In Progress (Step 1 done)
@@ -730,7 +719,7 @@
   - added `.npmrc` (`legacy-peer-deps=true`) for `npm ci` peer conflict
 - Resolved preflight toolchain blocker:
   - installed `postgresql-client` on EC2 (`pg_dump`, `psql`)
-- Executed user-requested single-run closure (`1회`):
+- Executed user-requested single-run closure (`1??):
   - `ROUNDS=1 SLEEP_SECONDS=0 npm run ops:closure`
   - preflight PASS, verify round1 PASS, failures `0`
 - Corrected closure evidence targeting to actual run dir:
@@ -834,8 +823,8 @@
 
 ## EC2 Pivot Progress Update (2026-04-13, Step 3V~3Z)
 ### Newly completed
-- Step 3V (API 제거 2차) 완료:
-  - Supabase fallback 제거:
+- Step 3V (API ?쒓굅 2李? ?꾨즺:
+  - Supabase fallback ?쒓굅:
     - `/api/topics`
     - `/api/regions`
     - `/api/global-topics`
@@ -843,81 +832,80 @@
     - `/api/stats`
     - `/api/timeline`
     - `/api/topic/[topicId]`
-  - API는 PostgreSQL-only 또는 미구성 시 `provider: "none"` 응답으로 통일
-- Step 3W (Batch 제거 1차) 완료:
+  - API??PostgreSQL-only ?먮뒗 誘멸뎄????`provider: "none"` ?묐떟?쇰줈 ?듭씪
+- Step 3W (Batch ?쒓굅 1李? ?꾨즺:
   - `scripts/build-snapshots.ts` PostgreSQL-only
   - `scripts/cleanup-old-data.ts` PostgreSQL-only
-  - analyzer 진입점 PostgreSQL-only:
+  - analyzer 吏꾩엯??PostgreSQL-only:
     - `packages/analyzer/src/run-analysis.ts`
     - `packages/analyzer/src/run-global-analysis.ts`
-- Step 3X (Collector/Seed 제거 2차) 완료:
-  - collector storage 경로 PostgreSQL-only:
+- Step 3X (Collector/Seed ?쒓굅 2李? ?꾨즺:
+  - collector storage 寃쎈줈 PostgreSQL-only:
     - `packages/collector/src/utils/supabase-storage.ts`
-  - seed 경로 PostgreSQL-only:
+  - seed 寃쎈줈 PostgreSQL-only:
     - `scripts/seed-regions.ts`
-- Step 3Y (Shared/Env 최종정리) 완료:
-  - shared Supabase runtime export 제거:
+- Step 3Y (Shared/Env 理쒖쥌?뺣━) ?꾨즺:
+  - shared Supabase runtime export ?쒓굅:
     - `packages/shared/src/index.ts`
-  - Supabase runtime 파일 제거:
+  - Supabase runtime ?뚯씪 ?쒓굅:
     - `packages/shared/src/supabase.ts` (deleted)
     - `app/api/_shared/supabase-server.ts` (deleted)
     - `lib/supabase-client.ts` (deleted)
-  - preflight env 체크를 PostgreSQL 기준으로 전환:
+  - preflight env 泥댄겕瑜?PostgreSQL 湲곗??쇰줈 ?꾪솚:
     - `scripts/closure-preflight.ts`
-- Step 3Z (마감 검증/문서 고정) 완료:
+- Step 3Z (留덇컧 寃利?臾몄꽌 怨좎젙) ?꾨즺:
   - `npm run lint` (pass)
   - `npm run build` (pass)
   - `npm run ops:supabase:audit` (pass, `totalMatches=0`)
   - `npm run ops:supabase:budget -- --print-json` (pass, budget/current `0`)
   - `npm run ops:verify3:check -- --print-json` (pass, `issues=[]`)
-  - budget 재기준화:
+  - budget ?ш린以??
     - `docs/source-notes/supabase-fallback-budget.json`: `51 -> 0`
-  - 패치노트 누적 반영:
+  - ?⑥튂?명듃 ?꾩쟻 諛섏쁺:
     - `docs/PATCH_NOTES.md` (`GP-20260413-39`)
 
 ### Current completion state
-- Supabase fallback runtime 코드 경로: 제거 완료 (`0` matches)
-- Single-run 클로저 정책: 유지 (`ROUNDS=1` 기본)
-- EC2 final evidence: PASS 유지 (`20260412_212140`)
+- Supabase fallback runtime 肄붾뱶 寃쎈줈: ?쒓굅 ?꾨즺 (`0` matches)
+- Single-run ?대줈? ?뺤콉: ?좎? (`ROUNDS=1` 湲곕낯)
+- EC2 final evidence: PASS ?좎? (`20260412_212140`)
 
 ### Remaining (current)
-1. 운영 관찰(24h) 유지
-- systemd timer 주기 수집/분석/정리 루프 모니터링
-- 에러율/지연/DB 용량 추이 확인
+1. ?댁쁺 愿李?24h) ?좎?
+- systemd timer 二쇨린 ?섏쭛/遺꾩꽍/?뺣━ 猷⑦봽 紐⑤땲?곕쭅
+- ?먮윭??吏??DB ?⑸웾 異붿씠 ?뺤씤
 
-2. 문서 정리(선택)
-- 역사 문서 내 Supabase 서술은 런타임 비활성/레거시임을 명시적으로 라벨링
-
+2. 臾몄꽌 ?뺣━(?좏깮)
+- ??궗 臾몄꽌 ??Supabase ?쒖닠? ?고???鍮꾪솢???덇굅?쒖엫??紐낆떆?곸쑝濡??쇰꺼留?
 ## EC2 Pivot Progress Update (2026-04-13, Step 4A)
 ### Newly completed
-- 운영 문서 PostgreSQL-only 기준 정리:
+- ?댁쁺 臾몄꽌 PostgreSQL-only 湲곗? ?뺣━:
   - `README.md`
   - `docs/operations.md`
   - `docs/deployment-ec2.md`
   - `docs/architecture.md`
-  - `docs/supabase-cutover-checklist.md` (legacy record 재정의)
+  - `docs/supabase-cutover-checklist.md` (legacy record ?ъ젙??
   - `.env.example`
-- 24h 운영 관찰 시작 준비:
-  - 신규 스냅샷 스크립트 추가:
+- 24h ?댁쁺 愿李??쒖옉 以鍮?
+  - ?좉퇋 ?ㅻ깄???ㅽ겕由쏀듃 異붽?:
     - `scripts/capture-ops-snapshot.sh`
     - `scripts/run-ops-watch-window.sh`
-  - 신규 실행 명령 추가:
+  - ?좉퇋 ?ㅽ뻾 紐낅졊 異붽?:
     - `npm run ops:monitor:snapshot`
     - `npm run ops:monitor:watch`
-  - 산출물 경로:
+  - ?곗텧臾?寃쎈줈:
     - `docs/evidence/ops-monitoring/<timestamp>/`
-- evidence 메타 갱신:
-  - `scripts/capture-cutover-evidence.sh` -> `postgres_config_mode` 기록
-  - `scripts/generate-evidence-report.ts` -> 신규 필드 파싱/리포트 반영
-  - `scripts/self-test-closure-tooling.ts` fixture 갱신
-- closure import 후속 문구 정리:
+- evidence 硫뷀? 媛깆떊:
+  - `scripts/capture-cutover-evidence.sh` -> `postgres_config_mode` 湲곕줉
+  - `scripts/generate-evidence-report.ts` -> ?좉퇋 ?꾨뱶 ?뚯떛/由ы룷??諛섏쁺
+  - `scripts/self-test-closure-tooling.ts` fixture 媛깆떊
+- closure import ?꾩냽 臾멸뎄 ?뺣━:
   - `scripts/apply-final-verification-report.ts`
-- Supabase audit 리포트 개선:
+- Supabase audit 由ы룷??媛쒖꽑:
   - `scripts/audit-supabase-fallback.ts`
-  - 매치 `0`일 때 제거 TODO 대신 guard checklist를 출력
-- 의존성/스크립트 정리:
-  - root/shared에서 `@supabase/supabase-js` 제거
-  - `setup:supabase` npm 스크립트 제거
+  - 留ㅼ튂 `0`?????쒓굅 TODO ???guard checklist瑜?異쒕젰
+- ?섏〈???ㅽ겕由쏀듃 ?뺣━:
+  - root/shared?먯꽌 `@supabase/supabase-js` ?쒓굅
+  - `setup:supabase` npm ?ㅽ겕由쏀듃 ?쒓굅
 
 ### Validation
 - `npm install` (pass)
@@ -929,18 +917,17 @@
 - `npm run ops:verify3:check -- --print-json` (pass, `issues=[]`)
 
 ### Current completion state
-- Runtime DB path: PostgreSQL-only (유지)
-- Supabase fallback retirement baseline: `0` (유지)
-- Closure evidence state: PASS (`20260412_212140`, 유지)
-- Ops watch tooling: 준비 완료 (EC2 실행 대기)
+- Runtime DB path: PostgreSQL-only (?좎?)
+- Supabase fallback retirement baseline: `0` (?좎?)
+- Closure evidence state: PASS (`20260412_212140`, ?좎?)
+- Ops watch tooling: 以鍮??꾨즺 (EC2 ?ㅽ뻾 ?湲?
 
 ### Remaining (current)
-1. 24h 운영 관찰 실행
-- EC2에서 1시간 간격으로 `npm run ops:monitor:snapshot` 수행
-- 최소 24회 증적 수집 후 이상 징후(실패율/지연/누락) 검토
-
-2. 관찰 결과 문서 반영
-- `docs/PATCH_NOTES.md`, `docs/DELIVERY_STATUS.md`에 운영 관찰 결과 요약 추가
+1. 24h ?댁쁺 愿李??ㅽ뻾
+- EC2?먯꽌 1?쒓컙 媛꾧꺽?쇰줈 `npm run ops:monitor:snapshot` ?섑뻾
+- 理쒖냼 24??利앹쟻 ?섏쭛 ???댁긽 吏뺥썑(?ㅽ뙣??吏???꾨씫) 寃??
+2. 愿李?寃곌낵 臾몄꽌 諛섏쁺
+- `docs/PATCH_NOTES.md`, `docs/DELIVERY_STATUS.md`???댁쁺 愿李?寃곌낵 ?붿빟 異붽?
 
 ## EC2 Pivot Progress Update (2026-04-13, Step 4B)
 ### Newly completed
@@ -973,157 +960,150 @@
 - EC2:
   - `npm ci` (pass)
   - `npm run build` (pass)
-  - systemd units/timers `active` 확인
+  - systemd units/timers `active` ?뺤씤
   - `bash scripts/capture-ops-snapshot.sh` (pass, failures `0`)
 
 ### Current completion state
-- systemd 기반 운영 루프: 활성화 완료
-- 24h 관찰 루프: 진행 중
-- local code snapshot: 커밋 완료
+- systemd 湲곕컲 ?댁쁺 猷⑦봽: ?쒖꽦???꾨즺
+- 24h 愿李?猷⑦봽: 吏꾪뻾 以?- local code snapshot: 而ㅻ컠 ?꾨즺
 
 ### Remaining (current)
 1. Remote Git push finalization
 - local repo has no configured remote (`git remote -v` empty)
-- push target URL/권한 필요
+- push target URL/沅뚰븳 ?꾩슂
 
 2. 24h watch completion review
-- watch 종료 후 `watch-summary.txt` 기반으로 운영 결과 요약/이슈 반영
+- watch 醫낅즺 ??`watch-summary.txt` 湲곕컲?쇰줈 ?댁쁺 寃곌낵 ?붿빟/?댁뒋 諛섏쁺
 
 ## EC2 Pivot Progress Update (2026-04-13, Step 4C)
 ### Newly completed
-- 프롬프트 단일화 완료:
-  - 마스터 문서로 `docs/INITIAL_PROMPT_GLOBAL_PULSE.md` 확정
-  - `docs/INITIAL_PROMPT_GLOBAL_PULSE_EC2.md`는 레거시 포인터 문서로 전환
-- 마스터 프롬프트에 통합 반영:
-  - 단일 EC2/PostgreSQL-only 아키텍처 기준
-  - Step 단위 실행/기록/검증 규칙
-  - 수집/분석/API/UI/운영 요구사항
-  - 현재 상태 요약 + 다음 실행 우선순위
-  - UTF-8 인코딩 체크리스트
-- 문서 운영 규칙 고정:
-  - 앞으로 프롬프트 갱신은 마스터 문서 1곳만 업데이트
+- ?꾨＼?꾪듃 ?⑥씪???꾨즺:
+  - 留덉뒪??臾몄꽌濡?`docs/INITIAL_PROMPT_GLOBAL_PULSE.md` ?뺤젙
+  - `docs/INITIAL_PROMPT_GLOBAL_PULSE_EC2.md`???덇굅???ъ씤??臾몄꽌濡??꾪솚
+- 留덉뒪???꾨＼?꾪듃???듯빀 諛섏쁺:
+  - ?⑥씪 EC2/PostgreSQL-only ?꾪궎?띿쿂 湲곗?
+  - Step ?⑥쐞 ?ㅽ뻾/湲곕줉/寃利?洹쒖튃
+  - ?섏쭛/遺꾩꽍/API/UI/?댁쁺 ?붽뎄?ы빆
+  - ?꾩옱 ?곹깭 ?붿빟 + ?ㅼ쓬 ?ㅽ뻾 ?곗꽑?쒖쐞
+  - UTF-8 ?몄퐫??泥댄겕由ъ뒪??- 臾몄꽌 ?댁쁺 洹쒖튃 怨좎젙:
+  - ?욎쑝濡??꾨＼?꾪듃 媛깆떊? 留덉뒪??臾몄꽌 1怨노쭔 ?낅뜲?댄듃
 
 ### Validation
-- `Get-Content -Encoding utf8 docs/INITIAL_PROMPT_GLOBAL_PULSE.md` (한글/구조 확인)
-- `Get-Content -Encoding utf8 docs/INITIAL_PROMPT_GLOBAL_PULSE_EC2.md` (포인터 전환 확인)
-- `git diff`로 문서 변경 범위 확인
+- `Get-Content -Encoding utf8 docs/INITIAL_PROMPT_GLOBAL_PULSE.md` (?쒓?/援ъ“ ?뺤씤)
+- `Get-Content -Encoding utf8 docs/INITIAL_PROMPT_GLOBAL_PULSE_EC2.md` (?ъ씤???꾪솚 ?뺤씤)
+- `git diff`濡?臾몄꽌 蹂寃?踰붿쐞 ?뺤씤
 
 ### Current completion state
-- Prompt source-of-truth: 단일화 완료
-- PostgreSQL-only 운영 원칙: 유지
-- 기록 체계(PATCH_NOTES/DELIVERY_STATUS 누적): 유지
+- Prompt source-of-truth: ?⑥씪???꾨즺
+- PostgreSQL-only ?댁쁺 ?먯튃: ?좎?
+- 湲곕줉 泥닿퀎(PATCH_NOTES/DELIVERY_STATUS ?꾩쟻): ?좎?
 
 ### Remaining (current)
 1. Remote Git push finalization
-- local repo remote 미설정 상태 해결 필요(`git remote add origin ...`)
+- local repo remote 誘몄꽕???곹깭 ?닿껐 ?꾩슂(`git remote add origin ...`)
 
-2. EC2 배포 경로 git checkout 전환
-- `/srv/projects/project2/global-pulse`를 git clone 기반으로 정리
+2. EC2 諛고룷 寃쎈줈 git checkout ?꾪솚
+- `/srv/projects/project2/global-pulse`瑜?git clone 湲곕컲?쇰줈 ?뺣━
 
-3. 24h 운영 관찰 결과 마감
-- `docs/evidence/ops-monitoring/*` 요약을 패치노트/상태문서에 최종 반영
+3. 24h ?댁쁺 愿李?寃곌낵 留덇컧
+- `docs/evidence/ops-monitoring/*` ?붿빟???⑥튂?명듃/?곹깭臾몄꽌??理쒖쥌 諛섏쁺
 ## EC2 Pivot Progress Update (2026-04-13, Step 4D)
 ### Newly completed
-- GitHub 신규 저장소 생성 완료:
+- GitHub ?좉퇋 ??μ냼 ?앹꽦 ?꾨즺:
   - `https://github.com/wsp-max/global-pulse`
-- 로컬 원격 연결 완료:
+- 濡쒖뺄 ?먭꺽 ?곌껐 ?꾨즺:
   - `origin = https://github.com/wsp-max/global-pulse.git`
-- 최초 업로드 완료:
-  - `git push -u origin master` 성공
-  - upstream 추적 설정 완료
+- 理쒖큹 ?낅줈???꾨즺:
+  - `git push -u origin master` ?깃났
+  - upstream 異붿쟻 ?ㅼ젙 ?꾨즺
 
 ### Validation
-- `git remote -v` 확인
-- `git push -u origin master` 성공 로그 확인
+- `git remote -v` ?뺤씤
+- `git push -u origin master` ?깃났 濡쒓렇 ?뺤씤
 
 ### Current completion state
-- 원격 저장소 연결: 완료
-- 코드/문서 백업 경로: GitHub origin으로 확정
+- ?먭꺽 ??μ냼 ?곌껐: ?꾨즺
+- 肄붾뱶/臾몄꽌 諛깆뾽 寃쎈줈: GitHub origin?쇰줈 ?뺤젙
 
 ### Remaining (current)
-1. EC2 배포 경로 git checkout 전환
-- `/srv/projects/project2/global-pulse`를 tar/scp 반영 방식에서 `git clone/pull` 기반으로 전환
+1. EC2 諛고룷 寃쎈줈 git checkout ?꾪솚
+- `/srv/projects/project2/global-pulse`瑜?tar/scp 諛섏쁺 諛⑹떇?먯꽌 `git clone/pull` 湲곕컲?쇰줈 ?꾪솚
 
-2. 24h 운영 관찰 결과 마감
-- `docs/evidence/ops-monitoring/*` 요약/이상 징후를 `PATCH_NOTES`/`DELIVERY_STATUS`에 최종 반영
+2. 24h ?댁쁺 愿李?寃곌낵 留덇컧
+- `docs/evidence/ops-monitoring/*` ?붿빟/?댁긽 吏뺥썑瑜?`PATCH_NOTES`/`DELIVERY_STATUS`??理쒖쥌 諛섏쁺
 
-3. 브랜치 정책 정리(선택)
-- 필요 시 `master -> main` 표준화
-
+3. 釉뚮옖移??뺤콉 ?뺣━(?좏깮)
+- ?꾩슂 ??`master -> main` ?쒖???
 ## EC2 Pivot Progress Update (2026-04-13, Step 4E)
 ### Newly completed
-- EC2 앱 경로를 git 기반 배포 구조로 전환 완료:
-  - 기존 경로 백업:
+- EC2 ??寃쎈줈瑜?git 湲곕컲 諛고룷 援ъ“濡??꾪솚 ?꾨즺:
+  - 湲곗〈 寃쎈줈 諛깆뾽:
     - `/srv/projects/project2/global-pulse_legacy_20260413_133224`
-  - 신규 경로 clone:
+  - ?좉퇋 寃쎈줈 clone:
     - `/srv/projects/project2/global-pulse` (`master`)
   - remote:
     - `origin=https://github.com/wsp-max/global-pulse.git`
-- 배포 루틴 표준화:
-  - `scripts/deploy-ec2.sh` 실행으로 build + systemd unit/timer 재적용
-  - `scripts/deploy-ec2.sh` default branch를 `master`로 정렬
-- 런타임 상태 확인:
+- 諛고룷 猷⑦떞 ?쒖???
+  - `scripts/deploy-ec2.sh` ?ㅽ뻾?쇰줈 build + systemd unit/timer ?ъ쟻??  - `scripts/deploy-ec2.sh` default branch瑜?`master`濡??뺣젹
+- ?고????곹깭 ?뺤씤:
   - web service `active`
   - collector/analyzer/snapshot/cleanup/backup timer `active`
-  - `/api/health` 최신 런타임 응답 확인 (`provider=postgres`)
+  - `/api/health` 理쒖떊 ?고????묐떟 ?뺤씤 (`provider=postgres`)
 
 ### Validation
 - EC2:
   - `git -C /srv/projects/project2/global-pulse rev-parse --abbrev-ref HEAD` -> `master`
-  - `git -C /srv/projects/project2/global-pulse remote -v` 확인
+  - `git -C /srv/projects/project2/global-pulse remote -v` ?뺤씤
   - `systemctl status global-pulse-web.service`
   - `systemctl list-timers 'global-pulse-*' --no-pager`
   - `curl -i http://127.0.0.1:3000/api/health`
 
 ### Current completion state
-- EC2 deploy path: git checkout 기반으로 전환 완료
-- 반복 배포 루틴: `git pull + build + systemd`로 고정
+- EC2 deploy path: git checkout 湲곕컲?쇰줈 ?꾪솚 ?꾨즺
+- 諛섎났 諛고룷 猷⑦떞: `git pull + build + systemd`濡?怨좎젙
 
 ### Remaining (current)
-1. EC2 PostgreSQL runtime env 설정
-- `/etc/global-pulse/global-pulse.env`에 `DATABASE_URL` 또는 `DB_*` 추가 필요
-- 현재 health는 `postgres_not_configured`로 `503` 상태
+1. EC2 PostgreSQL runtime env ?ㅼ젙
+- `/etc/global-pulse/global-pulse.env`??`DATABASE_URL` ?먮뒗 `DB_*` 異붽? ?꾩슂
+- ?꾩옱 health??`postgres_not_configured`濡?`503` ?곹깭
 
-2. 24h watch 결과 마감
-- 새 watch 종료 후 최종 summary를 문서에 반영
+2. 24h watch 寃곌낵 留덇컧
+- ??watch 醫낅즺 ??理쒖쥌 summary瑜?臾몄꽌??諛섏쁺
 
 ## EC2 Pivot Progress Update (2026-04-13, Step 4F)
 ### Newly completed
-- ops monitoring evidence를 신규 경로/로컬로 동기화:
+- ops monitoring evidence瑜??좉퇋 寃쎈줈/濡쒖뺄濡??숆린??
   - `docs/evidence/ops-monitoring/*`
-- post-cutover snapshot 1회 성공:
+- post-cutover snapshot 1???깃났:
   - `20260413_133512/summary.txt` (failures=0)
-- 24h watch 재시작:
+- 24h watch ?ъ떆??
   - `watch_20260413_133512/watch-summary.txt`
   - hour=1 pass, failures=0
 
 ### Validation
 - `npm run ops:monitor:snapshot` (EC2, pass)
-- `npm run ops:monitor:watch` (EC2, 백그라운드 실행 중)
-- watch summary에서 hour=1 성공 확인
+- `npm run ops:monitor:watch` (EC2, 諛깃렇?쇱슫???ㅽ뻾 以?
+- watch summary?먯꽌 hour=1 ?깃났 ?뺤씤
 
 ### Current completion state
-- 관찰 증적 이관: 완료
-- post-cutover watch: 진행 중
-
+- 愿李?利앹쟻 ?닿?: ?꾨즺
+- post-cutover watch: 吏꾪뻾 以?
 ### Remaining (current)
-1. watch 종료 결과 반영
-- `watch-summary.txt` 최종 `failures` 값과 중단 사유(있는 경우) 문서화
-
-2. DB table count 활성화
-- PostgreSQL env 설정 후 snapshot의 `db_table_counts` SKIP 해소
+1. watch 醫낅즺 寃곌낵 諛섏쁺
+- `watch-summary.txt` 理쒖쥌 `failures` 媛믨낵 以묐떒 ?ъ쑀(?덈뒗 寃쎌슦) 臾몄꽌??
+2. DB table count ?쒖꽦??- PostgreSQL env ?ㅼ젙 ??snapshot??`db_table_counts` SKIP ?댁냼
 
 ## Step 5A Progress Update (2026-04-13)
 ### Newly completed
-- 수집기 확장 1차 구현:
-  - `bilibili` scraper 구현
-  - `mastodon` scraper 구현
-  - `dcard` scraper 구현(차단 시 graceful failure)
-- collector/runtime 반영:
-  - `packages/collector/src/run.ts` 대상 소스 추가
-  - `scripts/test-scraper.ts` 테스트 소스 추가
-  - `packages/collector/src/index.ts` export 추가
-- 워크플로우 소스 단위 정렬:
+- ?섏쭛湲??뺤옣 1李?援ы쁽:
+  - `bilibili` scraper 援ы쁽
+  - `mastodon` scraper 援ы쁽
+  - `dcard` scraper 援ы쁽(李⑤떒 ??graceful failure)
+- collector/runtime 諛섏쁺:
+  - `packages/collector/src/run.ts` ????뚯뒪 異붽?
+  - `scripts/test-scraper.ts` ?뚯뒪???뚯뒪 異붽?
+  - `packages/collector/src/index.ts` export 異붽?
+- ?뚰겕?뚮줈???뚯뒪 ?⑥쐞 ?뺣젹:
   - `collect-sns-bilibili.yml` -> `--source bilibili`
   - `collect-sns-mastodon.yml` -> `--source mastodon`
   - `collect-taiwan.yml` -> `--source dcard`
@@ -1140,29 +1120,28 @@
 - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
 
 ### Current completion state
-- Step 5A 목표(신규 3개 소스 도입): 코드 반영 완료
-- 운영 가용성:
-  - bilibili/mastodon: 동작 확인
-  - dcard: Cloudflare 403로 실패 처리(예상 리스크 명시)
+- Step 5A 紐⑺몴(?좉퇋 3媛??뚯뒪 ?꾩엯): 肄붾뱶 諛섏쁺 ?꾨즺
+- ?댁쁺 媛?⑹꽦:
+  - bilibili/mastodon: ?숈옉 ?뺤씤
+  - dcard: Cloudflare 403濡??ㅽ뙣 泥섎━(?덉긽 由ъ뒪??紐낆떆)
 
 ### Remaining (current)
-1. Dcard 안정화 경로 결정
-- API 차단 우회(프록시/브라우저 기반/대체 소스) 전략 필요
+1. Dcard ?덉젙??寃쎈줈 寃곗젙
+- API 李⑤떒 ?고쉶(?꾨줉??釉뚮씪?곗? 湲곕컲/?泥??뚯뒪) ?꾨왂 ?꾩슂
 
-2. Step 5B 착수
-- `ptt`, `hatena`, `fivech`, `weibo` 구현 + 실패율 기준 수립
+2. Step 5B 李⑹닔
+- `ptt`, `hatena`, `fivech`, `weibo` 援ы쁽 + ?ㅽ뙣??湲곗? ?섎┰
 
 ## EC2 Pivot Progress Update (2026-04-13, Step 4E Follow-up)
 ### Newly completed
-- EC2 재배포 충돌 해소:
-  - 원인: `docs/evidence/ops-monitoring/*` untracked 파일이 tracked 파일 병합을 막음
-  - 조치: evidence 디렉토리를 `ops-monitoring_runtime_20260413_134415`로 백업 이동 후 pull/deploy 재실행
-- EC2 앱 최신화 완료:
+- EC2 ?щ같??異⑸룎 ?댁냼:
+  - ?먯씤: `docs/evidence/ops-monitoring/*` untracked ?뚯씪??tracked ?뚯씪 蹂묓빀??留됱쓬
+  - 議곗튂: evidence ?붾젆?좊━瑜?`ops-monitoring_runtime_20260413_134415`濡?諛깆뾽 ?대룞 ??pull/deploy ?ъ떎??- EC2 ??理쒖떊???꾨즺:
   - deployed commit: `36a5fa7`
-- post-deploy watch 재시작:
+- post-deploy watch ?ъ떆??
   - `watch_20260413_134515` (hour=1 pass, failures=0)
-- 로컬 evidence 재동기화 완료:
-  - 최신 `ops-monitoring` 로그/summary 반영
+- 濡쒖뺄 evidence ?щ룞湲고솕 ?꾨즺:
+  - 理쒖떊 `ops-monitoring` 濡쒓렇/summary 諛섏쁺
 
 ### Validation
 - `git -C /srv/projects/project2/global-pulse rev-parse --short HEAD` -> `36a5fa7`
@@ -1172,36 +1151,36 @@
 - `npm run test:scraper -- --source dcard` (EC2) -> 403
 
 ### Current completion state
-- Step 4E: 완료(표준 배포 + follow-up 충돌 해소까지 반영)
-- Step 4F: 진행 중(24h watch 누적 중, hour1 pass)
-- Step 5A: 완료(3개 소스 코드 반영 + smoke 검증 완료)
+- Step 4E: ?꾨즺(?쒖? 諛고룷 + follow-up 異⑸룎 ?댁냼源뚯? 諛섏쁺)
+- Step 4F: 吏꾪뻾 以?24h watch ?꾩쟻 以? hour1 pass)
+- Step 5A: ?꾨즺(3媛??뚯뒪 肄붾뱶 諛섏쁺 + smoke 寃利??꾨즺)
 
 ### Remaining (current)
-1. PostgreSQL env 설정
-- `/etc/global-pulse/global-pulse.env`에 DB 접속 정보 추가 필요
+1. PostgreSQL env ?ㅼ젙
+- `/etc/global-pulse/global-pulse.env`??DB ?묒냽 ?뺣낫 異붽? ?꾩슂
 
-2. 24h watch 종료 마감
-- `watch_20260413_134515/watch-summary.txt` 최종 상태 반영
+2. 24h watch 醫낅즺 留덇컧
+- `watch_20260413_134515/watch-summary.txt` 理쒖쥌 ?곹깭 諛섏쁺
 
-3. Step 5B 실행
-- `ptt`, `hatena`, `fivech`, `weibo` 구현 착수
+3. Step 5B ?ㅽ뻾
+- `ptt`, `hatena`, `fivech`, `weibo` 援ы쁽 李⑹닔
 
 ## Step 5B Progress Update (2026-04-13)
 ### Newly completed
-- 고변동 소스 4개 구현 완료:
+- 怨좊????뚯뒪 4媛?援ы쁽 ?꾨즺:
   - `fivech` (`itest.5ch.io/subbacks/bbynews.json`)
   - `hatena` (RSS)
   - `ptt` (over18 cookie + HTML)
   - `weibo` (hotSearch JSON)
-- collector/runtime 연결:
-  - `run.ts` 대상 소스 등록 완료
-  - `test-scraper.ts` 테스트 매핑 등록 완료
-  - `collector index` export 정렬 완료
-- 운영 설정 보정:
-  - `collect-taiwan.yml` -> `--region tw`로 변경 (PTT 포함)
-  - `constants.ts`의 `fivech/hatena` scrapeUrl을 실제 수집 엔드포인트로 정렬
-- 데이터 정합성 보정:
-  - fivech 비정상 epoch thread(`924...`)는 `postedAt` 생략 처리
+- collector/runtime ?곌껐:
+  - `run.ts` ????뚯뒪 ?깅줉 ?꾨즺
+  - `test-scraper.ts` ?뚯뒪??留ㅽ븨 ?깅줉 ?꾨즺
+  - `collector index` export ?뺣젹 ?꾨즺
+- ?댁쁺 ?ㅼ젙 蹂댁젙:
+  - `collect-taiwan.yml` -> `--region tw`濡?蹂寃?(PTT ?ы븿)
+  - `constants.ts`??`fivech/hatena` scrapeUrl???ㅼ젣 ?섏쭛 ?붾뱶?ъ씤?몃줈 ?뺣젹
+- ?곗씠???뺥빀??蹂댁젙:
+  - fivech 鍮꾩젙??epoch thread(`924...`)??`postedAt` ?앸왂 泥섎━
 
 ### Validation
 - `npm run test:scraper -- --source hatena` -> success=true, postCount=40
@@ -1216,22 +1195,20 @@
 - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
 
 ### Current completion state
-- Step 5B: 코드 구현/로컬 수집 검증 완료
-- L2 Data Plane 관점:
-  - 활성 스크래퍼 커버리지가 JP/TW/CN으로 확장됨
-- 남은 검증:
-  - DB row 증가 검증은 EC2(PostgreSQL env 설정 후)에서 final check 필요
+- Step 5B: 肄붾뱶 援ы쁽/濡쒖뺄 ?섏쭛 寃利??꾨즺
+- L2 Data Plane 愿??
+  - ?쒖꽦 ?ㅽ겕?섑띁 而ㅻ쾭由ъ?媛 JP/TW/CN?쇰줈 ?뺤옣??- ?⑥? 寃利?
+  - DB row 利앷? 寃利앹? EC2(PostgreSQL env ?ㅼ젙 ???먯꽌 final check ?꾩슂
 
 ### Remaining (current)
-1. EC2 DB runtime 활성화
-- `/etc/global-pulse/global-pulse.env`에 `DATABASE_URL` 또는 `DB_*` 적용
-- `/api/health`를 `postgres_not_configured` -> 정상 상태로 전환
+1. EC2 DB runtime ?쒖꽦??- `/etc/global-pulse/global-pulse.env`??`DATABASE_URL` ?먮뒗 `DB_*` ?곸슜
+- `/api/health`瑜?`postgres_not_configured` -> ?뺤긽 ?곹깭濡??꾪솚
 
-2. 24h watch 최종 마감
-- `watch_20260413_134515/watch-summary.txt` 최종 결과를 PATCH_NOTES/DELIVERY_STATUS에 고정
+2. 24h watch 理쒖쥌 留덇컧
+- `watch_20260413_134515/watch-summary.txt` 理쒖쥌 寃곌낵瑜?PATCH_NOTES/DELIVERY_STATUS??怨좎젙
 
-3. Step 5C 착수
-- analyzer 품질 튜닝(불용어/클러스터 임계치/cross-region 유사도) 및 샘플 품질 리뷰
+3. Step 5C 李⑹닔
+- analyzer ?덉쭏 ?쒕떇(遺덉슜???대윭?ㅽ꽣 ?꾧퀎移?cross-region ?좎궗?? 諛??섑뵆 ?덉쭏 由щ럭
 
 ## EC2 Runtime Status Update (2026-04-14)
 ### Newly completed
@@ -1300,92 +1277,87 @@
 
 ## YouTube + Runtime Recovery Update (2026-04-14)
 ### Newly completed
-- `YOUTUBE_API_KEY` 반영 완료(EC2 runtime env).
-- YouTube collector 실증 성공:
-  - `youtube_kr/jp/us` 각각 20건 수집/적재
-  - source 상태 `ok`
-- 웹 충돌 복구:
-  - 다른 프로젝트(StockPulse)가 `3000`을 점유 중인 상태를 확인
-  - Global Pulse 웹 런타임을 `3100`으로 분리
-  - `/pulse` Nginx 프록시 upstream을 `3100`으로 전환
-- 현재 접속 상태:
+- `YOUTUBE_API_KEY` 諛섏쁺 ?꾨즺(EC2 runtime env).
+- YouTube collector ?ㅼ쬆 ?깃났:
+  - `youtube_kr/jp/us` 媛곴컖 20嫄??섏쭛/?곸옱
+  - source ?곹깭 `ok`
+- ??異⑸룎 蹂듦뎄:
+  - ?ㅻⅨ ?꾨줈?앺듃(StockPulse)媛 `3000`???먯쑀 以묒씤 ?곹깭瑜??뺤씤
+  - Global Pulse ???고??꾩쓣 `3100`?쇰줈 遺꾨━
+  - `/pulse` Nginx ?꾨줉??upstream??`3100`?쇰줈 ?꾪솚
+- ?꾩옱 ?묒냽 ?곹깭:
   - `http://3.36.83.199/pulse` (200)
   - `http://3.36.83.199/pulse/api/health` (200)
   - `http://3.36.83.199/pulse/api/stats` (200)
 
 ### Current gaps (updated)
-1. Step 5C 품질 튜닝
-- 불용어/대표 토픽명/유사도 임계치 정교화
-2. 소스 하드닝
-- `reddit*`, `dcard` 403 대응
-3. 운영 관찰 마감
-- 24h watch 최종 결과를 문서에 확정 반영
+1. Step 5C ?덉쭏 ?쒕떇
+- 遺덉슜??????좏뵿紐??좎궗???꾧퀎移??뺢탳??2. ?뚯뒪 ?섎뱶??- `reddit*`, `dcard` 403 ???3. ?댁쁺 愿李?留덇컧
+- 24h watch 理쒖쥌 寃곌낵瑜?臾몄꽌???뺤젙 諛섏쁺
 4. UI Step 6
-- 모바일 UX/장애 상태 UX 마감
+- 紐⑤컮??UX/?μ븷 ?곹깭 UX 留덇컧
 
 ## Step 5C Progress Update (2026-04-14, Slice 1)
 ### Newly completed
-- Analyzer 품질 튜닝 1차 반영:
-  - `keyword-extractor`를 유니코드 기반 수동 TF-IDF로 전환
-  - 지역별 스크립트 가중치(`kr/jp/cn`)와 stopword 강화
-  - 제목 phrase(2~3-gram) 추출 및 중복 키워드 억제
-  - `topic-clusterer` 대표 토픽명 생성 로직(관련 제목/키워드 점수 기반) 도입
-  - 약한 seed 스킵 + single-post 토픽 상한 + 유사 토픽 dedupe 적용
+- Analyzer ?덉쭏 ?쒕떇 1李?諛섏쁺:
+  - `keyword-extractor`瑜??좊땲肄붾뱶 湲곕컲 ?섎룞 TF-IDF濡??꾪솚
+  - 吏??퀎 ?ㅽ겕由쏀듃 媛以묒튂(`kr/jp/cn`)? stopword 媛뺥솕
+  - ?쒕ぉ phrase(2~3-gram) 異붿텧 諛?以묐났 ?ㅼ썙???듭젣
+  - `topic-clusterer` ????좏뵿紐??앹꽦 濡쒖쭅(愿???쒕ぉ/?ㅼ썙???먯닔 湲곕컲) ?꾩엯
+  - ?쏀븳 seed ?ㅽ궢 + single-post ?좏뵿 ?곹븳 + ?좎궗 ?좏뵿 dedupe ?곸슜
 
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
-- 로컬 스모크에서 토픽 결과가 단편 단어 중심에서 구문형(`관세 협상`, `한미 관세`) 중심으로 개선됨을 확인
+- 濡쒖뺄 ?ㅻえ?ъ뿉???좏뵿 寃곌낵媛 ?⑦렪 ?⑥뼱 以묒떖?먯꽌 援щЦ??`愿???묒긽`, `?쒕? 愿??) 以묒떖?쇰줈 媛쒖꽑?⑥쓣 ?뺤씤
 
 ### Current completion state
-- Step 5C: **진행 중 (1차 튜닝 완료)**
-- 남은 작업은 cross-region 매핑 임계치/대표명 안정화, 실데이터(EC2) 샘플 리뷰 기반 미세조정
+- Step 5C: **吏꾪뻾 以?(1李??쒕떇 ?꾨즺)**
+- ?⑥? ?묒뾽? cross-region 留ㅽ븨 ?꾧퀎移???쒕챸 ?덉젙?? ?ㅻ뜲?댄꽣(EC2) ?섑뵆 由щ럭 湲곕컲 誘몄꽭議곗젙
 
 ### Remaining (current)
 1. Step 5C quality tuning (slice 2)
-- cross-region 유사도 임계치/오탐 튜닝
-- 리전별 샘플(kr/jp/cn/us) 20개 이상 수동 리뷰 후 stopword 보정
+- cross-region ?좎궗???꾧퀎移??ㅽ깘 ?쒕떇
+- 由ъ쟾蹂??섑뵆(kr/jp/cn/us) 20媛??댁긽 ?섎룞 由щ럭 ??stopword 蹂댁젙
 2. Source hardening
-- `reddit*`, `dcard` 403 대응 전략 확정 및 적용
+- `reddit*`, `dcard` 403 ????꾨왂 ?뺤젙 諛??곸슜
 3. Ops closeout
-- 24h watch 최종 요약 고정
+- 24h watch 理쒖쥌 ?붿빟 怨좎젙
 4. UI Step 6
-- 모바일 UX/장애 상태 UX 마감
+- 紐⑤컮??UX/?μ븷 ?곹깭 UX 留덇컧
 
 ## Step 5C Progress Update (2026-04-14, Slice 2)
 ### Newly completed
-- cross-region 매핑 품질 정밀화:
-  - 단순 Jaccard 기반에서 복합 점수 기반(token/keyword/name)으로 전환
-  - generic stopword 및 토큰 정규화 강화
-  - strong-name / exact-keyword-phrase / primary-name-token 가드 추가
-- global analyzer 기본 similarity를 `0.32`로 상향해 기본 오탐 완화
+- cross-region 留ㅽ븨 ?덉쭏 ?뺣???
+  - ?⑥닚 Jaccard 湲곕컲?먯꽌 蹂듯빀 ?먯닔 湲곕컲(token/keyword/name)?쇰줈 ?꾪솚
+  - generic stopword 諛??좏겙 ?뺢퇋??媛뺥솕
+  - strong-name / exact-keyword-phrase / primary-name-token 媛??異붽?
+- global analyzer 湲곕낯 similarity瑜?`0.32`濡??곹뼢??湲곕낯 ?ㅽ깘 ?꾪솕
 
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
-- `npm run analyze:global -- --hours 24 --min-regions 2` -> pass (로컬 DB 미설정 skip)
-- 로컬 smoke에서 KR/JP 관세 이슈는 매핑되고, 무관한 US 스포츠 이슈는 분리됨을 확인
+- `npm run analyze:global -- --hours 24 --min-regions 2` -> pass (濡쒖뺄 DB 誘몄꽕??skip)
+- 濡쒖뺄 smoke?먯꽌 KR/JP 愿???댁뒋??留ㅽ븨?섍퀬, 臾닿???US ?ㅽ룷痢??댁뒋??遺꾨━?⑥쓣 ?뺤씤
 
 ### Current completion state
-- Step 5C: **진행 중 (Slice 1~2 완료)**
-- 남은 핵심은 EC2 실데이터 기준 threshold 미세조정과 수동 샘플 리뷰 결과 반영
+- Step 5C: **吏꾪뻾 以?(Slice 1~2 ?꾨즺)**
+- ?⑥? ?듭떖? EC2 ?ㅻ뜲?댄꽣 湲곗? threshold 誘몄꽭議곗젙怨??섎룞 ?섑뵆 由щ럭 寃곌낵 諛섏쁺
 
 ### Remaining (current)
 1. Step 5C quality tuning (slice 3)
-- EC2 DB 실데이터(최근 24h topics/global_topics) 샘플 리뷰 기반 threshold/stopword 최종 튜닝
+- EC2 DB ?ㅻ뜲?댄꽣(理쒓렐 24h topics/global_topics) ?섑뵆 由щ럭 湲곕컲 threshold/stopword 理쒖쥌 ?쒕떇
 2. Source hardening
-- `reddit*`, `dcard` 403 대응
-3. Ops closeout
-- 24h watch 최종 결과 문서 고정
+- `reddit*`, `dcard` 403 ???3. Ops closeout
+- 24h watch 理쒖쥌 寃곌낵 臾몄꽌 怨좎젙
 4. UI Step 6
-- 모바일 UX/장애 상태 UX 마감
+- 紐⑤컮??UX/?μ븷 ?곹깭 UX 留덇컧
 
 ## UI/Encoding Stability Update (2026-04-14)
 ### Newly completed
-- 화면 `??` 노출 보완:
-  - `HeatBadge` placeholder 문자열 제거, heat level 아이콘 기반으로 교체
-  - `RegionFlag` fallback 개선 + `regionId` 정규화
-- 인코딩 재발 방지 가드 추가:
+- ?붾㈃ `??` ?몄텧 蹂댁셿:
+  - `HeatBadge` placeholder 臾몄옄???쒓굅, heat level ?꾩씠肄?湲곕컲?쇰줈 援먯껜
+  - `RegionFlag` fallback 媛쒖꽑 + `regionId` ?뺢퇋??- ?몄퐫???щ컻 諛⑹? 媛??異붽?:
   - `.editorconfig` (UTF-8/LF)
   - `.gitattributes` (text eol=lf)
 
@@ -1394,38 +1366,38 @@
 - `npm run build` -> pass
 
 ### Blocking info (next step)
-- Step 5C Slice 3(EC2 실데이터 튜닝) 진행을 위해 SSH 키 필요
-  - 시도 결과: `ubuntu@3.36.83.199: Permission denied (publickey)`
+- Step 5C Slice 3(EC2 ?ㅻ뜲?댄꽣 ?쒕떇) 吏꾪뻾???꾪빐 SSH ???꾩슂
+  - ?쒕룄 寃곌낵: `ubuntu@3.36.83.199: Permission denied (publickey)`
 
 ## Source Hardening Update (2026-04-14, Slice 1)
 ### Newly completed
-- Reddit 계열(`reddit`, `reddit_worldnews`, `reddit_europe`, `reddit_mideast`) 403 완화 로직 적용:
-  - OAuth 우선 + 공개 endpoint fallback 다중 경로
-  - 헤더/에러 처리 강화
-- Dcard endpoint fallback(2개 경로) 적용
+- Reddit 怨꾩뿴(`reddit`, `reddit_worldnews`, `reddit_europe`, `reddit_mideast`) 403 ?꾪솕 濡쒖쭅 ?곸슜:
+  - OAuth ?곗꽑 + 怨듦컻 endpoint fallback ?ㅼ쨷 寃쎈줈
+  - ?ㅻ뜑/?먮윭 泥섎━ 媛뺥솕
+- Dcard endpoint fallback(2媛?寃쎈줈) ?곸슜
 
 ### Validation
 - `npm run test:scraper -- --source reddit_worldnews` -> success=true, 30 posts
 - `npm run collect -- --source reddit,reddit_worldnews,reddit_europe,reddit_mideast` -> `4/4 succeeded`
-- `npm run test:scraper -- --source dcard` -> 403 유지(known)
+- `npm run test:scraper -- --source dcard` -> 403 ?좎?(known)
 - `npm run lint` -> pass
 - `npm run build` -> pass
 
 ### Current completion state
-- Source hardening: **부분 완료**
-  - Reddit 계열: 개선 완료
-  - Dcard: Cloudflare 정책 이슈로 추가 대응 필요
+- Source hardening: **遺遺??꾨즺**
+  - Reddit 怨꾩뿴: 媛쒖꽑 ?꾨즺
+  - Dcard: Cloudflare ?뺤콉 ?댁뒋濡?異붽? ????꾩슂
 
 ## Step 5C Progress Update (2026-04-14, Slice 3)
 ### Newly completed
-- 토픽 품질 튜닝 3차 마감:
-  - `keyword-extractor` stopword/노이즈 토큰 필터 확장
-  - `topic-clusterer` 단일 토큰 대표명 억제 강화(phrase 우선 + weak single-topic 스킵)
-  - `cross-region-mapper` 대표 글로벌 토픽명 선택을 품질 점수 기반으로 보정
-  - `run-global-analysis` 입력을 “리전별 최신 배치”로 제한해 과거 노이즈 재유입 차단
-- EC2 실데이터 재실행 검증:
-  - analyzer 재실행 후 최신 배치 기준 단일 토큰 토픽 비율 감소 확인
-  - 글로벌 토픽 건수 노이즈 축소 확인(25 -> 3)
+- ?좏뵿 ?덉쭏 ?쒕떇 3李?留덇컧:
+  - `keyword-extractor` stopword/?몄씠利??좏겙 ?꾪꽣 ?뺤옣
+  - `topic-clusterer` ?⑥씪 ?좏겙 ??쒕챸 ?듭젣 媛뺥솕(phrase ?곗꽑 + weak single-topic ?ㅽ궢)
+  - `cross-region-mapper` ???湲濡쒕쾶 ?좏뵿紐??좏깮???덉쭏 ?먯닔 湲곕컲?쇰줈 蹂댁젙
+  - `run-global-analysis` ?낅젰???쒕━?꾨퀎 理쒖떊 諛곗튂?앸줈 ?쒗븳??怨쇨굅 ?몄씠利??ъ쑀??李⑤떒
+- EC2 ?ㅻ뜲?댄꽣 ?ъ떎??寃利?
+  - analyzer ?ъ떎????理쒖떊 諛곗튂 湲곗? ?⑥씪 ?좏겙 ?좏뵿 鍮꾩쑉 媛먯냼 ?뺤씤
+  - 湲濡쒕쾶 ?좏뵿 嫄댁닔 ?몄씠利?異뺤냼 ?뺤씤(25 -> 3)
 
 ### Validation
 - Local:
@@ -1434,37 +1406,36 @@
 - EC2:
   - `npm run analyze -- --hours 6` -> pass
   - `npm run analyze:global -- --hours 24 --min-regions 2 --similarity 0.32` -> pass
-  - latest-batch quality query -> region별 `single_token = 0` 확인
+  - latest-batch quality query -> region蹂?`single_token = 0` ?뺤씤
 
 ### Current completion state
-- Step 5C: **완료 (Slice 1~3)**
-- 분석 품질은 “단편 단어 중심”에서 “구문/의미 중심”으로 전환 완료
+- Step 5C: **?꾨즺 (Slice 1~3)**
+- 遺꾩꽍 ?덉쭏? ?쒕떒???⑥뼱 以묒떖?앹뿉???쒓뎄臾??섎? 以묒떖?앹쑝濡??꾪솚 ?꾨즺
 
 ### Remaining (current)
-1. Step 4F 운영 관찰 최종 마감
-- 24h watch summary가 현재 `hour=23, failures=0`까지 기록되어 있어 final hour 완료 후 문서 고정 필요
+1. Step 4F ?댁쁺 愿李?理쒖쥌 留덇컧
+- 24h watch summary媛 ?꾩옱 `hour=23, failures=0`源뚯? 湲곕줉?섏뼱 ?덉뼱 final hour ?꾨즺 ??臾몄꽌 怨좎젙 ?꾩슂
 
-2. Source hardening 잔여
-- `dcard` Cloudflare 403 지속: 프록시/브라우저 기반 수집 또는 대체 소스 전략 결정 필요
+2. Source hardening ?붿뿬
+- `dcard` Cloudflare 403 吏?? ?꾨줉??釉뚮씪?곗? 湲곕컲 ?섏쭛 ?먮뒗 ?泥??뚯뒪 ?꾨왂 寃곗젙 ?꾩슂
 
-3. UI Step 6 마감
-- 모바일 레이아웃 동선, 장애/빈 데이터 상태 표시 고도화
-
+3. UI Step 6 留덇컧
+- 紐⑤컮???덉씠?꾩썐 ?숈꽑, ?μ븷/鍮??곗씠???곹깭 ?쒖떆 怨좊룄??
 ## Access/Credential Update (2026-04-14)
 ### Newly confirmed
-- EC2 SSH key path 확인: `C:\Users\wsp\Downloads\plasma-key.pem`
-- EC2 접속 확인: `ubuntu@3.36.83.199`
-- Reddit OAuth credentials 미제공 상태 확인(공개 endpoint fallback 모드로 운영)
+- EC2 SSH key path ?뺤씤: `C:\Users\wsp\Downloads\plasma-key.pem`
+- EC2 ?묒냽 ?뺤씤: `ubuntu@3.36.83.199`
+- Reddit OAuth credentials 誘몄젣怨??곹깭 ?뺤씤(怨듦컻 endpoint fallback 紐⑤뱶濡??댁쁺)
 
 ### Operational note
-- Reddit 계열은 현재 fallback 경로로 수집 성공 케이스가 있으나, IP/시간대에 따라 403 재발 가능성이 있으므로 OAuth 자격증명이 있으면 안정성이 더 높아짐.
+- Reddit 怨꾩뿴? ?꾩옱 fallback 寃쎈줈濡??섏쭛 ?깃났 耳?댁뒪媛 ?덉쑝?? IP/?쒓컙????곕씪 403 ?щ컻 媛?μ꽦???덉쑝誘濡?OAuth ?먭꺽利앸챸???덉쑝硫??덉젙?깆씠 ???믪븘吏?
 
 ## Ops Snapshot Accuracy Update (2026-04-14)
 ### Newly completed
-- `scripts/capture-ops-snapshot.sh` 검증 로직 보정:
-  - API health/stats/topics를 HTTP 상태코드 2xx 기준으로 판정
-  - `PORT`/`NEXT_BASE_PATH`(`NEXT_PUBLIC_BASE_PATH`) 기반 동적 API URL 생성
-  - DB table count 실행 로그의 민감정보(redacted) 처리
+- `scripts/capture-ops-snapshot.sh` 寃利?濡쒖쭅 蹂댁젙:
+  - API health/stats/topics瑜?HTTP ?곹깭肄붾뱶 2xx 湲곗??쇰줈 ?먯젙
+  - `PORT`/`NEXT_BASE_PATH`(`NEXT_PUBLIC_BASE_PATH`) 湲곕컲 ?숈쟻 API URL ?앹꽦
+  - DB table count ?ㅽ뻾 濡쒓렇??誘쇨컧?뺣낫(redacted) 泥섎━
 
 ### Validation
 - Local:
@@ -1473,101 +1444,96 @@
 - EC2 endpoint spot check:
   - `127.0.0.1:3100/pulse/api/health` -> 200
   - `127.0.0.1:3100/api/health` -> 404
-  - 기존 오검증 조건을 확인한 뒤 스크립트 보정 반영
+  - 湲곗〈 ?ㅺ?利?議곌굔???뺤씤?????ㅽ겕由쏀듃 蹂댁젙 諛섏쁺
 
 ### Current completion state
-- L4 Observability: **정확도 보정 완료**
-- 운영 스냅샷 결과가 `/pulse` + 포트 분리 환경과 정합하도록 수정됨
-
+- L4 Observability: **?뺥솗??蹂댁젙 ?꾨즺**
+- ?댁쁺 ?ㅻ깄??寃곌낵媛 `/pulse` + ?ы듃 遺꾨━ ?섍꼍怨??뺥빀?섎룄濡??섏젙??
 ### Remaining (updated)
-1. Step 4F 운영 관찰 최종 마감
-- 보정된 스크립트 기준으로 watch를 1회 재실행해 final summary를 고정해야 함
+1. Step 4F ?댁쁺 愿李?理쒖쥌 留덇컧
+- 蹂댁젙???ㅽ겕由쏀듃 湲곗??쇰줈 watch瑜?1???ъ떎?됲빐 final summary瑜?怨좎젙?댁빞 ??
+2. Source hardening ?붿뿬
+- `dcard` Cloudflare 403 ???釉뚮씪?곗? 湲곕컲/?꾨줉???泥??뚯뒪 ?꾨왂 寃곗젙)
 
-2. Source hardening 잔여
-- `dcard` Cloudflare 403 대응(브라우저 기반/프록시/대체 소스 전략 결정)
-
-3. UI Step 6 마감
-- 모바일 레이아웃, 장애/빈 데이터 UX 최종 정리
+3. UI Step 6 留덇컧
+- 紐⑤컮???덉씠?꾩썐, ?μ븷/鍮??곗씠??UX 理쒖쥌 ?뺣━
 
 ## Step 4F Closure Update (2026-04-14, single-run)
 ### Newly completed
-- EC2에서 보정된 watch 단일 런 완료:
+- EC2?먯꽌 蹂댁젙??watch ?⑥씪 ???꾨즺:
   - command: `HOURS=1 INTERVAL_SECONDS=0 MAX_FAILURES=1 npm run ops:monitor:watch`
   - evidence: `/srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/watch_20260414_121813/watch-summary.txt`
   - result: `failures=0`
-- watch 내부 API 점검이 `/pulse` + `3100` runtime에 맞게 반영됨:
+- watch ?대? API ?먭???`/pulse` + `3100` runtime??留욊쾶 諛섏쁺??
   - `http://127.0.0.1:3100/pulse/api/health` -> 200
   - `http://127.0.0.1:3100/pulse/api/stats` -> 200
   - `http://127.0.0.1:3100/pulse/api/topics?region=kr&limit=5` -> 200
 
 ### Current completion state
-- Step 4F: **single-run 기준 완료**
-- L4 Observability: 실운영 경로(`/pulse`) 기준 검증 일관성 확보
+- Step 4F: **single-run 湲곗? ?꾨즺**
+- L4 Observability: ?ㅼ슫??寃쎈줈(`/pulse`) 湲곗? 寃利??쇨????뺣낫
 
 ## Source Hardening Update (2026-04-14, Slice 2)
 ### Newly completed
-- Dcard scraper에 browser fallback 추가:
-  - API endpoint fallback 실패 시 headless browser로 동일 endpoint 재시도
-  - 실패 시 endpoint별 HTTP status/body snippet까지 에러에 포함해 원인 파악 가능
-
+- Dcard scraper??browser fallback 異붽?:
+  - API endpoint fallback ?ㅽ뙣 ??headless browser濡??숈씪 endpoint ?ъ떆??  - ?ㅽ뙣 ??endpoint蹂?HTTP status/body snippet源뚯? ?먮윭???ы븿???먯씤 ?뚯븙 媛??
 ### Validation
 - Local:
-  - `npm run test:scraper -- --source dcard` -> fail (로컬 Chromium 실행파일 부재), fallback 호출 확인
+  - `npm run test:scraper -- --source dcard` -> fail (濡쒖뺄 Chromium ?ㅽ뻾?뚯씪 遺??, fallback ?몄텧 ?뺤씤
 - EC2:
-  - `npm run test:scraper -- --source dcard` -> fail (403 유지), browser fallback 경로 및 상세 진단 메시지 확인
+  - `npm run test:scraper -- --source dcard` -> fail (403 ?좎?), browser fallback 寃쎈줈 諛??곸꽭 吏꾨떒 硫붿떆吏 ?뺤씤
 
 ### Current completion state
-- Source hardening: **진행 중**
-  - Reddit 계열: fallback 개선 완료
-  - Dcard: 진단성 강화 완료, 수집 성공까지는 추가 우회 전략 필요
+- Source hardening: **吏꾪뻾 以?*
+  - Reddit 怨꾩뿴: fallback 媛쒖꽑 ?꾨즺
+  - Dcard: 吏꾨떒??媛뺥솕 ?꾨즺, ?섏쭛 ?깃났源뚯???異붽? ?고쉶 ?꾨왂 ?꾩슂
 
 ### Remaining (updated)
-1. Dcard 운영 전략 결정
-- 필요 의사결정: `프록시` vs `쿠키 세션` vs `대체 소스` 중 1개 선택
+1. Dcard ?댁쁺 ?꾨왂 寃곗젙
+- ?꾩슂 ?섏궗寃곗젙: `?꾨줉?? vs `荑좏궎 ?몄뀡` vs `?泥??뚯뒪` 以?1媛??좏깮
 
-2. UI Step 6 마감
-- 모바일 레이아웃, 장애/빈 데이터 UX 최종 정리
+2. UI Step 6 留덇컧
+- 紐⑤컮???덉씠?꾩썐, ?μ븷/鍮??곗씠??UX 理쒖쥌 ?뺣━
 
 ## Cost Policy Update (2026-04-14, No-proxy mode)
 ### Newly completed
-- 사용자 결정 반영: **프록시 비용 비사용** 정책 확정.
-- Dcard를 기본 비활성 소스로 전환:
-  - collector 기본 실행에서 자동 제외
-  - 명시 실행(`--source dcard`)만 진단 목적으로 허용
-- seed/snapshot 정합성 반영:
+- ?ъ슜??寃곗젙 諛섏쁺: **?꾨줉??鍮꾩슜 鍮꾩궗??* ?뺤콉 ?뺤젙.
+- Dcard瑜?湲곕낯 鍮꾪솢???뚯뒪濡??꾪솚:
+  - collector 湲곕낯 ?ㅽ뻾?먯꽌 ?먮룞 ?쒖쇅
+  - 紐낆떆 ?ㅽ뻾(`--source dcard`)留?吏꾨떒 紐⑹쟻?쇰줈 ?덉슜
+- seed/snapshot ?뺥빀??諛섏쁺:
   - `seed-regions` -> `dcard.is_active=false`
-  - `region_snapshots.sources_total` -> 기본 활성 소스 기준 집계
+  - `region_snapshots.sources_total` -> 湲곕낯 ?쒖꽦 ?뚯뒪 湲곗? 吏묎퀎
 
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
 - `npm run collect -- --region tw` -> pass
-  - 로그: `Disabled-by-default sources skipped: dcard`
-  - 실행: `ptt` 단일 소스 수집 확인
+  - 濡쒓렇: `Disabled-by-default sources skipped: dcard`
+  - ?ㅽ뻾: `ptt` ?⑥씪 ?뚯뒪 ?섏쭛 ?뺤씤
 
 ### Current completion state
-- 운영 정책: **무비용(no-proxy) 기준 고정**
-- TW 데이터 플레인: PTT 중심 운영으로 안정화
-
+- ?댁쁺 ?뺤콉: **臾대퉬??no-proxy) 湲곗? 怨좎젙**
+- TW ?곗씠???뚮젅?? PTT 以묒떖 ?댁쁺?쇰줈 ?덉젙??
 ### Remaining (updated)
-1. EC2 반영
-- 신규 정책 커밋 pull/deploy 또는 수동 반영 후 `npm run seed:regions` 재실행 필요
+1. EC2 諛섏쁺
+- ?좉퇋 ?뺤콉 而ㅻ컠 pull/deploy ?먮뒗 ?섎룞 諛섏쁺 ??`npm run seed:regions` ?ъ떎???꾩슂
 
-2. UI Step 6 마감
-- 모바일 레이아웃, 장애/빈 데이터 UX 최종 정리
+2. UI Step 6 留덇컧
+- 紐⑤컮???덉씠?꾩썐, ?μ븷/鍮??곗씠??UX 理쒖쥌 ?뺣━
 
 ## UI Step 6 Update (2026-04-14, Slice 1)
 ### Newly completed
-- 모바일 동선 강화:
-  - 전 페이지 공통 상단 `Header` 적용
-  - 모바일 하단 탭 내비 `MobileBottomNav` 추가
-- 장애/로딩/빈 상태 UX 정리:
-  - `EmptyState`, `LoadingSkeleton`, `ErrorBoundary` 강화
-  - `app/error.tsx`, `app/loading.tsx` 추가로 라우트 레벨 fallback 보완
-- 주요 페이지 상태 처리 일관화:
+- 紐⑤컮???숈꽑 媛뺥솕:
+  - ???섏씠吏 怨듯넻 ?곷떒 `Header` ?곸슜
+  - 紐⑤컮???섎떒 ???대퉬 `MobileBottomNav` 異붽?
+- ?μ븷/濡쒕뵫/鍮??곹깭 UX ?뺣━:
+  - `EmptyState`, `LoadingSkeleton`, `ErrorBoundary` 媛뺥솕
+  - `app/error.tsx`, `app/loading.tsx` 異붽?濡??쇱슦???덈꺼 fallback 蹂댁셿
+- 二쇱슂 ?섏씠吏 ?곹깭 泥섎━ ?쇨???
   - Home, Global Issues, Timeline, Search, Region Detail, Topic Detail
-- 텍스트 정합성 정리:
-  - 깨진 문구/구버전 안내문구(PostgreSQL 기준 아님) 정리
+- ?띿뒪???뺥빀???뺣━:
+  - 源⑥쭊 臾멸뎄/援щ쾭???덈궡臾멸뎄(PostgreSQL 湲곗? ?꾨떂) ?뺣━
 
 ### Validation
 - `npm run lint` -> pass
@@ -1577,78 +1543,75 @@
 - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
 
 ### Current completion state
-- Step 6: **진행 중 (Slice 1 완료)**
-- 모바일 내비 + 기본 상태 UX는 운영 가능한 수준으로 정리됨
-
+- Step 6: **吏꾪뻾 以?(Slice 1 ?꾨즺)**
+- 紐⑤컮???대퉬 + 湲곕낯 ?곹깭 UX???댁쁺 媛?ν븳 ?섏??쇰줈 ?뺣━??
 ### Remaining (updated)
-1. EC2 적용 마감
-- UI Step 6 커밋을 EC2에 pull/deploy 반영
-- `/pulse` 실접속으로 모바일/에러 fallback 스모크 확인
+1. EC2 ?곸슜 留덇컧
+- UI Step 6 而ㅻ컠??EC2??pull/deploy 諛섏쁺
+- `/pulse` ?ㅼ젒?띿쑝濡?紐⑤컮???먮윭 fallback ?ㅻえ???뺤씤
 
-2. Step 6 Slice 2 (최종 QA)
-- 실기기(또는 모바일 뷰포트)에서 탭 내비/스크롤/가독성 최종 점검
-- 장애 상황(API 5xx/빈데이터) 시나리오 스크린샷 증적 추가
+2. Step 6 Slice 2 (理쒖쥌 QA)
+- ?ㅺ린湲??먮뒗 紐⑤컮??酉고룷???먯꽌 ???대퉬/?ㅽ겕濡?媛?낆꽦 理쒖쥌 ?먭?
+- ?μ븷 ?곹솴(API 5xx/鍮덈뜲?댄꽣) ?쒕굹由ъ삤 ?ㅽ겕由곗꺑 利앹쟻 異붽?
 
 ## UI Step 6 Update (2026-04-14, Slice 1.5 Runtime Apply)
 ### Newly completed
-- EC2 런타임에 Step 6 코드 반영 완료(archive deploy).
-- EC2 build + web service restart 완료.
-- 실접속 스모크:
+- EC2 ?고??꾩뿉 Step 6 肄붾뱶 諛섏쁺 ?꾨즺(archive deploy).
+- EC2 build + web service restart ?꾨즺.
+- ?ㅼ젒???ㅻえ??
   - `/pulse` 200
   - `/pulse/api/health` 200
   - `/pulse/search` 200
-- 운영 스냅샷:
+- ?댁쁺 ?ㅻ깄??
   - `npm run ops:monitor:snapshot` pass
   - `failures=0`
   - evidence: `/srv/projects/project2/global-pulse/docs/evidence/ops-monitoring/20260414_130936`
 
 ### Current completion state
-- Step 6: **진행 중 (Slice 1 + Runtime apply 완료)**
-- 코드/배포/운영 스냅샷이 동일 기준으로 정렬됨
-
+- Step 6: **吏꾪뻾 以?(Slice 1 + Runtime apply ?꾨즺)**
+- 肄붾뱶/諛고룷/?댁쁺 ?ㅻ깄?룹씠 ?숈씪 湲곗??쇰줈 ?뺣젹??
 ### Remaining (updated)
-1. Step 6 Slice 2 (최종 QA)
-- 모바일 실기기 탭 내비/뷰포트 최종 점검
-- 에러/빈데이터 시나리오 캡처 증적 고정
+1. Step 6 Slice 2 (理쒖쥌 QA)
+- 紐⑤컮???ㅺ린湲????대퉬/酉고룷??理쒖쥌 ?먭?
+- ?먮윭/鍮덈뜲?댄꽣 ?쒕굹由ъ삤 罹≪쿂 利앹쟻 怨좎젙
 
-2. 운영 배포 루틴 정리
-- EC2 evidence 누적 파일 정리 루틴(배포 전/후)을 deploy 문서에 고정
+2. ?댁쁺 諛고룷 猷⑦떞 ?뺣━
+- EC2 evidence ?꾩쟻 ?뚯씪 ?뺣━ 猷⑦떞(諛고룷 ??????deploy 臾몄꽌??怨좎젙
 
 ## UI Step 6 Update (2026-04-14, Slice 2 QA Automation)
 ### Newly completed
-- 모바일/에러 시나리오 QA 자동화 스크립트 추가:
+- 紐⑤컮???먮윭 ?쒕굹由ъ삤 QA ?먮룞???ㅽ겕由쏀듃 異붽?:
   - `scripts/ui-smoke-check.sh`
   - `npm run ops:ui:smoke`
-- 운영 런북 반영:
-  - `docs/operations.md`에 UI smoke 섹션 추가
-- EC2 실검증 완료:
+- ?댁쁺 ?곕턿 諛섏쁺:
+  - `docs/operations.md`??UI smoke ?뱀뀡 異붽?
+- EC2 ?ㅺ?利??꾨즺:
   - `APP_HOST=http://127.0.0.1:3100 APP_BASE_PATH=/pulse npm run ops:ui:smoke`
-  - 결과 `failures=0`
-  - 증적: `/srv/projects/project2/global-pulse/docs/evidence/ui-smoke/20260414_132052`
+  - 寃곌낵 `failures=0`
+  - 利앹쟻: `/srv/projects/project2/global-pulse/docs/evidence/ui-smoke/20260414_132052`
 
 ### Current completion state
-- Step 6: **Slice 1 + Slice 2 완료**
-- 모바일/장애 QA가 재실행 가능한 스크립트 기반으로 고정됨
-
+- Step 6: **Slice 1 + Slice 2 ?꾨즺**
+- 紐⑤컮???μ븷 QA媛 ?ъ떎??媛?ν븳 ?ㅽ겕由쏀듃 湲곕컲?쇰줈 怨좎젙??
 ### Remaining (updated)
-1. 운영 배포 루틴 정리
-- EC2 evidence 누적 파일 정리 루틴(배포 전/후)을 deploy 문서에 고정
+1. ?댁쁺 諛고룷 猷⑦떞 ?뺣━
+- EC2 evidence ?꾩쟻 ?뚯씪 ?뺣━ 猷⑦떞(諛고룷 ??????deploy 臾몄꽌??怨좎젙
 
-2. 선택 과제 (권장)
-- 실기기 캡처(스크린샷) 1세트만 추가해 UI smoke 증적과 함께 보관
+2. ?좏깮 怨쇱젣 (沅뚯옣)
+- ?ㅺ린湲?罹≪쿂(?ㅽ겕由곗꺑) 1?명듃留?異붽???UI smoke 利앹쟻怨??④퍡 蹂닿?
 
 ## UI Step 6 Update (2026-04-14, Slice 3 Deploy Hygiene)
 ### Newly completed
-- 런타임 증적 회전 자동화 고도화:
+- ?고???利앹쟻 ?뚯쟾 ?먮룞??怨좊룄??
   - `scripts/rotate-runtime-evidence.sh`
-  - archive 대상: `ops-monitoring`, `ui-smoke`, `final-verification`, `cutover`
-  - 안전 prune 가드(앱 evidence 루트 외 경로 차단)
-- 배포 체인 고정:
-  - `scripts/deploy-ec2.sh`에서 `git pull` 전 증적 회전 기본 실행
-  - tracked 변경 감지 시 기본 배포 중단(충돌 예방)
-- 운영/배포 문서 반영:
+  - archive ??? `ops-monitoring`, `ui-smoke`, `final-verification`, `cutover`
+  - ?덉쟾 prune 媛????evidence 猷⑦듃 ??寃쎈줈 李⑤떒)
+- 諛고룷 泥댁씤 怨좎젙:
+  - `scripts/deploy-ec2.sh`?먯꽌 `git pull` ??利앹쟻 ?뚯쟾 湲곕낯 ?ㅽ뻾
+  - tracked 蹂寃?媛먯? ??湲곕낯 諛고룷 以묐떒(異⑸룎 ?덈갑)
+- ?댁쁺/諛고룷 臾몄꽌 諛섏쁺:
   - `docs/operations.md`, `docs/deployment-ec2.md`
-- npm 실행 경로 고정:
+- npm ?ㅽ뻾 寃쎈줈 怨좎젙:
   - `npm run ops:evidence:rotate`
 
 ### Validation
@@ -1662,28 +1625,27 @@
 - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
 
 ### Current completion state
-- Step 6: **Slice 1 + Slice 2 + Slice 3 완료 (마감)**
-- 운영 배포 루틴(증적 누적/충돌 방지)까지 문서/스크립트 기준으로 고정됨
-
+- Step 6: **Slice 1 + Slice 2 + Slice 3 ?꾨즺 (留덇컧)**
+- ?댁쁺 諛고룷 猷⑦떞(利앹쟻 ?꾩쟻/異⑸룎 諛⑹?)源뚯? 臾몄꽌/?ㅽ겕由쏀듃 湲곗??쇰줈 怨좎젙??
 ### Remaining (updated)
-1. Step 5C 분석 품질 튜닝
-- 단편 키워드/의미 불명 토픽 감소를 위한 stopword/토큰 정규화/대표명 규칙 추가 튜닝
+1. Step 5C 遺꾩꽍 ?덉쭏 ?쒕떇
+- ?⑦렪 ?ㅼ썙???섎? 遺덈챸 ?좏뵿 媛먯냼瑜??꾪븳 stopword/?좏겙 ?뺢퇋????쒕챸 洹쒖튃 異붽? ?쒕떇
 
-2. 소스 확장 우선순위 실행
-- 무비용 정책 유지 전제에서 안정형 소스(`bilibili`, `mastodon`) 운영 투입 확대
+2. ?뚯뒪 ?뺤옣 ?곗꽑?쒖쐞 ?ㅽ뻾
+- 臾대퉬???뺤콉 ?좎? ?꾩젣?먯꽌 ?덉젙???뚯뒪(`bilibili`, `mastodon`) ?댁쁺 ?ъ엯 ?뺣?
 
-3. 선택 과제 (권장)
-- 실기기 캡처(스크린샷) 1세트 추가 후 UI smoke 증적과 함께 보관
+3. ?좏깮 怨쇱젣 (沅뚯옣)
+- ?ㅺ린湲?罹≪쿂(?ㅽ겕由곗꺑) 1?명듃 異붽? ??UI smoke 利앹쟻怨??④퍡 蹂닿?
 
 ## Step 5C Update (2026-04-14, Analysis Quality Tuning Round 1)
 ### Newly completed
-- `keyword-extractor` 품질 필터 강화:
-  - KR/JP/CN/EN 불용어 확장
-  - 반복 감탄/웃음/플랫폼 메타성 잡음 토큰 제거 패턴 추가
-- `topic-clusterer` 대표명 규칙 강화:
-  - 단일 토픽명 편향 감소를 위해 보조 후보 결합(`A · B`) 로직 추가
-  - 단일 토큰 최소 길이 기준 강화
-  - KR/JP/CN 메타 단어 블랙리스트 추가
+- `keyword-extractor` ?덉쭏 ?꾪꽣 媛뺥솕:
+  - KR/JP/CN/EN 遺덉슜???뺤옣
+  - 諛섎났 媛먰깂/?껋쓬/?뚮옯??硫뷀????≪쓬 ?좏겙 ?쒓굅 ?⑦꽩 異붽?
+- `topic-clusterer` ??쒕챸 洹쒖튃 媛뺥솕:
+  - ?⑥씪 ?좏뵿紐??명뼢 媛먯냼瑜??꾪빐 蹂댁“ ?꾨낫 寃고빀(`A 쨌 B`) 濡쒖쭅 異붽?
+  - ?⑥씪 ?좏겙 理쒖냼 湲몄씠 湲곗? 媛뺥솕
+  - KR/JP/CN 硫뷀? ?⑥뼱 釉붾옓由ъ뒪??異붽?
 
 ### Validation
 - `npm run lint` -> pass
@@ -1693,56 +1655,54 @@
 - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
 
 ### Current completion state
-- Step 5C: **진행 중 (Round 1 완료)**
-- 토픽명 가독성과 키워드 잡음 억제 규칙은 코드 기준으로 반영 완료
+- Step 5C: **吏꾪뻾 以?(Round 1 ?꾨즺)**
+- ?좏뵿紐?媛?낆꽦怨??ㅼ썙???≪쓬 ?듭젣 洹쒖튃? 肄붾뱶 湲곗??쇰줈 諛섏쁺 ?꾨즺
 
 ### Remaining (updated)
-1. Step 5C Round 2 (EC2 실데이터 캘리브레이션)
-- EC2에서 `npm run analyze -- --hours 6` 1회 실행 후 상위 토픽 샘플(kr/jp/us) 검토
-- 과소필터/과다필터 여부에 따라 stopword/블랙리스트 미세 조정
+1. Step 5C Round 2 (EC2 ?ㅻ뜲?댄꽣 罹섎━釉뚮젅?댁뀡)
+- EC2?먯꽌 `npm run analyze -- --hours 6` 1???ㅽ뻾 ???곸쐞 ?좏뵿 ?섑뵆(kr/jp/us) 寃??- 怨쇱냼?꾪꽣/怨쇰떎?꾪꽣 ?щ????곕씪 stopword/釉붾옓由ъ뒪??誘몄꽭 議곗젙
 
-2. 소스 확장 우선순위 실행
-- 무비용 정책 전제에서 안정형 소스(`bilibili`, `mastodon`) 운영 투입 확대
+2. ?뚯뒪 ?뺤옣 ?곗꽑?쒖쐞 ?ㅽ뻾
+- 臾대퉬???뺤콉 ?꾩젣?먯꽌 ?덉젙???뚯뒪(`bilibili`, `mastodon`) ?댁쁺 ?ъ엯 ?뺣?
 
-3. 선택 과제 (권장)
-- 실기기 캡처(스크린샷) 1세트 추가 후 UI smoke 증적과 함께 보관
+3. ?좏깮 怨쇱젣 (沅뚯옣)
+- ?ㅺ린湲?罹≪쿂(?ㅽ겕由곗꺑) 1?명듃 異붽? ??UI smoke 利앹쟻怨??④퍡 蹂닿?
 
 ## Dashboard UI Update (2026-04-14, Left Empty Zone Fill)
 ### Newly completed
-- 메인 대시보드 좌측 빈 영역을 데이터 패널로 전환:
-  - 신규 `PulseSignalBoard` 추가
-  - 좌측 컬럼을 `flex` 구조로 조정해 남는 높이를 패널이 자연스럽게 점유
-- Signal Board 구성:
+- 硫붿씤 ??쒕낫??醫뚯륫 鍮??곸뿭???곗씠???⑤꼸濡??꾪솚:
+  - ?좉퇋 `PulseSignalBoard` 異붽?
+  - 醫뚯륫 而щ읆??`flex` 援ъ“濡?議곗젙???⑤뒗 ?믪씠瑜??⑤꼸???먯뿰?ㅻ읇寃??먯쑀
+- Signal Board 援ъ꽦:
   - Total Heat / Active Topics / Source Health / Global Topics
-  - Region Momentum 바
-  - Cross Signals(리드 글로벌 이슈 + 키워드 빈도 태그)
+  - Region Momentum 諛?  - Cross Signals(由щ뱶 湲濡쒕쾶 ?댁뒋 + ?ㅼ썙??鍮덈룄 ?쒓렇)
 
 ### Validation
 - `npm run lint` -> pass
 - `npm run build` -> pass
 
 ### Current completion state
-- 홈 대시보드: **지도 하단 빈 공간 이슈 해결 완료**
-- 시각 균형과 정보 밀도 개선 완료
+- ????쒕낫?? **吏???섎떒 鍮?怨듦컙 ?댁뒋 ?닿껐 ?꾨즺**
+- ?쒓컖 洹좏삎怨??뺣낫 諛??媛쒖꽑 ?꾨즺
 
 ### Remaining (updated)
-1. Step 5C Round 2 (EC2 실데이터 캘리브레이션)
-- `npm run analyze -- --hours 6` 후 토픽 품질 샘플 리뷰/미세 튜닝
+1. Step 5C Round 2 (EC2 ?ㅻ뜲?댄꽣 罹섎━釉뚮젅?댁뀡)
+- `npm run analyze -- --hours 6` ???좏뵿 ?덉쭏 ?섑뵆 由щ럭/誘몄꽭 ?쒕떇
 
-2. 소스 확장 우선순위 실행
-- 무비용 정책 전제에서 안정형 소스(`bilibili`, `mastodon`) 운영 투입 확대
+2. ?뚯뒪 ?뺤옣 ?곗꽑?쒖쐞 ?ㅽ뻾
+- 臾대퉬???뺤콉 ?꾩젣?먯꽌 ?덉젙???뚯뒪(`bilibili`, `mastodon`) ?댁쁺 ?ъ엯 ?뺣?
 
 ## Step 5C Update (2026-04-14, Analysis Quality Tuning Round 2)
 ### Newly completed
-- Heat score 포화 완화:
-  - `heat-score-calculator`를 `log1p + soft-cap` 방식으로 전환
-  - 상단 구간에서 토픽 간 점수 분해능 확보
-- Source 가중치 재밸런싱:
-  - `topic-clusterer` source weight 확장
-  - YouTube 가중치 하향(0.45), 커뮤니티/뉴스형 소스 상대 우선
-- 토큰 품질 보강:
-  - YouTube 메타 단어 불용어 확장
-  - 날짜형 토큰 제거 규칙 추가
+- Heat score ?ы솕 ?꾪솕:
+  - `heat-score-calculator`瑜?`log1p + soft-cap` 諛⑹떇?쇰줈 ?꾪솚
+  - ?곷떒 援ш컙?먯꽌 ?좏뵿 媛??먯닔 遺꾪빐???뺣낫
+- Source 媛以묒튂 ?щ갭?곗떛:
+  - `topic-clusterer` source weight ?뺤옣
+  - YouTube 媛以묒튂 ?섑뼢(0.45), 而ㅻ??덊떚/?댁뒪???뚯뒪 ?곷? ?곗꽑
+- ?좏겙 ?덉쭏 蹂닿컯:
+  - YouTube 硫뷀? ?⑥뼱 遺덉슜???뺤옣
+  - ?좎쭨???좏겙 ?쒓굅 洹쒖튃 異붽?
 
 ### Validation
 - `npm run lint` -> pass
@@ -1752,28 +1712,27 @@
 - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
 
 ### Current completion state
-- Step 5C: **진행 중 (Round 1 + Round 2 완료)**
-- 점수 포화 완화/잡음 억제 규칙까지 코드 기준 반영 완료
+- Step 5C: **吏꾪뻾 以?(Round 1 + Round 2 ?꾨즺)**
+- ?먯닔 ?ы솕 ?꾪솕/?≪쓬 ?듭젣 洹쒖튃源뚯? 肄붾뱶 湲곗? 諛섏쁺 ?꾨즺
 
 ### Remaining (updated)
-1. Step 5C Round 3 (EC2 결과 캘리브레이션)
-- Round 2 코드 배포 후 `npm run analyze -- --hours 6` 재실행
-- `/api/topics?region=kr|jp|us&period=1h` 샘플 리뷰로 stopword/source weight 미세 조정
+1. Step 5C Round 3 (EC2 寃곌낵 罹섎━釉뚮젅?댁뀡)
+- Round 2 肄붾뱶 諛고룷 ??`npm run analyze -- --hours 6` ?ъ떎??- `/api/topics?region=kr|jp|us&period=1h` ?섑뵆 由щ럭濡?stopword/source weight 誘몄꽭 議곗젙
 
-2. 소스 확장 우선순위 실행
-- 무비용 정책 전제에서 안정형 소스(`bilibili`, `mastodon`) 운영 투입 확대
+2. ?뚯뒪 ?뺤옣 ?곗꽑?쒖쐞 ?ㅽ뻾
+- 臾대퉬???뺤콉 ?꾩젣?먯꽌 ?덉젙???뚯뒪(`bilibili`, `mastodon`) ?댁쁺 ?ъ엯 ?뺣?
 
 ## Step 5C Update (2026-04-14, Analysis Quality Tuning Round 3)
 ### Newly completed
-- `/api/topics` dedupe 적용:
-  - 동일 토픽명(정규화 기준) 중 최신 1건만 반환
-  - total 카운트도 dedupe 기준으로 일치
-- EC2 런타임 재검증:
-  - 배포 후 `global-pulse-web.service` active 확인
-  - `/pulse/api/health` 200 확인
-- 재분석 실행:
-  - `npm run analyze -- --hours 6` 재실행 완료
-  - heat 포화 완화(지역 합산 로그 기준 1k~6k 분포) 확인
+- `/api/topics` dedupe ?곸슜:
+  - ?숈씪 ?좏뵿紐??뺢퇋??湲곗?) 以?理쒖떊 1嫄대쭔 諛섑솚
+  - total 移댁슫?몃룄 dedupe 湲곗??쇰줈 ?쇱튂
+- EC2 ?고????ш?利?
+  - 諛고룷 ??`global-pulse-web.service` active ?뺤씤
+  - `/pulse/api/health` 200 ?뺤씤
+- ?щ텇???ㅽ뻾:
+  - `npm run analyze -- --hours 6` ?ъ떎???꾨즺
+  - heat ?ы솕 ?꾪솕(吏???⑹궛 濡쒓렇 湲곗? 1k~6k 遺꾪룷) ?뺤씤
 
 ### Validation
 - Local:
@@ -1787,26 +1746,25 @@
   - `npm run analyze -- --hours 6` -> pass
 
 ### Current completion state
-- Step 5C: **Round 1 + Round 2 + Round 3 완료**
-- 중복 토픽 노출/점수 포화/잡음 토큰 이슈를 1차 운영 기준으로 정리 완료
+- Step 5C: **Round 1 + Round 2 + Round 3 ?꾨즺**
+- 以묐났 ?좏뵿 ?몄텧/?먯닔 ?ы솕/?≪쓬 ?좏겙 ?댁뒋瑜?1李??댁쁺 湲곗??쇰줈 ?뺣━ ?꾨즺
 
 ### Remaining (updated)
-1. 소스 확장 우선순위 실행
-- 무비용 정책 전제에서 안정형 소스(`bilibili`, `mastodon`) 운영 투입 확대
+1. ?뚯뒪 ?뺤옣 ?곗꽑?쒖쐞 ?ㅽ뻾
+- 臾대퉬???뺤콉 ?꾩젣?먯꽌 ?덉젙???뚯뒪(`bilibili`, `mastodon`) ?댁쁺 ?ъ엯 ?뺣?
 
-2. 품질 고도화(선택)
-- dedupe key를 title 기반에서 cluster hash 기반으로 확장
-- Gemini 요약 on-demand 정책(일일 제한)으로 품질 문장화 보강
+2. ?덉쭏 怨좊룄???좏깮)
+- dedupe key瑜?title 湲곕컲?먯꽌 cluster hash 湲곕컲?쇰줈 ?뺤옣
+- Gemini ?붿빟 on-demand ?뺤콉(?쇱씪 ?쒗븳)?쇰줈 ?덉쭏 臾몄옣??蹂닿컯
 
 ## Step 5A Update (2026-04-14, Stable SNS Source Hardening)
 ### Newly completed
-- Mastodon 수집 정제 품질 강화:
-  - HTML 엔티티 디코딩(named + numeric)
-  - URL 공백 정규화
-  - `cleanUrl()` 추가 및 mastodon scraper URL 적용
-- 안정형 SNS 소스 검증:
-  - `bilibili` scraper 통과
-  - `mastodon` scraper 통과
+- Mastodon ?섏쭛 ?뺤젣 ?덉쭏 媛뺥솕:
+  - HTML ?뷀떚???붿퐫??named + numeric)
+  - URL 怨듬갚 ?뺢퇋??  - `cleanUrl()` 異붽? 諛?mastodon scraper URL ?곸슜
+- ?덉젙??SNS ?뚯뒪 寃利?
+  - `bilibili` scraper ?듦낵
+  - `mastodon` scraper ?듦낵
 
 ### Validation
 - `npm run test:scraper -- --source mastodon` -> pass
@@ -1818,27 +1776,26 @@
 - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
 
 ### Current completion state
-- Step 5A: **안정형 SNS 소스 1차 하드닝 완료**
-- 텍스트/URL 정합성 개선으로 downstream 분석 품질 개선 기반 확보
+- Step 5A: **?덉젙??SNS ?뚯뒪 1李??섎뱶???꾨즺**
+- ?띿뒪??URL ?뺥빀??媛쒖꽑?쇰줈 downstream 遺꾩꽍 ?덉쭏 媛쒖꽑 湲곕컲 ?뺣낫
 
 ### Remaining (updated)
-1. EC2 운영 데이터 검증
-- `npm run collect -- --source bilibili,mastodon` 실행 후 `raw_posts` 증가 확인
-- 해당 소스 기반 분석 반영 샘플 확인
+1. EC2 ?댁쁺 ?곗씠??寃利?- `npm run collect -- --source bilibili,mastodon` ?ㅽ뻾 ??`raw_posts` 利앷? ?뺤씤
+- ?대떦 ?뚯뒪 湲곕컲 遺꾩꽍 諛섏쁺 ?섑뵆 ?뺤씤
 
-2. 다음 확장 우선순위
-- 비용 정책 유지 전제에서 `zhihu`/`weibo` 안정성 개선 또는 `hatena`/`ptt` 정합성 보강
+2. ?ㅼ쓬 ?뺤옣 ?곗꽑?쒖쐞
+- 鍮꾩슜 ?뺤콉 ?좎? ?꾩젣?먯꽌 `zhihu`/`weibo` ?덉젙??媛쒖꽑 ?먮뒗 `hatena`/`ptt` ?뺥빀??蹂닿컯
 
 ## Step 5A Update (2026-04-14, Ops Verification Automation)
 ### Newly completed
-- 소스 적재 검증 자동화 추가:
+- ?뚯뒪 ?곸옱 寃利??먮룞??異붽?:
   - `scripts/verify-source-ingest.ts`
-  - 선택 소스의 최근 N분 `raw_posts` 건수/샘플 row 출력
-  - 기본 모드에서 소스별 0건이면 실패 처리
-- 운영 명령 추가:
+  - ?좏깮 ?뚯뒪??理쒓렐 N遺?`raw_posts` 嫄댁닔/?섑뵆 row 異쒕젰
+  - 湲곕낯 紐⑤뱶?먯꽌 ?뚯뒪蹂?0嫄댁씠硫??ㅽ뙣 泥섎━
+- ?댁쁺 紐낅졊 異붽?:
   - `npm run ops:verify:source`
-- 런북 반영:
-  - `docs/operations.md`에 source verify 섹션 추가
+- ?곕턿 諛섏쁺:
+  - `docs/operations.md`??source verify ?뱀뀡 異붽?
 
 ### Validation
 - `npm run lint` -> pass
@@ -1850,15 +1807,13 @@
 - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
 
 ### Current completion state
-- Step 5A: **운영 검증 자동화까지 완료**
-- 안정형 SNS 소스 확장(수집 + 운영 점검) 절차가 반복 가능 형태로 고정됨
-
+- Step 5A: **?댁쁺 寃利??먮룞?붽퉴吏 ?꾨즺**
+- ?덉젙??SNS ?뚯뒪 ?뺤옣(?섏쭛 + ?댁쁺 ?먭?) ?덉감媛 諛섎났 媛???뺥깭濡?怨좎젙??
 ### Remaining (updated)
-1. EC2 배치 루틴 결합
-- collector timer 후처리로 `ops:verify:source` 주기 실행 여부 검토
-
-2. 다음 소스 확장
-- 비용 정책 유지 전제에서 `hatena` 또는 `ptt` 정합성 개선 우선 적용
+1. EC2 諛곗튂 猷⑦떞 寃고빀
+- collector timer ?꾩쿂由щ줈 `ops:verify:source` 二쇨린 ?ㅽ뻾 ?щ? 寃??
+2. ?ㅼ쓬 ?뚯뒪 ?뺤옣
+- 鍮꾩슜 ?뺤콉 ?좎? ?꾩젣?먯꽌 `hatena` ?먮뒗 `ptt` ?뺥빀??媛쒖꽑 ?곗꽑 ?곸슜
 
 ## Step 5A Update (2026-04-14, Source Verify Timer Integration)
 ### Newly completed
@@ -1899,7 +1854,7 @@
 ### Newly completed
 - Reworked PTT recommend parser to avoid encoding-fragile branch logic.
 - Added robust handling for:
-  - hot marker (`爆`) -> `likeCount=100`
+  - hot marker (`??) -> `likeCount=100`
   - downvote marker (`X<number>`) -> `dislikeCount`
   - numeric push counts (`<number>`) -> `likeCount`
   - unknown markers -> graceful zero fallback
@@ -2032,26 +1987,25 @@
   - `/pulse/global-issues` empty-state text not present at verification time
 
 ### Current completion state
-- Step 5C: **code + runtime apply 완료**
+- Step 5C: **code + runtime apply ?꾨즺**
 - empty-state recurrence risk significantly reduced for transient low-signal analyzer runs
 
 ### Remaining (updated)
 1. Step 5C quality follow-up
-- global topic naming normalization (`keep brawl` 등 저정보 명칭 억제)
+- global topic naming normalization (`keep brawl` ????뺣낫 紐낆묶 ?듭젣)
 
 2. Step 5A/5B source expansion continuation
-- 무비용 우선 정책 기준으로 `hatena`/`ptt` 등 고변동 소스 안정화
-
+- 臾대퉬???곗꽑 ?뺤콉 湲곗??쇰줈 `hatena`/`ptt` ??怨좊????뚯뒪 ?덉젙??
 ## Step 5C Update (2026-04-15, UI Encoding + Loading State UX Guard)
 ### Newly completed
-- 홈/글로벌 페이지 인코딩 복구:
-  - 깨진 한글 문구(모지바케) 제거 및 UTF-8 텍스트로 통일
-- 로딩 UX 보정:
-  - `GlobalIssuePanel`을 로딩 중에는 렌더하지 않도록 조건 수정
-  - 데이터 로드 전 빈 카드가 먼저 보이는 현상 완화
-- API 클라이언트 보강:
-  - `lib/api.ts`에 `/pulse` 런타임 base-path 감지 fallback 추가
-  - build-time env 누락 시에도 클라이언트 fetch 경로 안정성 강화
+- ??湲濡쒕쾶 ?섏씠吏 ?몄퐫??蹂듦뎄:
+  - 源⑥쭊 ?쒓? 臾멸뎄(紐⑥?諛붿?) ?쒓굅 諛?UTF-8 ?띿뒪?몃줈 ?듭씪
+- 濡쒕뵫 UX 蹂댁젙:
+  - `GlobalIssuePanel`??濡쒕뵫 以묒뿉???뚮뜑?섏? ?딅룄濡?議곌굔 ?섏젙
+  - ?곗씠??濡쒕뱶 ??鍮?移대뱶媛 癒쇱? 蹂댁씠???꾩긽 ?꾪솕
+- API ?대씪?댁뼵??蹂닿컯:
+  - `lib/api.ts`??`/pulse` ?고???base-path 媛먯? fallback 異붽?
+  - build-time env ?꾨씫 ?쒖뿉???대씪?댁뼵??fetch 寃쎈줈 ?덉젙??媛뺥솕
 
 ### Validation
 - `npm run lint` -> pass
@@ -2060,15 +2014,14 @@
 - `npm run ops:verify3:check -- --print-json` -> pass (`issues=[]`)
 
 ### Current completion state
-- 사용자 체감 이슈(문자열 깨짐, 로딩 중 빈 글로벌 이슈 노출) 1차 보정 완료
-- `/pulse` 하위 경로 운영에서 클라이언트 API 호출 안정성 보강 완료
+- ?ъ슜??泥닿컧 ?댁뒋(臾몄옄??源⑥쭚, 濡쒕뵫 以?鍮?湲濡쒕쾶 ?댁뒋 ?몄텧) 1李?蹂댁젙 ?꾨즺
+- `/pulse` ?섏쐞 寃쎈줈 ?댁쁺?먯꽌 ?대씪?댁뼵??API ?몄텧 ?덉젙??蹂닿컯 ?꾨즺
 
 ### Remaining (updated)
 1. Runtime apply
-- EC2 배포 후 실제 브라우저에서 홈/글로벌 페이지 렌더 상태 재확인
-
+- EC2 諛고룷 ???ㅼ젣 釉뚮씪?곗??먯꽌 ??湲濡쒕쾶 ?섏씠吏 ?뚮뜑 ?곹깭 ?ы솗??
 2. Quality tuning follow-up
-- 글로벌 토픽 대표명 저정보 표현(`keep brawl` 등) 억제 규칙 추가
+- 湲濡쒕쾶 ?좏뵿 ??쒕챸 ??뺣낫 ?쒗쁽(`keep brawl` ?? ?듭젣 洹쒖튃 異붽?
 
 ## Step 5C Runtime Recovery (2026-04-15, `/pulse` subpath output fix)
 ### Newly completed
@@ -2087,7 +2040,7 @@
   - static chunks use `/pulse/_next/...`
 
 ### Current completion state
-- `/pulse` deployment output path issue: **code fix 완료**
+- `/pulse` deployment output path issue: **code fix ?꾨즺**
 - next action is runtime deploy + public endpoint verification
 
 ### Remaining (updated)
@@ -2095,7 +2048,7 @@
 - deploy latest commit and confirm public `/pulse` HTML now references `/pulse/_next/...`
 
 2. Quality tuning follow-up
-- 글로벌 토픽 대표명 저정보 표현(`keep brawl` 등) 억제 규칙 추가
+- 湲濡쒕쾶 ?좏뵿 ??쒕챸 ??뺣낫 ?쒗쁽(`keep brawl` ?? ?듭젣 洹쒖튃 異붽?
 
 ## Step 5C Runtime Recovery (2026-04-15, deploy-chain follow-up)
 ### Newly completed
@@ -2120,7 +2073,7 @@
 
 ### Remaining (updated)
 1. Quality tuning follow-up
-- 글로벌 토픽 대표명 저정보 표현(`keep brawl` 등) 억제 규칙 추가
+- 湲濡쒕쾶 ?좏뵿 ??쒕챸 ??뺣낫 ?쒗쁽(`keep brawl` ?? ?듭젣 洹쒖튃 異붽?
 
 ## Step 5C Runtime Recovery (2026-04-15, public `/pulse` recovered)
 ### Newly completed
@@ -2142,15 +2095,14 @@
 - `http://3.36.83.199/pulse/api/global-topics?limit=3` -> `200`, `total=3`
 
 ### Current completion state
-- `/pulse` runtime breakage: **복구 완료**
-- deploy-chain root cause: **식별 및 스크립트 반영 완료**
+- `/pulse` runtime breakage: **蹂듦뎄 ?꾨즺**
+- deploy-chain root cause: **?앸퀎 諛??ㅽ겕由쏀듃 諛섏쁺 ?꾨즺**
 
 ### Remaining (updated)
 1. Deploy script final hardening
-- `deploy-ec2.sh` 최신 수정(`--include=dev --include-workspace-root`) 커밋 반영본 기준으로 다음 배포 사이클 재검증
-
+- `deploy-ec2.sh` 理쒖떊 ?섏젙(`--include=dev --include-workspace-root`) 而ㅻ컠 諛섏쁺蹂?湲곗??쇰줈 ?ㅼ쓬 諛고룷 ?ъ씠???ш?利?
 2. Quality tuning follow-up
-- 글로벌 토픽 대표명 저정보 표현(`keep brawl` 등) 억제 규칙 추가
+- 湲濡쒕쾶 ?좏뵿 ??쒕챸 ??뺣낫 ?쒗쁽(`keep brawl` ?? ?듭젣 洹쒖튃 異붽?
 
 ## Update 2026-04-15: Topic Quality Tuning
 - Status: In progress validation completed locally, pending EC2 analyzer rerun.
@@ -2493,3 +2445,17 @@
 
 ### Follow-up
 - Backfill dedupe refined to name-based key to avoid duplicate global labels across fresh/history rows.
+
+## Analyzer Follow-up (2026-04-18, Gemini 404 대응)
+### Newly completed
+- Gemini summarizer now supports multi-model fallback and dynamic model listing.
+- Runtime diagnostics enhanced to include concise HTTP body snippets for model errors.
+- UTF-8 prompt/fallback text restored in analyzer summarizer path.
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
+
+### Remaining
+1. Deploy and run `npm run analyze:gemini -- --hours 24` on EC2.
+2. Confirm 404 disappearance and check whether fresh cross-region global topics increase.

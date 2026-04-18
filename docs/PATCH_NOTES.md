@@ -4179,3 +4179,25 @@ pm run ops:snapshot -> completed (egions=6)
 - Adjusted global-topic backfill dedupe key from `id+name` to `nameEn+nameKo`.
 - Effect: prevents duplicate labels from appearing when fresh and historical rows have different IDs.
 - Validation: `npm run lint`, `npm run build` pass.
+
+## GP-20260418-102 (Gemini Summarizer Hardening: model fallback + UTF-8 + diagnostics)
+### Before -> After
+- Before:
+  - Gemini summarizer was pinned to `gemini-1.5-flash` and failed with HTTP 404 in runtime.
+  - Prompt/fallback text had mojibake corruption in source.
+  - Failure logs only exposed status code, making root-cause debugging slow.
+- After:
+  - Reworked Gemini summarizer with resilient model resolution:
+    - environment override (`GEMINI_MODEL`, comma-separated),
+    - default fallback chain (`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-2.5-flash-lite`, `gemini-2.0-flash-lite`),
+    - optional live model discovery via `GET /v1beta/models` (cached 5 minutes).
+  - Added per-model retry loop for `generateContent`.
+  - Added compact response-body diagnostics in error messages.
+  - Restored UTF-8 Korean prompt/fallback strings.
+
+### Changed Files
+- `packages/analyzer/src/gemini-summarizer.ts`
+
+### Validation
+- `npm run lint` -> pass
+- `npm run build` -> pass
