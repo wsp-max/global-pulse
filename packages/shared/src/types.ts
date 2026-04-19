@@ -85,6 +85,8 @@ export interface Topic {
   canonicalKey?: string | null;
   embeddingJson?: number[] | null;
   burstZ?: number | null;
+  lifecycleStage?: "emerging" | "peaking" | "fading" | null;
+  miniTrend?: number[] | null;
   velocityPerHour?: number | null;
   acceleration?: number | null;
   spreadScore?: number | null;
@@ -224,5 +226,6 @@ export const SENTIMENT_COLORS = {
   neutral: "#6B7280",
   negative: "#EF4444",
 };
+
 
 

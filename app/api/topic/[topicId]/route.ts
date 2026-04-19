@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import type { GlobalTopic, Topic } from "@global-pulse/shared";
 import {
   mapGlobalTopicRow,
@@ -99,12 +99,13 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
               `
               select
                 id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,post_count,
-                total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,rank,period_start,period_end,
+                total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,rank,period_start,period_end,
                 null::float as velocity_per_hour,
                 null::float as acceleration,
                 null::float as spread_score,
                 null::jsonb as propagation_timeline,
                 null::jsonb as propagation_edges,
+                null::float[] as mini_trend,
                 created_at
               from topics
               where id = any($1::bigint[])
@@ -185,12 +186,13 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
       `
       select
         id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,post_count,
-        total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,rank,period_start,period_end,
+        total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,rank,period_start,period_end,
         null::float as velocity_per_hour,
         null::float as acceleration,
         null::float as spread_score,
         null::jsonb as propagation_timeline,
         null::jsonb as propagation_edges,
+                null::float[] as mini_trend,
         created_at
       from topics
       where id = $1
@@ -223,12 +225,13 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
         `
         select
           id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,post_count,
-          total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,rank,period_start,period_end,
+          total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,rank,period_start,period_end,
           null::float as velocity_per_hour,
           null::float as acceleration,
           null::float as spread_score,
           null::jsonb as propagation_timeline,
           null::jsonb as propagation_edges,
+                null::float[] as mini_trend,
           created_at
         from topics
         where region_id = $1 and id <> $2
@@ -282,3 +285,4 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
     topic: null,
   });
 }
+

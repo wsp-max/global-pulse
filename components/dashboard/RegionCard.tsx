@@ -16,6 +16,21 @@ const PORTAL_SOURCE_ID_SET = new Set(
   SOURCES.filter((source) => source.type === "news" && source.newsCategory === "portal").map((source) => source.id),
 );
 
+function buildMiniSparkline(values: number[] | null | undefined): string {
+  if (!values || values.length < 2) {
+    return "";
+  }
+  const max = Math.max(...values, 1);
+  const step = values.length > 1 ? 28 / (values.length - 1) : 28;
+  return values
+    .map((value, index) => {
+      const x = index * step;
+      const y = 8 - (value / max) * 8;
+      return `${x},${Number(y.toFixed(2))}`;
+    })
+    .join(" ");
+}
+
 export function RegionCard({ region, scope = "community", onTopicSelect }: RegionCardProps) {
   const router = useRouter();
   const heatScore = Math.round(region.totalHeatScore);
@@ -63,26 +78,37 @@ export function RegionCard({ region, scope = "community", onTopicSelect }: Regio
 
       <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-[var(--text-tertiary)]">
         {topTopics.length > 0 ? (
-          topTopics.map((topic) =>
-            typeof topic.id === "number" ? (
+          topTopics.map((topic) => {
+            const sparkline = buildMiniSparkline(topic.miniTrend ?? null);
+            return typeof topic.id === "number" ? (
               <button
                 key={topic.id}
                 type="button"
-                className="rounded-full border border-[var(--border-default)] px-2 py-0.5 hover:bg-[var(--bg-tertiary)]"
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] px-2 py-0.5 hover:bg-[var(--bg-tertiary)]"
                 onClick={(event) => {
                   event.stopPropagation();
                   onTopicSelect?.(topic.id!);
                 }}
                 aria-label={`${topic.nameKo || topic.nameEn} 상세 열기`}
               >
-                {topic.nameKo || topic.nameEn}
+                <span>{topic.nameKo || topic.nameEn}</span>
+                {sparkline ? (
+                  <svg viewBox="0 0 28 8" className="h-2 w-7" aria-hidden="true">
+                    <polyline points={sparkline} fill="none" stroke="var(--text-accent)" strokeWidth="1" />
+                  </svg>
+                ) : null}
               </button>
             ) : (
-              <span key={topic.nameEn} className="rounded-full border border-[var(--border-default)] px-2 py-0.5">
-                {topic.nameKo || topic.nameEn}
+              <span key={topic.nameEn} className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] px-2 py-0.5">
+                <span>{topic.nameKo || topic.nameEn}</span>
+                {sparkline ? (
+                  <svg viewBox="0 0 28 8" className="h-2 w-7" aria-hidden="true">
+                    <polyline points={sparkline} fill="none" stroke="var(--text-accent)" strokeWidth="1" />
+                  </svg>
+                ) : null}
               </span>
-            ),
-          )
+            );
+          })
         ) : (
           <span>수집 대기</span>
         )}
@@ -121,3 +147,4 @@ export function RegionCard({ region, scope = "community", onTopicSelect }: Regio
     </article>
   );
 }
+

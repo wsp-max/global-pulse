@@ -11,6 +11,12 @@ interface BatchSelectionRow {
   is_fresh: boolean;
 }
 
+interface MiniTrendRow {
+  topic_name: string;
+  bucket_at: string;
+  heat_score: number | string | null;
+}
+
 type RegionDataState = "fresh" | "stale" | "empty" | "partially-stale";
 
 function parseScope(value: string | null): Scope {
@@ -127,12 +133,13 @@ async function getRegions(request: Request) {
             `
             select
               id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
-              post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,scope,rank,period_start,period_end,
+              post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,scope,rank,period_start,period_end,
               null::float as velocity_per_hour,
               null::float as acceleration,
               null::float as spread_score,
               null::jsonb as propagation_timeline,
-              null::jsonb as propagation_edges
+              null::jsonb as propagation_edges,
+              null::float[] as mini_trend
             from topics
             where region_id = $1
               and source_ids && $2::text[]
@@ -207,12 +214,13 @@ async function getRegions(request: Request) {
             with history as (
               select
                 id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
-                post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,scope,rank,period_start,period_end,
+                post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,scope,rank,period_start,period_end,
                 null::float as velocity_per_hour,
                 null::float as acceleration,
                 null::float as spread_score,
                 null::jsonb as propagation_timeline,
-                null::jsonb as propagation_edges
+                null::jsonb as propagation_edges,
+              null::float[] as mini_trend
               from topics
               where region_id = $1
                 and source_ids && $2::text[]
@@ -257,6 +265,37 @@ async function getRegions(request: Request) {
         }
 
         const topTopics = mergedTopicRows.map(mapTopicRow);
+        const timelineTopicNames = topTopics.map((topic) => topic.nameEn).filter(Boolean);
+        const trendRows =
+          timelineTopicNames.length > 0
+            ? await postgres.query<MiniTrendRow>(
+                `
+                select
+                  topic_name,
+                  to_char(date_trunc('hour', recorded_at), 'YYYY-MM-DD"T"HH24:MI:SS"Z"") as bucket_at,
+                  avg(heat_score) as heat_score
+                from heat_history
+                where region_id = $1
+                  and topic_name = any($2::text[])
+                  and recorded_at >= now() - interval '24 hours'
+                group by topic_name, date_trunc('hour', recorded_at)
+                order by topic_name asc, date_trunc('hour', recorded_at) asc
+                `,
+                [region.id, timelineTopicNames],
+              )
+            : { rows: [] as MiniTrendRow[] };
+
+        const trendByTopic = new Map<string, number[]>();
+        for (const row of trendRows.rows) {
+          const list = trendByTopic.get(row.topic_name) ?? [];
+          list.push(Number(row.heat_score ?? 0));
+          trendByTopic.set(row.topic_name, list);
+        }
+
+        const enrichedTopTopics = topTopics.map((topic) => ({
+          ...topic,
+          miniTrend: (trendByTopic.get(topic.nameEn) ?? []).slice(-8),
+        }));
         const hasMetrics = Number(metrics?.active_topics ?? 0) > 0;
 
         return {
@@ -264,7 +303,7 @@ async function getRegions(request: Request) {
           totalHeatScore: Number(hasMetrics ? metrics?.total_heat_score ?? 0 : 0),
           activeTopics: Number(hasMetrics ? metrics?.active_topics ?? 0 : 0),
           avgSentiment: Number(hasMetrics ? metrics?.avg_sentiment ?? 0 : 0),
-          topKeywords: hasMetrics && topTopics.length > 0 ? deriveTopKeywords(topTopics) : [],
+          topKeywords: hasMetrics && enrichedTopTopics.length > 0 ? deriveTopKeywords(enrichedTopTopics) : [],
           sourcesActive: Number(hasMetrics ? metrics?.sources_active ?? 0 : 0),
           sourcesTotal: Number(snapshot?.sources_total ?? sourceIds.length),
           snapshotAt: snapshot?.snapshot_at ?? selectedBatchCreatedAt ?? null,
@@ -272,7 +311,7 @@ async function getRegions(request: Request) {
           supplementedFromHistory,
           stale: dataState === "stale" || dataState === "partially-stale",
           scope,
-          topTopics,
+          topTopics: enrichedTopTopics,
         };
       }),
     );
@@ -304,3 +343,6 @@ async function getRegions(request: Request) {
     lastUpdated: new Date().toISOString(),
   });
 }
+
+
+

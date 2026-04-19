@@ -3,15 +3,42 @@
 import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useTopicDetail } from "@/lib/hooks/useTopicDetail";
+import { useTopicTimeline } from "@/lib/hooks/useTopicTimeline";
 
 interface TopicDetailSheetProps {
   topicId: number | null;
   onClose: () => void;
 }
 
+function buildSparklinePoints(values: number[], width: number, height: number): string {
+  if (values.length === 0) {
+    return "";
+  }
+  const max = Math.max(...values, 1);
+  const step = values.length > 1 ? width / (values.length - 1) : width;
+  return values
+    .map((value, index) => {
+      const x = index * step;
+      const y = height - (value / max) * height;
+      return `${x},${Number(y.toFixed(2))}`;
+    })
+    .join(" ");
+}
+
+function lifecycleClass(stage: "emerging" | "peaking" | "fading" | null | undefined): string {
+  if (stage === "fading") {
+    return "border-slate-400/40 bg-slate-500/10 text-slate-200";
+  }
+  if (stage === "peaking") {
+    return "border-amber-400/50 bg-amber-500/10 text-amber-200";
+  }
+  return "border-cyan-400/40 bg-cyan-500/10 text-cyan-200";
+}
+
 export function TopicDetailSheet({ topicId, onClose }: TopicDetailSheetProps) {
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const { data, isLoading, error } = useTopicDetail(topicId ? String(topicId) : "");
+  const { data: timelineData } = useTopicTimeline(topicId);
 
   useEffect(() => {
     if (!topicId) {
@@ -62,6 +89,10 @@ export function TopicDetailSheet({ topicId, onClose }: TopicDetailSheetProps) {
     };
   }, [data]);
 
+  const sparklineValues = timelineData?.buckets.map((item) => item.heatScore) ?? [];
+  const sparkline = buildSparklinePoints(sparklineValues, 240, 40);
+  const lifecycleStage = timelineData?.lifecycleStage ?? data?.topic?.lifecycleStage ?? "emerging";
+
   if (!topicId) {
     return null;
   }
@@ -84,7 +115,12 @@ export function TopicDetailSheet({ topicId, onClose }: TopicDetailSheetProps) {
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">{resolved.title}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">{resolved.title}</h2>
+              <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${lifecycleClass(lifecycleStage)}`}>
+                {lifecycleStage}
+              </span>
+            </div>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">{resolved.subtitle}</p>
           </div>
           <button
@@ -127,36 +163,56 @@ export function TopicDetailSheet({ topicId, onClose }: TopicDetailSheetProps) {
               )}
             </div>
 
+            <div className="mt-4 rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+              <p className="text-xs text-[var(--text-tertiary)]">Heat Sparkline (6h)</p>
+              <div className="mt-2 h-12 w-full rounded-md bg-[rgba(15,23,42,0.55)] p-1">
+                {sparkline ? (
+                  <svg viewBox="0 0 240 40" className="h-full w-full" role="img" aria-label="토픽 열기 스파크라인">
+                    <polyline
+                      points={sparkline}
+                      fill="none"
+                      stroke="var(--text-accent)"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <div className="flex h-full items-center text-xs text-[var(--text-tertiary)]">시계열 데이터 수집 중</div>
+                )}
+              </div>
+            </div>
+
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
                 <p className="text-xs text-[var(--text-tertiary)]">Timeline</p>
                 <div className="mt-2 space-y-1 text-xs text-[var(--text-secondary)]">
-                  {(data?.timeline ?? []).slice(0, 8).map((point) => (
-                    <p key={`${point.regionId}-${point.recordedAt}`}>
-                      {point.regionId.toUpperCase()} · {new Date(point.recordedAt).toLocaleString("ko-KR")} · heat {Math.round(point.heatScore)}
+                  {(timelineData?.buckets ?? []).slice(-8).map((point) => (
+                    <p key={`${point.bucketAt}`}>
+                      {new Date(point.bucketAt).toLocaleString("ko-KR")} · heat {Math.round(point.heatScore)} · posts {point.postCount}
                     </p>
                   ))}
-                  {(data?.timeline ?? []).length === 0 && <p>타임라인 데이터 없음</p>}
+                  {(timelineData?.buckets ?? []).length === 0 && <p>타임라인 데이터 없음</p>}
                 </div>
               </article>
 
               <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
                 <p className="text-xs text-[var(--text-tertiary)]">Related Topics</p>
                 <div className="mt-2 space-y-1 text-xs text-[var(--text-secondary)]">
-                  {(data?.relatedTopics ?? []).slice(0, 5).map((topic) => (
+                  {(data?.relatedTopics ?? []).slice(0, 5).map((topic) =>
                     typeof topic.id === "number" ? (
                       <Link key={topic.id} href={`/topic/${topic.id}`} className="block hover:text-[var(--text-primary)]">
                         {topic.nameKo || topic.nameEn}
                       </Link>
-                    ) : null
-                  ))}
-                  {(data?.relatedGlobalTopics ?? []).slice(0, 5).map((topic) => (
+                    ) : null,
+                  )}
+                  {(data?.relatedGlobalTopics ?? []).slice(0, 5).map((topic) =>
                     typeof topic.id === "number" ? (
                       <Link key={`g-${topic.id}`} href={`/topic/${topic.id}`} className="block hover:text-[var(--text-primary)]">
                         {topic.nameKo || topic.nameEn}
                       </Link>
-                    ) : null
-                  ))}
+                    ) : null,
+                  )}
                   {(data?.relatedTopics ?? []).length === 0 && (data?.relatedGlobalTopics ?? []).length === 0 && (
                     <p>연관 토픽이 없습니다.</p>
                   )}

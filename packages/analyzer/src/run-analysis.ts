@@ -57,6 +57,7 @@ interface TopicInsertRow {
   raw_post_ids: number[];
   burst_z: number | null;
   anomaly_score: number | null;
+  lifecycle_stage: "emerging" | "peaking" | "fading" | null;
   scope: AnalysisScope;
   rank: number | null;
   period_start: string;
@@ -105,12 +106,19 @@ interface DailyBaselineUpsertRow {
   heat_std: number;
 }
 
+interface TopicHistoryRow {
+  topic_name: string;
+  heat_score: number | string | null;
+  recorded_at: string;
+}
+
 interface AnalysisStorage {
   mode: "postgres";
   fetchRawPosts(sourceIds: string[], periodStartIso: string): Promise<RawPostRow[]>;
   fetchPortalRankingSignals(regionId: string, fromIso: string): Promise<PortalRankingSignalRow[]>;
   fetchBaseline(regionId: string, categories: string[]): Promise<BaselineRow[]>;
   upsertDailyBaseline(rows: DailyBaselineUpsertRow[]): Promise<void>;
+  fetchTopicHeatHistory(regionId: string, topicNames: string[], hours: number): Promise<TopicHistoryRow[]>;
   insertTopics(rows: TopicInsertRow[]): Promise<void>;
   insertHeatHistory(rows: HeatHistoryInsertRow[]): Promise<void>;
   insertRegionSnapshot(row: SnapshotInsertRow): Promise<void>;
@@ -169,6 +177,40 @@ function normalizeBurstTerm(value: string): string {
 
 function normalizeCanonicalKey(value: string): string {
   return value.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function determineLifecycleStage(params: {
+  nowIso: string;
+  periodStartIso: string;
+  currentHeat: number;
+  history: Array<{ heatScore: number; recordedAt: string }>;
+}): "emerging" | "peaking" | "fading" {
+  const nowMs = new Date(params.nowIso).getTime();
+  const periodStartMs = new Date(params.periodStartIso).getTime();
+
+  const historyRows = params.history.filter((row) => Number.isFinite(row.heatScore));
+  const firstSeenMs =
+    historyRows.length > 0
+      ? Math.min(...historyRows.map((row) => new Date(row.recordedAt).getTime()))
+      : periodStartMs;
+
+  if (Number.isFinite(firstSeenMs) && nowMs - firstSeenMs < 6 * 60 * 60 * 1000) {
+    return "emerging";
+  }
+
+  const allSeries = [...historyRows.map((row) => row.heatScore), params.currentHeat];
+  const peakHeat = Math.max(...allSeries, params.currentHeat);
+
+  if (historyRows.length >= 2) {
+    const last = historyRows.at(-1)?.heatScore ?? params.currentHeat;
+    const prev = historyRows.at(-2)?.heatScore ?? last;
+    const latest = params.currentHeat;
+    if (latest < last && last < prev && latest < peakHeat) {
+      return "fading";
+    }
+  }
+
+  return params.currentHeat >= peakHeat ? "peaking" : "peaking";
 }
 
 function normalizeTextForSimilarity(value: string): string[] {
@@ -409,6 +451,26 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         );
       }
     },
+    async fetchTopicHeatHistory(regionId, topicNames, hours) {
+      if (topicNames.length === 0) {
+        return [];
+      }
+
+      const safeHours = Math.max(6, Math.min(hours, 168));
+      const { rows } = await pool.query<TopicHistoryRow>(
+        `
+        select topic_name, heat_score, recorded_at
+        from heat_history
+        where region_id = $1
+          and topic_name = any($2::text[])
+          and recorded_at >= now() - ($3::int || ' hours')::interval
+        order by recorded_at asc
+        `,
+        [regionId, topicNames, safeHours],
+      );
+
+      return rows;
+    },
     async insertTopics(rows) {
       if (rows.length === 0) return;
       const columns: Array<keyof TopicInsertRow & string> = [
@@ -437,6 +499,7 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         "raw_post_ids",
         "burst_z",
         "anomaly_score",
+        "lifecycle_stage",
         "scope",
         "rank",
         "period_start",
@@ -639,10 +702,32 @@ async function runRegionAnalysis(params: {
   });
   await storage.upsertDailyBaseline(baselineUpserts);
 
-  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
-  const maxHeatScoreInBatch = Math.max(...topicsWithAnomaly.map((topic) => topic.heatScore), 1);
+  const topicNames = topicsWithAnomaly.map((topic) => topic.nameEn).filter(Boolean);
+  const topicHistoryRows = await storage.fetchTopicHeatHistory(regionId, topicNames, 72);
+  const historyByName = new Map<string, Array<{ heatScore: number; recordedAt: string }>>();
+  for (const row of topicHistoryRows) {
+    const list = historyByName.get(row.topic_name) ?? [];
+    list.push({
+      heatScore: toNumber(row.heat_score),
+      recordedAt: row.recorded_at,
+    });
+    historyByName.set(row.topic_name, list);
+  }
 
-  const topicRows: TopicInsertRow[] = topicsWithAnomaly.map((topic) => ({
+  const topicsWithLifecycle = topicsWithAnomaly.map((topic) => ({
+    ...topic,
+    lifecycleStage: determineLifecycleStage({
+      nowIso: periodEndIso,
+      periodStartIso,
+      currentHeat: topic.heatScore,
+      history: historyByName.get(topic.nameEn) ?? [],
+    }),
+  }));
+
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  const maxHeatScoreInBatch = Math.max(...topicsWithLifecycle.map((topic) => topic.heatScore), 1);
+
+  const topicRows: TopicInsertRow[] = topicsWithLifecycle.map((topic) => ({
     region_id: topic.regionId,
     name_ko: topic.nameKo,
     name_en: topic.nameEn,
@@ -668,6 +753,7 @@ async function runRegionAnalysis(params: {
     raw_post_ids: topic.rawPostIds ?? [],
     burst_z: topic.burstZ ?? null,
     anomaly_score: topic.anomalyScore ?? null,
+    lifecycle_stage: topic.lifecycleStage ?? null,
     scope,
     rank: topic.rank ?? null,
     period_start: topic.periodStart,
@@ -677,7 +763,7 @@ async function runRegionAnalysis(params: {
 
   await storage.insertTopics(topicRows);
 
-  const historyRows: HeatHistoryInsertRow[] = topicsWithAnomaly.map((topic) => ({
+  const historyRows: HeatHistoryInsertRow[] = topicsWithLifecycle.map((topic) => ({
     region_id: topic.regionId,
     topic_name: topic.nameEn,
     heat_score: topic.heatScore,
@@ -688,8 +774,8 @@ async function runRegionAnalysis(params: {
 
   await storage.insertHeatHistory(historyRows);
 
-  const totalHeatScore = topicsWithAnomaly.reduce((sum, topic) => sum + topic.heatScore, 0);
-  const sentimentValues = topicsWithAnomaly
+  const totalHeatScore = topicsWithLifecycle.reduce((sum, topic) => sum + topic.heatScore, 0);
+  const sentimentValues = topicsWithLifecycle
     .map((topic) => topic.sentiment)
     .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
   const avgSentiment =
@@ -700,7 +786,7 @@ async function runRegionAnalysis(params: {
   await storage.insertRegionSnapshot({
     region_id: regionId,
     total_heat_score: totalHeatScore,
-    active_topics: topicsWithAnomaly.length,
+    active_topics: topicsWithLifecycle.length,
     avg_sentiment: avgSentiment === null ? null : Number(avgSentiment.toFixed(4)),
     top_keywords: keywords.slice(0, 10).map((keyword) => keyword.keyword),
     sources_active: new Set(posts.map((post) => post.sourceId)).size,
@@ -710,7 +796,7 @@ async function runRegionAnalysis(params: {
   });
 
   log(
-    `[${regionId}:${scope}] posts=${posts.length}, keywords=${keywords.length}, topics=${topicsWithAnomaly.length}, totalHeat=${totalHeatScore.toFixed(
+    `[${regionId}:${scope}] posts=${posts.length}, keywords=${keywords.length}, topics=${topicsWithLifecycle.length}, totalHeat=${totalHeatScore.toFixed(
       1,
     )}`,
   );
@@ -781,6 +867,10 @@ runAnalysis().catch((error) => {
   logger.error(`Analysis failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });
+
+
+
+
 
 
 

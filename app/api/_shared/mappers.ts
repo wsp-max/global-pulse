@@ -1,4 +1,4 @@
-import type { GlobalTopic, Topic, TopicCategory, TopicEntity, TopicEntityType } from "@global-pulse/shared";
+﻿import type { GlobalTopic, Topic, TopicCategory, TopicEntity, TopicEntityType } from "@global-pulse/shared";
 import { cleanupTopicName } from "@/lib/utils/topic-name";
 import { buildTopicSummaries } from "@/lib/utils/topic-summary";
 
@@ -132,6 +132,8 @@ export interface TopicRow {
   source_ids: string[] | null;
   raw_post_ids?: number[] | null;
   burst_z?: number | null;
+  lifecycle_stage?: "emerging" | "peaking" | "fading" | null;
+  mini_trend?: number[] | null;
   velocity_per_hour?: number | null;
   acceleration?: number | null;
   spread_score?: number | null;
@@ -231,6 +233,8 @@ export function mapTopicRow(row: TopicRow): Topic {
     sourceIds: row.source_ids ?? [],
     rawPostIds: row.raw_post_ids ?? undefined,
     burstZ: toNullableNumber(row.burst_z),
+    lifecycleStage: row.lifecycle_stage ?? null,
+    miniTrend: row.mini_trend ?? null,
     velocityPerHour: toOptionalNumberOrNull(row.velocity_per_hour),
     acceleration: toOptionalNumberOrNull(row.acceleration),
     spreadScore: toOptionalNumberOrNull(row.spread_score),
@@ -280,3 +284,4 @@ export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
     scope: row.scope ?? undefined,
   };
 }
+
