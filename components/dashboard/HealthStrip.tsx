@@ -13,6 +13,7 @@ interface RegionsHealthResponse {
 interface SourcesHealthResponse {
   healthySources: number;
   totalSources: number;
+  autoDisabledSources24h?: number;
 }
 
 interface AnalyzerHealthResponse {
@@ -71,6 +72,7 @@ export function HealthStrip() {
 
   const freshnessMinutes = ageMinutes(regions?.latestSnapshotAt);
   const coverage = Math.round(((analyzer?.metrics?.geminiSuccessRate ?? 0) * 100));
+  const autoDisabledCount = sources?.autoDisabledSources24h ?? 0;
 
   return (
     <Link
@@ -89,6 +91,11 @@ export function HealthStrip() {
           Sources: {sources?.healthySources ?? 0}/{sources?.totalSources ?? 0} healthy
         </span>
         <span>Gemini: {coverage}% summary coverage</span>
+        {autoDisabledCount > 0 ? (
+          <span className="rounded-full border border-red-500/50 bg-red-500/10 px-2 py-0.5 text-red-300">
+            auto-disabled {autoDisabledCount}
+          </span>
+        ) : null}
       </div>
     </Link>
   );

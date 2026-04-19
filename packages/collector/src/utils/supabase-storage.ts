@@ -3,6 +3,12 @@ import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/post
 import type { Pool } from "pg";
 import { Logger } from "./logger";
 
+export interface PersistScraperResultOutcome {
+  persisted: boolean;
+  insertedCount: number;
+  errorMessage?: string;
+}
+
 function toIsoTimestamp(value?: string): string | null {
   if (!value) return null;
   const parsed = new Date(value);
@@ -54,8 +60,12 @@ function getPostgresClient(): Pool | null {
   }
 }
 
-async function persistWithPostgres(pool: Pool, result: ScraperResult): Promise<void> {
+async function persistWithPostgres(
+  pool: Pool,
+  result: ScraperResult,
+): Promise<PersistScraperResultOutcome> {
   const now = new Date().toISOString();
+  let insertedCount = 0;
   const sourceMeta = await pool.query<{
     region_id: string;
     type: string;
@@ -80,7 +90,10 @@ async function persistWithPostgres(pool: Pool, result: ScraperResult): Promise<v
       `,
       [result.error ?? "unknown error", now, result.sourceId],
     );
-    return;
+    return {
+      persisted: true,
+      insertedCount: 0,
+    };
   }
 
   if (result.posts.length > 0) {
@@ -109,7 +122,7 @@ async function persistWithPostgres(pool: Pool, result: ScraperResult): Promise<v
       );
     }
 
-    await pool.query(
+    const insertResult = await pool.query(
       `
       insert into raw_posts (
         source_id, external_id, title, body_preview, url, author,
@@ -132,6 +145,7 @@ async function persistWithPostgres(pool: Pool, result: ScraperResult): Promise<v
       `,
       values,
     );
+    insertedCount = insertResult.rowCount ?? 0;
   }
 
   const rankedPortalPosts = result.posts
@@ -179,22 +193,37 @@ async function persistWithPostgres(pool: Pool, result: ScraperResult): Promise<v
     `,
     [now, result.sourceId],
   );
+
+  return {
+    persisted: true,
+    insertedCount,
+  };
 }
 
-export async function persistScraperResult(result: ScraperResult): Promise<void> {
+export async function persistScraperResult(result: ScraperResult): Promise<PersistScraperResultOutcome> {
   const postgres = getPostgresClient();
   if (!postgres) {
     Logger.warn(`[${result.sourceId}] PostgreSQL configuration unavailable. Skipping persistence.`);
-    return;
+    return {
+      persisted: false,
+      insertedCount: 0,
+      errorMessage: "postgres_not_configured",
+    };
   }
 
   try {
-    await persistWithPostgres(postgres, result);
+    return await persistWithPostgres(postgres, result);
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     Logger.error(
       `[${result.sourceId}] PostgreSQL persistence failed: ${
-        error instanceof Error ? error.message : String(error)
+        errorMessage
       }`,
     );
+    return {
+      persisted: false,
+      insertedCount: 0,
+      errorMessage,
+    };
   }
 }

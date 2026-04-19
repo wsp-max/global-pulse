@@ -39,6 +39,7 @@ import { ReseteraScraper } from "./scrapers/us/resetera";
 import { SlashdotScraper } from "./scrapers/us/slashdot";
 import { Logger } from "./utils/logger";
 import { persistScraperResult } from "./utils/supabase-storage";
+import { recordCollectorRun, toCollectorRunErrorCode } from "./utils/collector-runs";
 
 const DEFAULT_SCRAPER_TIMEOUT_MS = Number(process.env.COLLECTOR_SCRAPER_TIMEOUT_MS ?? 90_000);
 const BROWSER_SCRAPER_TIMEOUT_MS = Number(process.env.COLLECTOR_BROWSER_TIMEOUT_MS ?? 150_000);
@@ -298,6 +299,8 @@ async function run(): Promise<void> {
   const results: ScraperResult[] = [];
 
   for (const scraper of scrapers) {
+    const startedAtIso = new Date().toISOString();
+    const startedAtMs = Date.now();
     assertCollectorMemoryBudget(scraper.sourceId);
     const timeoutMs = getScraperTimeoutMs(scraper.sourceId);
 
@@ -308,7 +311,34 @@ async function run(): Promise<void> {
     const result = await scrapeWithTimeout(scraper.sourceId, () => scraper.scrape(), timeoutMs);
     results.push(result);
 
-    await persistScraperResult(result);
+    const persistence = await persistScraperResult(result);
+    const finishedAtIso = new Date().toISOString();
+    const collectorStatus = result.success && persistence.persisted ? "success" : "failed";
+    const runErrorMessage =
+      result.success && persistence.persisted
+        ? null
+        : (result.error ?? persistence.errorMessage ?? "collector_or_persistence_failed");
+    const runOutcome = await recordCollectorRun({
+      sourceId: scraper.sourceId,
+      startedAt: startedAtIso,
+      finishedAt: finishedAtIso,
+      status: collectorStatus,
+      fetchedCount: result.posts.length,
+      insertedCount: persistence.insertedCount,
+      latencyMs: Math.max(1, Date.now() - startedAtMs),
+      errorCode: toCollectorRunErrorCode(runErrorMessage),
+      errorMessage: runErrorMessage,
+    });
+
+    if (!persistence.persisted) {
+      Logger.warn(
+        `[${scraper.sourceId}] persistence failed; collector run marked failed for observability`,
+      );
+    }
+
+    if (runOutcome.autoDisabled) {
+      Logger.warn(`[${scraper.sourceId}] auto-disabled in sources after 3 consecutive failures`);
+    }
 
     if (!result.success) {
       Logger.error(`[${scraper.sourceId}] failed: ${result.error ?? "unknown error"}`);
