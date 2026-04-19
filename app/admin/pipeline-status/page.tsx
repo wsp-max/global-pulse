@@ -2,8 +2,10 @@ import { REGIONS } from "@global-pulse/shared";
 import type { Pool } from "pg";
 import { getPostgresPoolOrNull } from "@/app/api/_shared/postgres-server";
 
+export const dynamic = "force-dynamic";
+
 interface AnalyzerBatchRow {
-  finished_at: string;
+  finished_at: string | Date;
   scope: "community" | "news" | "mixed";
   topics_count: number | string;
   enriched_count: number | string;
@@ -12,7 +14,7 @@ interface AnalyzerBatchRow {
 interface RegionSummaryRow {
   region_id: string;
   scope: "community" | "news" | "mixed" | null;
-  snapshot_at: string | null;
+  snapshot_at: string | Date | null;
   active_topics: number | string | null;
   active_sources: number | string | null;
   total_sources: number | string | null;
@@ -52,6 +54,20 @@ function toNumber(value: unknown): number {
     }
   }
   return 0;
+}
+
+function toIsoString(value: string | Date | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return String(value);
+  }
+  return parsed.toISOString();
 }
 
 async function fetchPipelineStatus(pool: Pool): Promise<PipelineStatusData> {
@@ -137,7 +153,7 @@ async function fetchPipelineStatus(pool: Pool): Promise<PipelineStatusData> {
       : 0;
 
     return {
-      finishedAt: row.finished_at,
+      finishedAt: toIsoString(row.finished_at) ?? "-",
       scope: row.scope,
       topicsCount,
       enrichedCount,
@@ -151,7 +167,7 @@ async function fetchPipelineStatus(pool: Pool): Promise<PipelineStatusData> {
     regionId: row.region_id,
     regionName: regionNameById.get(row.region_id) ?? row.region_id.toUpperCase(),
     scope: (row.scope ?? "community") as "community" | "news" | "mixed",
-    snapshotAt: row.snapshot_at,
+    snapshotAt: toIsoString(row.snapshot_at),
     activeTopics: toNumber(row.active_topics),
     activeSources: toNumber(row.active_sources),
     totalSources: toNumber(row.total_sources),
