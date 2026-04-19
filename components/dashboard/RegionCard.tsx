@@ -92,6 +92,12 @@ export function RegionCard({ region, scope = "community", onTopicSelect }: Regio
                 aria-label={`${topic.nameKo || topic.nameEn} 상세 열기`}
               >
                 <span>{topic.nameKo || topic.nameEn}</span>
+                {topic.dominantSourceShare !== null && topic.dominantSourceShare !== undefined && topic.dominantSourceShare > 0.8 ? (
+                  <span className="rounded-full border border-slate-500/40 bg-slate-500/10 px-1 text-[9px] text-slate-200">⚠️ 단일 출처</span>
+                ) : null}
+                {topic.sourceDiversity !== null && topic.sourceDiversity !== undefined && topic.sourceDiversity > 0.7 ? (
+                  <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1 text-[9px] text-emerald-200">✅ 다출처</span>
+                ) : null}
                 {sparkline ? (
                   <svg viewBox="0 0 28 8" className="h-2 w-7" aria-hidden="true">
                     <polyline points={sparkline} fill="none" stroke="var(--text-accent)" strokeWidth="1" />
@@ -101,6 +107,12 @@ export function RegionCard({ region, scope = "community", onTopicSelect }: Regio
             ) : (
               <span key={topic.nameEn} className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] px-2 py-0.5">
                 <span>{topic.nameKo || topic.nameEn}</span>
+                {topic.dominantSourceShare !== null && topic.dominantSourceShare !== undefined && topic.dominantSourceShare > 0.8 ? (
+                  <span className="rounded-full border border-slate-500/40 bg-slate-500/10 px-1 text-[9px] text-slate-200">⚠️ 단일 출처</span>
+                ) : null}
+                {topic.sourceDiversity !== null && topic.sourceDiversity !== undefined && topic.sourceDiversity > 0.7 ? (
+                  <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1 text-[9px] text-emerald-200">✅ 다출처</span>
+                ) : null}
                 {sparkline ? (
                   <svg viewBox="0 0 28 8" className="h-2 w-7" aria-hidden="true">
                     <polyline points={sparkline} fill="none" stroke="var(--text-accent)" strokeWidth="1" />
@@ -147,4 +159,5 @@ export function RegionCard({ region, scope = "community", onTopicSelect }: Regio
     </article>
   );
 }
+
 

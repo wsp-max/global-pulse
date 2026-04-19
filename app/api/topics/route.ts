@@ -67,7 +67,13 @@ async function getTopics(request: Request) {
   const scope = parseScope(searchParams.get("scope"));
   const startIso = periodStartIso(period);
   const sortColumn =
-    sort === "sentiment" ? "sentiment" : sort === "recent" ? "created_at" : "heat_score";
+    sort === "sentiment"
+      ? "sentiment"
+      : sort === "recent"
+        ? "created_at"
+        : sort === "diverse"
+          ? "(coalesce(heat_score, 0) * coalesce(source_diversity, 0))"
+          : "heat_score";
 
   const postgres = getPostgresPoolOrNull();
   if (postgres) {
@@ -105,7 +111,7 @@ async function getTopics(request: Request) {
           with filtered as (
             select
               id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
-              post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,scope,rank,period_start,period_end,
+              post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,source_diversity,dominant_source_share,scope,rank,period_start,period_end,
               null::float as velocity_per_hour,
               null::float as acceleration,
               null::float as spread_score,
@@ -131,7 +137,7 @@ async function getTopics(request: Request) {
           )
           select
             id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
-            post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,scope,rank,period_start,period_end,
+            post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,source_diversity,dominant_source_share,scope,rank,period_start,period_end,
             velocity_per_hour,acceleration,spread_score,propagation_timeline,propagation_edges,
             null::float[] as mini_trend
           from dedup
@@ -188,7 +194,7 @@ async function getTopics(request: Request) {
           with history as (
             select
               id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
-              post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,scope,rank,period_start,period_end,
+              post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,source_diversity,dominant_source_share,scope,rank,period_start,period_end,
               null::float as velocity_per_hour,
               null::float as acceleration,
               null::float as spread_score,
@@ -210,7 +216,7 @@ async function getTopics(request: Request) {
           )
           select
             id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
-            post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,scope,rank,period_start,period_end,
+            post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,source_diversity,dominant_source_share,scope,rank,period_start,period_end,
             velocity_per_hour,acceleration,spread_score,propagation_timeline,propagation_edges,
             null::float[] as mini_trend
           from dedup
@@ -322,6 +328,9 @@ async function getTopics(request: Request) {
     lastUpdated: new Date().toISOString(),
   });
 }
+
+
+
 
 
 

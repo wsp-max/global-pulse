@@ -1,4 +1,4 @@
-import { SOURCES, type Topic } from "@global-pulse/shared";
+﻿import { SOURCES, type Topic } from "@global-pulse/shared";
 import { analyzeSentiment } from "./sentiment-analyzer";
 import { calculateHeatScoreWithSourceDiversity } from "./heat-score-calculator";
 import {
@@ -206,29 +206,13 @@ const TOPIC_NAME_BLACKLIST = new Set([
   "viral",
   "legend",
   "breakingnews",
-  "충격",
-  "섬뜩",
-  "미쳤다",
-  "미친",
-  "만행",
-  "레전드",
-  "논란",
-  "속보",
-  "단독",
-  "입수",
-  "폭로",
-  "주요",
-  "관련",
-  "콘텐츠",
-  "및",
-  "등",
-  "速報",
-  "炎上",
-  "話題",
-  "震惊",
-  "重磅",
-  "独家",
-  "热议",
+  "shock",
+  "urgent",
+  "headline",
+  "topic",
+  "content",
+  "daily",
+  "update",
 ]);
 
 const LOW_SIGNAL_LABEL_PARTS = new Set([
@@ -300,29 +284,13 @@ const LOW_SIGNAL_LABEL_PARTS = new Set([
   "controversy",
   "viral",
   "legend",
-  "충격",
-  "섬뜩",
-  "미쳤다",
-  "미친",
-  "만행",
-  "레전드",
-  "논란",
-  "속보",
-  "단독",
-  "입수",
-  "폭로",
-  "주요",
-  "관련",
-  "콘텐츠",
-  "및",
-  "등",
-  "速報",
-  "炎上",
-  "話題",
-  "震惊",
-  "重磅",
-  "独家",
-  "热议",
+  "shock",
+  "urgent",
+  "headline",
+  "topic",
+  "content",
+  "daily",
+  "update",
 ]);
 
 const NEWS_SOURCE_IDS = new Set(
@@ -397,7 +365,7 @@ function isSingleTokenLabel(value: string): boolean {
 function splitLabelParts(value: string): string[] {
   return value
     .toLowerCase()
-    .split(/[\s/|,:;+\-–—]+/u)
+    .split(/[\s/|,:;+\-]+/u)
     .map((part) => part.trim())
     .filter(Boolean);
 }
@@ -833,7 +801,12 @@ export async function clusterTopics(
     const avgSentiment =
       sentiments.length > 0 ? sentiments.reduce((sum, value) => sum + value, 0) / sentiments.length : null;
 
-    const sourceIds = [...new Set(relatedPosts.map((post) => post.sourceId))];
+    const sourceCountMap = new Map<string, number>();
+    for (const post of relatedPosts) {
+      sourceCountMap.set(post.sourceId, (sourceCountMap.get(post.sourceId) ?? 0) + 1);
+    }
+
+    const sourceIds = [...sourceCountMap.keys()];
     const topicKeywords = [...new Set(clusterKeywords.map((keyword) => keywordOriginalMap.get(keyword) ?? keyword))];
     const topicName = buildRepresentativeTopicName({
       regionId,
@@ -874,6 +847,13 @@ export async function clusterTopics(
       rawPostIds: relatedPosts
         .map((post) => Number(post.id))
         .filter((postId) => Number.isInteger(postId) && postId > 0),
+      sourceDiversity: Number((sourceIds.length / Math.log(relatedPosts.length + Math.E)).toFixed(4)),
+      dominantSourceShare: Number(
+        (
+          Math.max(...[...sourceCountMap.values(), 0]) /
+          Math.max(1, relatedPosts.length)
+        ).toFixed(4),
+      ),
       periodStart: options.periodStart,
       periodEnd: options.periodEnd,
     });
@@ -971,3 +951,4 @@ export async function clusterTopics(
     rank: index + 1,
   }));
 }
+

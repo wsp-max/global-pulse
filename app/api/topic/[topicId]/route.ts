@@ -99,7 +99,7 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
               `
               select
                 id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,post_count,
-                total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,rank,period_start,period_end,
+                total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,source_diversity,dominant_source_share,rank,period_start,period_end,
                 null::float as velocity_per_hour,
                 null::float as acceleration,
                 null::float as spread_score,
@@ -186,7 +186,7 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
       `
       select
         id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,post_count,
-        total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,rank,period_start,period_end,
+        total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,source_diversity,dominant_source_share,rank,period_start,period_end,
         null::float as velocity_per_hour,
         null::float as acceleration,
         null::float as spread_score,
@@ -225,7 +225,7 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
         `
         select
           id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,post_count,
-          total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,rank,period_start,period_end,
+          total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,source_diversity,dominant_source_share,rank,period_start,period_end,
           null::float as velocity_per_hour,
           null::float as acceleration,
           null::float as spread_score,
@@ -285,4 +285,6 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
     topic: null,
   });
 }
+
+
 

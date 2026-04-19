@@ -134,6 +134,8 @@ export interface TopicRow {
   burst_z?: number | null;
   lifecycle_stage?: "emerging" | "peaking" | "fading" | null;
   mini_trend?: number[] | null;
+  source_diversity?: number | null;
+  dominant_source_share?: number | null;
   velocity_per_hour?: number | null;
   acceleration?: number | null;
   spread_score?: number | null;
@@ -235,6 +237,8 @@ export function mapTopicRow(row: TopicRow): Topic {
     burstZ: toNullableNumber(row.burst_z),
     lifecycleStage: row.lifecycle_stage ?? null,
     miniTrend: row.mini_trend ?? null,
+    sourceDiversity: toOptionalNumberOrNull(row.source_diversity),
+    dominantSourceShare: toOptionalNumberOrNull(row.dominant_source_share),
     velocityPerHour: toOptionalNumberOrNull(row.velocity_per_hour),
     acceleration: toOptionalNumberOrNull(row.acceleration),
     spreadScore: toOptionalNumberOrNull(row.spread_score),
@@ -284,4 +288,5 @@ export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
     scope: row.scope ?? undefined,
   };
 }
+
 

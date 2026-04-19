@@ -92,6 +92,8 @@ export function TopicDetailSheet({ topicId, onClose }: TopicDetailSheetProps) {
   const sparklineValues = timelineData?.buckets.map((item) => item.heatScore) ?? [];
   const sparkline = buildSparklinePoints(sparklineValues, 240, 40);
   const lifecycleStage = timelineData?.lifecycleStage ?? data?.topic?.lifecycleStage ?? "emerging";
+  const sourceDiversity = data?.topic?.sourceDiversity ?? null;
+  const dominantSourceShare = data?.topic?.dominantSourceShare ?? null;
 
   if (!topicId) {
     return null;
@@ -120,6 +122,16 @@ export function TopicDetailSheet({ topicId, onClose }: TopicDetailSheetProps) {
               <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${lifecycleClass(lifecycleStage)}`}>
                 {lifecycleStage}
               </span>
+              {dominantSourceShare !== null && dominantSourceShare > 0.8 ? (
+                <span className="rounded-full border border-slate-500/40 bg-slate-500/10 px-2 py-0.5 text-[10px] text-slate-200">
+                  ⚠️ 단일 출처
+                </span>
+              ) : null}
+              {sourceDiversity !== null && sourceDiversity > 0.7 ? (
+                <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200">
+                  ✅ 다출처 검증
+                </span>
+              ) : null}
             </div>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">{resolved.subtitle}</p>
           </div>
@@ -229,3 +241,4 @@ export function TopicDetailSheet({ topicId, onClose }: TopicDetailSheetProps) {
     </div>
   );
 }
+

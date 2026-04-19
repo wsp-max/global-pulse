@@ -58,6 +58,8 @@ interface TopicInsertRow {
   burst_z: number | null;
   anomaly_score: number | null;
   lifecycle_stage: "emerging" | "peaking" | "fading" | null;
+  source_diversity: number | null;
+  dominant_source_share: number | null;
   scope: AnalysisScope;
   rank: number | null;
   period_start: string;
@@ -500,6 +502,8 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         "burst_z",
         "anomaly_score",
         "lifecycle_stage",
+        "source_diversity",
+        "dominant_source_share",
         "scope",
         "rank",
         "period_start",
@@ -754,6 +758,8 @@ async function runRegionAnalysis(params: {
     burst_z: topic.burstZ ?? null,
     anomaly_score: topic.anomalyScore ?? null,
     lifecycle_stage: topic.lifecycleStage ?? null,
+    source_diversity: topic.sourceDiversity ?? null,
+    dominant_source_share: topic.dominantSourceShare ?? null,
     scope,
     rank: topic.rank ?? null,
     period_start: topic.periodStart,
@@ -867,6 +873,7 @@ runAnalysis().catch((error) => {
   logger.error(`Analysis failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });
+
 
 
 
