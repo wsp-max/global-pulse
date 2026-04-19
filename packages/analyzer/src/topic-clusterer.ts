@@ -1,6 +1,6 @@
 import type { Topic } from "@global-pulse/shared";
 import { analyzeSentiment } from "./sentiment-analyzer";
-import { calculateHeatScore } from "./heat-score-calculator";
+import { calculateHeatScoreWithSourceDiversity } from "./heat-score-calculator";
 import {
   buildTitlePhrases,
   sanitizePostTitle,
@@ -732,7 +732,9 @@ export async function clusterTopics(
         .filter((title) => title.length > 0),
       keywords: topicKeywords,
       sentiment: avgSentiment === null ? null : Number(avgSentiment.toFixed(3)),
-      heatScore: calculateHeatScore(heatInputs),
+      heatScore: calculateHeatScoreWithSourceDiversity(heatInputs, {
+        sourceDiversityCount: sourceIds.length,
+      }),
       postCount: relatedPosts.length,
       totalViews: relatedPosts.reduce((sum, post) => sum + post.viewCount, 0),
       totalLikes: relatedPosts.reduce((sum, post) => sum + post.likeCount, 0),

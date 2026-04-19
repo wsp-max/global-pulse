@@ -7,6 +7,10 @@ export interface HeatScoreInput {
   sourceWeight: number;
 }
 
+interface HeatScoreOptions {
+  sourceDiversityCount?: number;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -39,5 +43,19 @@ export function calculateHeatScore(items: HeatScoreInput[]): number {
   // Soft-cap keeps ranking differences in high-volume ranges instead of flattening to 2000.
   const normalized = 2000 * (1 - Math.exp(-rawTotal / 900));
   return clamp(normalized, 0, 2000);
+}
+
+function sourceDiversityMultiplier(sourceCount: number): number {
+  const safeCount = Number.isFinite(sourceCount) ? Math.max(1, sourceCount) : 1;
+  return Math.min(1 + Math.log2(safeCount), 2.2);
+}
+
+export function calculateHeatScoreWithSourceDiversity(
+  items: HeatScoreInput[],
+  options: HeatScoreOptions = {},
+): number {
+  const base = calculateHeatScore(items);
+  const diversity = sourceDiversityMultiplier(options.sourceDiversityCount ?? 1);
+  return clamp(base * diversity, 0, 2000);
 }
 
