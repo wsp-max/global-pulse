@@ -77,6 +77,53 @@ function toMs(value?: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function mergePropagationTimeline(
+  existing: GlobalTopic["propagationTimeline"] | undefined,
+  incoming: GlobalTopic["propagationTimeline"] | undefined,
+): GlobalTopic["propagationTimeline"] {
+  const merged = new Map<string, { firstPostAt: string; heatAtDiscovery: number; status?: "fading" | "steady" | "accelerating" }>();
+  const entries = [...(existing ?? []), ...(incoming ?? [])];
+
+  for (const item of entries) {
+    if (!item || !item.regionId) {
+      continue;
+    }
+    const current = merged.get(item.regionId);
+    const itemMs = toMs(item.firstPostAt) ?? Number.POSITIVE_INFINITY;
+    const currentMs = current ? toMs(current.firstPostAt) ?? Number.POSITIVE_INFINITY : Number.POSITIVE_INFINITY;
+
+    if (!current || itemMs < currentMs) {
+      merged.set(item.regionId, {
+        firstPostAt: item.firstPostAt,
+        heatAtDiscovery: item.heatAtDiscovery,
+        status: item.status,
+      });
+    }
+  }
+
+  return [...merged.entries()]
+    .map(([regionId, payload]) => ({ regionId, ...payload }))
+    .sort((left, right) => (toMs(left.firstPostAt) ?? 0) - (toMs(right.firstPostAt) ?? 0));
+}
+
+function mergePropagationEdges(
+  existing: GlobalTopic["propagationEdges"] | undefined,
+  incoming: GlobalTopic["propagationEdges"] | undefined,
+): GlobalTopic["propagationEdges"] {
+  const merged = new Map<string, { from: string; to: string; lagMinutes: number; confidence: number }>();
+  for (const edge of [...(existing ?? []), ...(incoming ?? [])]) {
+    if (!edge || !edge.from || !edge.to) {
+      continue;
+    }
+    const key = `${edge.from}:${edge.to}:${edge.lagMinutes}`;
+    const current = merged.get(key);
+    if (!current || edge.confidence > current.confidence) {
+      merged.set(key, edge);
+    }
+  }
+  return [...merged.values()];
+}
+
 function mergeRegionalSentiment(
   leftSentiment: number | undefined,
   leftHeat: number,
@@ -127,6 +174,8 @@ function mergeGlobalTopics(existing: GlobalTopic, incoming: GlobalTopic): Global
   const useIncomingFirstSeen =
     incomingFirstSeenMs !== null &&
     (existingFirstSeenMs === null || incomingFirstSeenMs < existingFirstSeenMs);
+  const propagationTimeline = mergePropagationTimeline(existing.propagationTimeline, incoming.propagationTimeline);
+  const propagationEdges = mergePropagationEdges(existing.propagationEdges, incoming.propagationEdges);
 
   return {
     ...existing,
@@ -141,10 +190,21 @@ function mergeGlobalTopics(existing: GlobalTopic, incoming: GlobalTopic): Global
     totalHeatScore: Number((existing.totalHeatScore + incoming.totalHeatScore).toFixed(3)),
     firstSeenRegion: useIncomingFirstSeen ? incoming.firstSeenRegion : existing.firstSeenRegion,
     firstSeenAt: useIncomingFirstSeen ? incoming.firstSeenAt : existing.firstSeenAt,
+    velocityPerHour: Number(
+      Math.max(existing.velocityPerHour ?? Number.NEGATIVE_INFINITY, incoming.velocityPerHour ?? Number.NEGATIVE_INFINITY) ||
+        0,
+    ),
+    acceleration: Number(
+      Math.max(existing.acceleration ?? Number.NEGATIVE_INFINITY, incoming.acceleration ?? Number.NEGATIVE_INFINITY) ||
+        0,
+    ),
+    spreadScore: Number(Math.max(existing.spreadScore ?? 0, incoming.spreadScore ?? 0)),
+    propagationTimeline,
+    propagationEdges,
   };
 }
 
-function dedupeAndMergeTopics(topics: GlobalTopic[], minRegions: number): GlobalTopic[] {
+function dedupeAndMergeTopics(topics: GlobalTopic[], minRegions: number, sort: "heat" | "spread"): GlobalTopic[] {
   const merged: GlobalTopic[] = [];
 
   for (const topic of [...topics].sort((a, b) => b.totalHeatScore - a.totalHeatScore)) {
@@ -167,7 +227,12 @@ function dedupeAndMergeTopics(topics: GlobalTopic[], minRegions: number): Global
 
   return merged
     .filter((topic) => topic.regions.length >= minRegions)
-    .sort((a, b) => b.totalHeatScore - a.totalHeatScore);
+    .sort((a, b) => {
+      if (sort === "spread") {
+        return (b.spreadScore ?? 0) - (a.spreadScore ?? 0) || b.totalHeatScore - a.totalHeatScore;
+      }
+      return b.totalHeatScore - a.totalHeatScore;
+    });
 }
 
 export async function GET(request: Request) {
@@ -178,6 +243,9 @@ async function getGlobalTopics(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(Number(searchParams.get("limit") ?? 10), 50);
   const minRegions = Math.max(Number(searchParams.get("minRegions") ?? 2), 1);
+  const sort = searchParams.get("sort") === "spread" ? "spread" : "heat";
+  const minAcceleration = Number(searchParams.get("min_acceleration") ?? Number.NaN);
+  const statusFilter = searchParams.get("status");
 
   const postgres = getPostgresPoolOrNull();
   if (postgres) {
@@ -186,10 +254,11 @@ async function getGlobalTopics(request: Request) {
         `
         select
           id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
-          topic_ids,total_heat_score,first_seen_region,first_seen_at,created_at
+          topic_ids,total_heat_score,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
+          propagation_timeline,propagation_edges,created_at
         from global_topics
         where expires_at is null or expires_at > now()
-        order by total_heat_score desc
+        order by ${sort === "spread" ? "spread_score" : "total_heat_score"} desc nulls last, total_heat_score desc
         limit 100
         `,
       );
@@ -203,9 +272,10 @@ async function getGlobalTopics(request: Request) {
           `
           select
             id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
-            topic_ids,total_heat_score,first_seen_region,first_seen_at,created_at
+            topic_ids,total_heat_score,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
+            propagation_timeline,propagation_edges,created_at
           from global_topics
-          order by created_at desc, total_heat_score desc
+          order by created_at desc, ${sort === "spread" ? "spread_score" : "total_heat_score"} desc nulls last
           limit 100
           `,
         );
@@ -216,9 +286,10 @@ async function getGlobalTopics(request: Request) {
           `
           select
             id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
-            topic_ids,total_heat_score,first_seen_region,first_seen_at,created_at
+            topic_ids,total_heat_score,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
+            propagation_timeline,propagation_edges,created_at
           from global_topics
-          order by created_at desc, total_heat_score desc
+          order by created_at desc, ${sort === "spread" ? "spread_score" : "total_heat_score"} desc nulls last
           limit 200
           `,
         );
@@ -232,12 +303,21 @@ async function getGlobalTopics(request: Request) {
         }
       }
 
-      mapped = dedupeAndMergeTopics(mapped, minRegions);
+      mapped = dedupeAndMergeTopics(mapped, minRegions, sort)
+        .filter((topic) => {
+          if (Number.isFinite(minAcceleration) && (topic.acceleration ?? 0) < minAcceleration) {
+            return false;
+          }
+          if (!statusFilter) {
+            return true;
+          }
+          return (topic.propagationTimeline ?? []).some((item) => item.status === statusFilter);
+        });
 
       return NextResponse.json({
         globalTopics: mapped.slice(0, limit),
         total: mapped.length,
-        meta: { limit, minRegions, dataState, supplementedFromHistory },
+        meta: { limit, minRegions, dataState, supplementedFromHistory, sort, minAcceleration, status: statusFilter },
         stale: dataState === "stale",
         configured: true,
         provider: "postgres",
@@ -261,6 +341,9 @@ async function getGlobalTopics(request: Request) {
     meta: {
       limit,
       minRegions,
+      sort,
+      minAcceleration,
+      status: statusFilter,
     },
     configured: false,
     provider: "none",

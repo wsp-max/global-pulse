@@ -79,7 +79,8 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
       `
       select
         id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
-        topic_ids,total_heat_score,first_seen_region,first_seen_at,created_at
+        topic_ids,total_heat_score,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
+        propagation_timeline,propagation_edges,created_at
       from global_topics
       where id = $1
       limit 1
@@ -109,7 +110,8 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
           `
           select
             id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
-            topic_ids,total_heat_score,first_seen_region,first_seen_at,created_at
+            topic_ids,total_heat_score,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
+            propagation_timeline,propagation_edges,created_at
           from global_topics
           where id <> $1
           order by total_heat_score desc
@@ -221,7 +223,8 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
         `
         select
           id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
-          topic_ids,total_heat_score,first_seen_region,first_seen_at,created_at
+          topic_ids,total_heat_score,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
+          propagation_timeline,propagation_edges,created_at
         from global_topics
         where topic_ids is not null and $1 = any(topic_ids)
         order by total_heat_score desc
