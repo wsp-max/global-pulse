@@ -8,9 +8,10 @@ interface HeaderClockProps {
 
 type FreshnessLevel = "fresh" | "warning" | "critical" | "unknown";
 
-interface RegionsResponseShape {
+interface RegionsHealthResponseShape {
+  activeRegions?: number;
+  latestSnapshotAt?: string | null;
   lastUpdated?: string;
-  regions?: Array<{ snapshotAt?: string | null; activeTopics?: number | null }>;
 }
 
 interface GlobalTopicsResponseShape {
@@ -82,29 +83,26 @@ function freshnessClass(level: FreshnessLevel): string {
 
 async function fetchDashboardMeta(basePath: string): Promise<DashboardMeta> {
   try {
-    const [regionsRes, globalRes] = await Promise.all([
-      fetch(`${basePath}/api/regions`, { cache: "no-store" }),
+    const [regionsHealthRes, globalRes] = await Promise.all([
+      fetch(`${basePath}/api/regions/health`, { cache: "no-store" }),
       fetch(`${basePath}/api/global-topics?limit=1`, { cache: "no-store" }),
     ]);
 
     const timestamps: number[] = [];
     let activeRegions: number | null = null;
 
-    if (regionsRes.ok) {
-      const regionsData = (await regionsRes.json()) as RegionsResponseShape;
-      const routeLastUpdated = toMillis(regionsData.lastUpdated);
-      if (routeLastUpdated !== null) {
-        timestamps.push(routeLastUpdated);
+    if (regionsHealthRes.ok) {
+      const regionsHealth = (await regionsHealthRes.json()) as RegionsHealthResponseShape;
+      activeRegions = typeof regionsHealth.activeRegions === "number" ? regionsHealth.activeRegions : null;
+
+      const healthLastUpdated = toMillis(regionsHealth.lastUpdated);
+      if (healthLastUpdated !== null) {
+        timestamps.push(healthLastUpdated);
       }
 
-      const activeRows = regionsData.regions ?? [];
-      activeRegions = activeRows.filter((row) => Number(row.activeTopics ?? 0) > 0).length;
-
-      for (const region of activeRows) {
-        const snapshotTime = toMillis(region.snapshotAt);
-        if (snapshotTime !== null) {
-          timestamps.push(snapshotTime);
-        }
+      const latestSnapshotAt = toMillis(regionsHealth.latestSnapshotAt);
+      if (latestSnapshotAt !== null) {
+        timestamps.push(latestSnapshotAt);
       }
     }
 
@@ -139,7 +137,7 @@ export function HeaderClock({ keyRegions }: HeaderClockProps) {
 
     const tickTimer = setInterval(() => {
       setNow(Date.now());
-    }, 1000);
+    }, 60_000);
 
     return () => {
       clearTimeout(mountTimer);

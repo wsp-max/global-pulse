@@ -1,15 +1,13 @@
 ﻿"use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import {
   GlobalIssuePanel,
   HotTopicTicker,
   LivePulseIndicator,
-  PropagationStream,
   PulseSignalBoard,
   RegionCard,
-  TopicDetailSheet,
-  WorldHeatMap,
 } from "@/components/dashboard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -17,6 +15,29 @@ import { useGlobalTopics } from "@/lib/hooks/useGlobalTopics";
 import { useRegions } from "@/lib/hooks/useRegions";
 import type { DashboardScope, GlobalTopicsApiResponse, RegionsApiResponse } from "@/lib/types/api";
 import { cleanupTopicName } from "@/lib/utils/topic-name";
+
+const WorldHeatMap = dynamic(
+  () => import("./WorldHeatMap").then((mod) => mod.WorldHeatMap),
+  {
+    ssr: false,
+    loading: () => <LoadingSkeleton className="h-[360px]" />,
+  },
+);
+
+const PropagationStream = dynamic(
+  () => import("./PropagationStream").then((mod) => mod.PropagationStream),
+  {
+    ssr: false,
+    loading: () => <LoadingSkeleton className="h-[280px]" />,
+  },
+);
+
+const TopicDetailSheet = dynamic(
+  () => import("./TopicDetailSheet").then((mod) => mod.TopicDetailSheet),
+  {
+    ssr: false,
+  },
+);
 
 interface DashboardClientProps {
   initialRegions?: RegionsApiResponse;
