@@ -238,7 +238,12 @@ async function searchTopics(request: Request) {
       select
         id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,sentiment_distribution,sentiment_reasoning_ko,sentiment_reasoning_en,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
         post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,anomaly_score,source_diversity,dominant_source_share,representative_excerpts,
-        velocity_per_hour,acceleration,spread_score,propagation_timeline,propagation_edges,scope,rank,period_start,period_end
+        null::float as velocity_per_hour,
+        null::float as acceleration,
+        null::float as spread_score,
+        null::jsonb as propagation_timeline,
+        null::jsonb as propagation_edges,
+        scope,rank,period_start,period_end
       from topics
       where ${topicWhere}
       order by heat_score desc
@@ -294,7 +299,12 @@ async function searchTopics(request: Request) {
           select
             id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,sentiment_distribution,sentiment_reasoning_ko,sentiment_reasoning_en,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
             post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,anomaly_score,source_diversity,dominant_source_share,representative_excerpts,
-            velocity_per_hour,acceleration,spread_score,propagation_timeline,propagation_edges,scope,rank,period_start,period_end
+            null::float as velocity_per_hour,
+            null::float as acceleration,
+            null::float as spread_score,
+            null::jsonb as propagation_timeline,
+            null::jsonb as propagation_edges,
+            scope,rank,period_start,period_end
           from topics
           where ${semanticWhere}
           order by created_at desc
