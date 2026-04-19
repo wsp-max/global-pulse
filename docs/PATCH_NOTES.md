@@ -4320,3 +4320,44 @@ pm run ops:snapshot -> completed (egions=6)
 - `npm run analyze -- --region me --hours 24`
 - `npm run analyze -- --region ru --hours 24`
 - `npm run analyze:global -- --hours 72 --limit 40 --similarity 0.24 --min-regions 2`
+
+## GP-20260419-107 (Dashboard QoL sweep: clock/basePath SSR quality + UTF-8 text recovery)
+### Scope
+- Applied user-reported P0/P1/P2 quality fixes to dashboard runtime with no API contract change.
+- Recovered broken UI strings caused by encoding corruption in core dashboard/navigation components.
+
+### Completed
+- Header clock fixes:
+  - split live clock into client component behavior and kept `hourCycle: "h23"`
+  - retained hydration-safe `--:--` initial render
+  - freshness badge text/ARIA restored to valid Korean (`갱신 N분 전`, `갱신 정보 없음`)
+- Dashboard and map UX:
+  - local world-atlas source path (`/pulse/geo/countries-110m.json`) with legend + Heat 설명
+  - heat visual normalization already applied (relative band/percent)
+- Language consistency and encoding cleanup:
+  - header/mobile nav labels unified in Korean
+  - repaired mojibake text in:
+    - `DashboardClient`
+    - `GlobalIssuePanel`
+    - `PulseSignalBoard`
+    - `WorldHeatMap`
+    - `HeaderClock`
+    - `MobileBottomNav`
+- Data quality path checks:
+  - global topic duplicate merge guard active (`/api/global-topics`)
+  - region topic `nameEn` divergence active for KR sample rows
+
+### Validation
+- Local (`NEXT_BASE_PATH=/pulse`):
+  - `npm run lint` -> pass
+  - `npm run build` -> pass
+  - `GET /pulse` -> 200
+  - `GET /pulse/api/regions` -> 200
+  - `GET /pulse/api/global-topics?limit=10` -> 200
+  - `GET /pulse/api/topics?region=kr` -> 200
+  - `24:` header text not present in SSR payload
+  - external world-atlas CDN ref not present
+- Runtime (`http://3.36.83.199/pulse`) pre-deploy verification of logic:
+  - `/api/global-topics?limit=10` duplicate signal check -> none
+  - `/api/topics?region=kr` `nameEn != nameKo` rows detected
+  - period/sort query returns differentiated topic order

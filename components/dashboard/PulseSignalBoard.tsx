@@ -61,7 +61,9 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-display text-sm tracking-[0.2em] text-[var(--text-accent)]">SIGNAL BOARD</p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">지금 이 순간 글로벌 리전 동조 신호를 요약합니다.</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              지금 이 순간 글로벌 리전 동조 신호를 요약합니다.
+            </p>
           </div>
           <div
             className="rounded-full border px-2 py-1 text-[11px] font-semibold"

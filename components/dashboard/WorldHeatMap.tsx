@@ -227,8 +227,8 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
               Heat Score 란?
             </summary>
             <p className="mt-2 max-w-sm rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)] p-2 leading-relaxed">
-              Heat Score는 대화량과 반응량을 묶어 계산한 지표입니다.
-              대략적으로 (posts + comments*0.5 + views/1000) * source_diversity 형태로 해석할 수 있습니다.
+              Heat Score는 게시글 볼륨과 반응량을 묶어 계산한 지표입니다. 일반적으로
+              (posts + comments*0.5 + views/1000) * source_diversity 형태로 해석할 수 있습니다.
             </p>
           </details>
         </div>

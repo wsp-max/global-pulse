@@ -178,10 +178,11 @@ export function HeaderClock({ keyRegions, activeRegions }: HeaderClockProps) {
   }, [latestIso, now]);
 
   const level = freshnessLevel(freshnessMinutes);
-  const freshnessText =
-    freshnessMinutes === null ? "갱신 정보 없음" : `갱신 ${freshnessMinutes}분 전`;
+  const freshnessText = freshnessMinutes === null ? "갱신 정보 없음" : `갱신 ${freshnessMinutes}분 전`;
   const freshnessAriaLabel =
-    freshnessMinutes === null ? "마지막 갱신 정보를 확인할 수 없음" : `마지막 갱신 ${freshnessMinutes}분 전`;
+    freshnessMinutes === null
+      ? "마지막 갱신 정보를 확인할 수 없음"
+      : `마지막 갱신 ${freshnessMinutes}분 전`;
 
   return (
     <div className="hidden items-center gap-4 text-xs text-[var(--text-secondary)] lg:flex">
@@ -200,3 +201,4 @@ export function HeaderClock({ keyRegions, activeRegions }: HeaderClockProps) {
     </div>
   );
 }
+

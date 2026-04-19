@@ -27,13 +27,13 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: "/timeline",
-    label: "\uD0C0\uC784\uB77C\uC778",
+    label: "타임라인",
     icon: BarChart3,
     match: (pathname) => pathname.startsWith("/timeline"),
   },
   {
     href: "/search",
-    label: "\uAC80\uC0C9",
+    label: "검색",
     icon: Search,
     match: (pathname) => pathname.startsWith("/search"),
   },

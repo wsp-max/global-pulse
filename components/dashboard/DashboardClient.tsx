@@ -71,7 +71,7 @@ export function DashboardClient({ initialRegions, initialGlobalTopics }: Dashboa
       {!regionsError && !isRegionsLoading && sortedRegions.length === 0 && (
         <EmptyState
           title="표시할 리전 데이터가 없습니다."
-          description="수집기와 분석기 실행 이후 데이터가 자동 반영됩니다."
+          description="수집기와 분석기 실행 후 데이터가 자동 반영됩니다."
         />
       )}
 

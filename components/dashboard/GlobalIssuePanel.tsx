@@ -87,4 +87,3 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
     </section>
   );
 }
-

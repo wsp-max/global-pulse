@@ -2533,3 +2533,24 @@
 ### Operational caveat fixed
 - Production env had `NODE_ENV=production`, so manual `npm ci` omitted dev deps and broke Next build.
 - Runtime deploy command was corrected to `npm ci --include=dev` before build.
+
+## Dashboard QoL Sweep (2026-04-19, GP-20260419-107)
+### Completed in this round
+- Restored live header clock behavior and `h23` format guard (no `24:xx`).
+- Added/kept freshness badge semantics with valid Korean text and ARIA labels.
+- Removed remaining mojibake in high-visibility UI blocks (header/nav/dashboard/global issue panel).
+- Kept global-topic dedupe and region-nameEn quality path active without schema/API change.
+- Kept heat-map geo source local (`/pulse/geo/countries-110m.json`) and no external CDN dependency.
+
+### Validation snapshot
+- Local build gate (`NEXT_BASE_PATH=/pulse`): `lint` pass, `build` pass.
+- Local route gate: `/pulse`, `/pulse/api/regions`, `/pulse/api/global-topics`, `/pulse/api/topics?region=kr` all 200.
+- Remote data gate (`3.36.83.199` pre-deploy read):
+  - global-topic duplicate check on top 10: none
+  - KR topics include `nameEn != nameKo` rows
+  - period/sort API queries return changed ordering
+
+### Remaining
+1. Deploy this commit to EC2 and re-check `/pulse` navigation labels and freshness badge rendering.
+2. Run post-deploy smoke: `/stock` 200, `/pulse` 200, `/pulse/api/health` 200.
+3. Optional: widen sentiment lexicon coverage for JP/TW/CN where zero concentration is still high.
