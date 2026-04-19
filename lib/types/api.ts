@@ -152,3 +152,30 @@ export interface IssueOverlapsApiResponse {
   configured?: boolean;
   lastUpdated?: string;
 }
+
+export interface PropagationMatrixCell {
+  fromRegion: string;
+  toRegion: string;
+  edgeCount: number;
+  avgLagMinutes: number | null;
+  sampleTopics: string[];
+}
+
+export interface PropagationMatrixInsight {
+  fromRegion: string;
+  toRegion: string;
+  share: number;
+  avgLagHours: number | null;
+  text: string;
+}
+
+export interface PropagationMatrixApiResponse {
+  scope: DashboardScope;
+  days: number;
+  regions: string[];
+  cells: PropagationMatrixCell[];
+  insight: PropagationMatrixInsight | null;
+  configured?: boolean;
+  provider?: "postgres" | "none";
+  lastUpdated?: string;
+}

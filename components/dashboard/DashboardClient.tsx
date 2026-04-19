@@ -8,6 +8,7 @@ import {
   GlobalIssuePanel,
   HotTopicTicker,
   LivePulseIndicator,
+  PropagationMatrix,
   PulseSignalBoard,
   RegionCard,
 } from "@/components/dashboard";
@@ -436,6 +437,8 @@ export function DashboardClient({
           onTopicSelect={openTopicSheet}
         />
       )}
+
+      {!regionsError && filteredRegions.length > 0 && <PropagationMatrix scope={activeScope} />}
 
       {isGlobalLoading && <LoadingSkeleton className="h-28" />}
       {globalError && (
