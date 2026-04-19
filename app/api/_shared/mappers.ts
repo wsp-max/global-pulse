@@ -37,6 +37,7 @@ export interface TopicRow {
   entities?: Array<{ text: string; type: string }> | null;
   aliases?: string[] | null;
   canonical_key?: string | null;
+  embedding_json?: number[] | null;
   heat_score: number | null;
   post_count: number | null;
   total_views: number | null;
@@ -81,6 +82,7 @@ export function mapTopicRow(row: TopicRow): Topic {
     entities: row.entities ?? undefined,
     aliases: row.aliases ?? undefined,
     canonicalKey: row.canonical_key ?? undefined,
+    embeddingJson: row.embedding_json ?? undefined,
     heatScore: toNumber(row.heat_score),
     postCount: toNumber(row.post_count),
     totalViews: toNumber(row.total_views),

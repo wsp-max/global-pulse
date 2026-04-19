@@ -57,6 +57,7 @@ export interface Topic {
   entities?: TopicEntity[];
   aliases?: string[];
   canonicalKey?: string;
+  embeddingJson?: number[] | null;
   burstZ?: number | null;
   rank?: number;
   periodStart: string;

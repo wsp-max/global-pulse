@@ -5,6 +5,7 @@ import type { Pool } from "pg";
 import { detectKeywordBursts } from "./burst-detector";
 import { extractKeywords, type AnalysisPostInput } from "./keyword-extractor";
 import { summarizeTopicsWithGemini } from "./gemini-summarizer";
+import { enrichTopicsWithEmbeddings } from "./topic-embeddings";
 import { clusterTopics } from "./topic-clusterer";
 
 const logger = getLogger("analyzer");
@@ -38,6 +39,7 @@ interface TopicInsertRow {
   entities: Array<{ text: string; type: string }>;
   aliases: string[];
   canonical_key: string | null;
+  embedding_json: number[] | null;
   heat_score: number;
   post_count: number;
   total_views: number;
@@ -226,6 +228,7 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         "entities",
         "aliases",
         "canonical_key",
+        "embedding_json",
         "heat_score",
         "post_count",
         "total_views",
@@ -338,7 +341,7 @@ async function runRegionAnalysis(params: {
     return;
   }
 
-  const analyzedTopics = useGemini
+  const summarizedTopics = useGemini
     ? await summarizeTopicsWithGemini(topics, { regionId }).catch((error) => {
         log(
           `[${regionId}] gemini summarization failed, falling back to local topics: ${
@@ -348,6 +351,14 @@ async function runRegionAnalysis(params: {
         return topics;
       })
     : topics;
+  const analyzedTopics = await enrichTopicsWithEmbeddings(summarizedTopics, { regionId }).catch((error) => {
+    log(
+      `[${regionId}] embedding enrichment failed, skipping embeddings: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+    return summarizedTopics;
+  });
 
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
@@ -363,6 +374,7 @@ async function runRegionAnalysis(params: {
     entities: topic.entities ?? [],
     aliases: topic.aliases ?? [],
     canonical_key: topic.canonicalKey ?? normalizeCanonicalKey(topic.nameEn),
+    embedding_json: topic.embeddingJson ?? null,
     heat_score: topic.heatScore,
     post_count: topic.postCount,
     total_views: topic.totalViews,
