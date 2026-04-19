@@ -726,6 +726,10 @@ export async function clusterTopics(
       regionId,
       nameKo: topicName,
       nameEn: topicNameEn,
+      sampleTitles: relatedPosts
+        .slice(0, 5)
+        .map((post) => sanitizePostTitle(post.title, post.sourceId))
+        .filter((title) => title.length > 0),
       keywords: topicKeywords,
       sentiment: avgSentiment === null ? null : Number(avgSentiment.toFixed(3)),
       heatScore: calculateHeatScore(heatInputs),

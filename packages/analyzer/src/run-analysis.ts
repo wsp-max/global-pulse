@@ -34,6 +34,10 @@ interface TopicInsertRow {
   summary_en: string | null;
   keywords: string[];
   sentiment: number | null;
+  category: string | null;
+  entities: Array<{ text: string; type: string }>;
+  aliases: string[];
+  canonical_key: string | null;
   heat_score: number;
   post_count: number;
   total_views: number;
@@ -108,6 +112,10 @@ function toAnalysisPost(row: RawPostRow): AnalysisPostInput {
 }
 
 function normalizeBurstTerm(value: string): string {
+  return value.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function normalizeCanonicalKey(value: string): string {
   return value.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
@@ -214,6 +222,10 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         "summary_en",
         "keywords",
         "sentiment",
+        "category",
+        "entities",
+        "aliases",
+        "canonical_key",
         "heat_score",
         "post_count",
         "total_views",
@@ -347,6 +359,10 @@ async function runRegionAnalysis(params: {
     summary_en: topic.summaryEn ?? null,
     keywords: topic.keywords,
     sentiment: topic.sentiment,
+    category: topic.category ?? null,
+    entities: topic.entities ?? [],
+    aliases: topic.aliases ?? [],
+    canonical_key: topic.canonicalKey ?? normalizeCanonicalKey(topic.nameEn),
     heat_score: topic.heatScore,
     post_count: topic.postCount,
     total_views: topic.totalViews,

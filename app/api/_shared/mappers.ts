@@ -30,8 +30,13 @@ export interface TopicRow {
   name_en: string;
   summary_ko: string | null;
   summary_en: string | null;
+  sample_titles?: string[] | null;
   keywords: string[] | null;
   sentiment: number | null;
+  category?: string | null;
+  entities?: Array<{ text: string; type: string }> | null;
+  aliases?: string[] | null;
+  canonical_key?: string | null;
   heat_score: number | null;
   post_count: number | null;
   total_views: number | null;
@@ -69,8 +74,13 @@ export function mapTopicRow(row: TopicRow): Topic {
     nameEn: row.name_en,
     summaryKo: row.summary_ko ?? undefined,
     summaryEn: row.summary_en ?? undefined,
+    sampleTitles: row.sample_titles ?? undefined,
     keywords: row.keywords ?? [],
     sentiment: toNullableNumber(row.sentiment),
+    category: row.category ?? undefined,
+    entities: row.entities ?? undefined,
+    aliases: row.aliases ?? undefined,
+    canonicalKey: row.canonical_key ?? undefined,
     heatScore: toNumber(row.heat_score),
     postCount: toNumber(row.post_count),
     totalViews: toNumber(row.total_views),

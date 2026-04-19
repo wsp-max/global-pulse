@@ -44,6 +44,7 @@ export interface Topic {
   nameEn: string;
   summaryKo?: string;
   summaryEn?: string;
+  sampleTitles?: string[];
   keywords: string[];
   sentiment: number | null;
   heatScore: number;
@@ -52,10 +53,34 @@ export interface Topic {
   totalLikes: number;
   totalComments: number;
   sourceIds: string[];
+  category?: TopicCategory;
+  entities?: TopicEntity[];
+  aliases?: string[];
+  canonicalKey?: string;
   burstZ?: number | null;
   rank?: number;
   periodStart: string;
   periodEnd: string;
+}
+
+export type TopicCategory =
+  | "politics"
+  | "economy"
+  | "tech"
+  | "entertainment"
+  | "sports"
+  | "society"
+  | "crime"
+  | "culture"
+  | "health"
+  | "science"
+  | "other";
+
+export type TopicEntityType = "person" | "org" | "product" | "event" | "place" | "work" | "other";
+
+export interface TopicEntity {
+  text: string;
+  type: TopicEntityType;
 }
 
 export interface GlobalTopic {
