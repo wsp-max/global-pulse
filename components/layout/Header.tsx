@@ -1,8 +1,8 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { REGIONS } from "@global-pulse/shared";
 import { HeaderClock } from "./HeaderClock";
 
-const NAV_LINKS = [
+const BASE_NAV_LINKS = [
   { href: "/", label: "대시보드" },
   { href: "/global-issues", label: "글로벌 이슈" },
   { href: "/timeline", label: "타임라인" },
@@ -11,6 +11,14 @@ const NAV_LINKS = [
 
 export function Header() {
   const keyRegions = ["Asia/Seoul", "Asia/Tokyo", "America/New_York"];
+  const dualMapEnabled = process.env.FEATURE_DUAL_MAP_UI === "true";
+  const navLinks = dualMapEnabled
+    ? [
+        ...BASE_NAV_LINKS,
+        { href: "/news", label: "뉴스 트랙" },
+        { href: "/compare", label: "커뮤 vs 뉴스" },
+      ]
+    : BASE_NAV_LINKS;
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border-default)] bg-[rgba(17,24,39,0.92)] backdrop-blur">
@@ -31,7 +39,7 @@ export function Header() {
         </div>
 
         <nav className="mt-3 hidden items-center gap-3 text-sm text-[var(--text-secondary)] md:flex">
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}

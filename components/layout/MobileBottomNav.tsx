@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Globe2, Home, Search } from "lucide-react";
+import { BarChart3, Globe2, Home, Newspaper, Search, GitCompareArrows } from "lucide-react";
 import type { ComponentType } from "react";
 
 interface NavItem {
@@ -12,7 +12,7 @@ interface NavItem {
   match: (pathname: string) => boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
+const BASE_NAV_ITEMS: NavItem[] = [
   {
     href: "/",
     label: "대시보드",
@@ -21,7 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: "/global-issues",
-    label: "글로벌 이슈",
+    label: "글로벌",
     icon: Globe2,
     match: (pathname) => pathname.startsWith("/global-issues"),
   },
@@ -39,13 +39,34 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+const DUAL_MAP_NAV_ITEMS: NavItem[] = [
+  {
+    href: "/news",
+    label: "뉴스",
+    icon: Newspaper,
+    match: (pathname) => pathname.startsWith("/news"),
+  },
+  {
+    href: "/compare",
+    label: "비교",
+    icon: GitCompareArrows,
+    match: (pathname) => pathname.startsWith("/compare"),
+  },
+];
+
 export function MobileBottomNav() {
   const pathname = usePathname() || "/";
+  const dualMapEnabled = process.env.NEXT_PUBLIC_FEATURE_DUAL_MAP_UI === "true";
+  const navItems = dualMapEnabled ? [...BASE_NAV_ITEMS, ...DUAL_MAP_NAV_ITEMS] : BASE_NAV_ITEMS;
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--border-default)] bg-[rgba(10,14,23,0.95)] pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 backdrop-blur md:hidden">
-      <ul className="mx-auto grid max-w-xl grid-cols-4 gap-1 px-2">
-        {NAV_ITEMS.map((item) => {
+      <ul
+        className={`mx-auto grid max-w-xl gap-1 px-2 ${
+          dualMapEnabled ? "grid-cols-6" : "grid-cols-4"
+        }`}
+      >
+        {navItems.map((item) => {
           const Icon = item.icon;
           const active = item.match(pathname);
 

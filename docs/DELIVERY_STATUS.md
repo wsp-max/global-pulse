@@ -2618,3 +2618,9 @@
   - `FEATURE_DUAL_MAP_UI=false` 기준 `/pulse/news`, `/pulse/compare` 404 동작 확인.
 - post-deploy에서 `scope=news` API 500 확인 후 DB 마이그레이션 적용(`0005_news_sources_and_scope.sql`)으로 복구.
 - 복구 후 news/compare API 200 정상화.
+
+## 2026-04-19 Recovery Update (news FK + tab exposure)
+- 뉴스 수집 실패(FK) 원인 복구: EC2에서 `seed:regions` 재적용 후 대상 news 소스 수집 성공 확인.
+- Pulse 네비게이션 라벨 한글 깨짐 복구.
+- Pulse 탭 노출 확장: 뉴스 트랙(`/news`), 커뮤 vs 뉴스(`/compare`)를 feature flag 기반으로 노출.
+- EC2 env에서 dual-map/news pipeline 활성화 값 적용 완료.

@@ -4528,3 +4528,28 @@ pm run ops:snapshot -> completed (egions=6)
   - `/pulse/api/regions?scope=news` -> 200
   - `/pulse/api/topics?region=kr&scope=news` -> 200
   - `/pulse/api/regions/compare?regionId=kr` -> 200
+
+## GP-20260419-111 (News source FK recovery + Pulse tab exposure)
+### Recovery
+- Root cause of news ingest failures (`raw_posts_source_id_fkey`) was missing source catalog rows for newly added news source IDs.
+- Applied source seed on EC2 (`npm run seed:regions`) and re-ran targeted news collect.
+- Verified targeted news collect succeeds without FK errors:
+  - `tuoitre_rss`, `thisday_rss`, `news24_rss` => `3/3 succeeded`
+
+### UI / Access
+- Fixed mojibake nav labels in Pulse header/mobile nav.
+- Added feature-driven nav entries for dual-map routes:
+  - `/news` (뉴스 트랙)
+  - `/compare` (커뮤 vs 뉴스)
+- Added `NEXT_PUBLIC_FEATURE_DUAL_MAP_UI` to `.env.example` for client-side tab exposure control.
+
+### Runtime env
+- Updated EC2 env (`/etc/global-pulse/global-pulse.env`):
+  - `FEATURE_NEWS_PIPELINE=true`
+  - `FEATURE_DUAL_MAP_UI=true`
+  - `NEXT_PUBLIC_FEATURE_DUAL_MAP_UI=true`
+
+### Local gates
+- `pnpm lint` pass
+- `pnpm test` pass (24/24)
+- `pnpm build` pass
