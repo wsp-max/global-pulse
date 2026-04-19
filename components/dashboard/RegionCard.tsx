@@ -1,4 +1,6 @@
-﻿import Link from "next/link";
+﻿"use client";
+
+import { useRouter } from "next/navigation";
 import { SOURCES } from "@global-pulse/shared";
 import { HeatBadge } from "@/components/shared/HeatBadge";
 import type { DashboardScope, RegionDashboardRow } from "@/lib/types/api";
@@ -7,21 +9,20 @@ import { toHeatPercent } from "@/lib/utils/heat";
 interface RegionCardProps {
   region: RegionDashboardRow;
   scope?: DashboardScope;
+  onTopicSelect?: (topicId: number) => void;
 }
 
 const PORTAL_SOURCE_ID_SET = new Set(
   SOURCES.filter((source) => source.type === "news" && source.newsCategory === "portal").map((source) => source.id),
 );
 
-export function RegionCard({ region, scope = "community" }: RegionCardProps) {
+export function RegionCard({ region, scope = "community", onTopicSelect }: RegionCardProps) {
+  const router = useRouter();
   const heatScore = Math.round(region.totalHeatScore);
   const sentimentPercent = Math.round(((region.avgSentiment + 1) / 2) * 100);
   const heatPercent = toHeatPercent(region.totalHeatScore, 2000, 10);
   const topKeywords = region.topKeywords.slice(0, 5);
-  const topicLabels = region.topTopics
-    .slice(0, 10)
-    .map((topic) => topic.nameKo || topic.nameEn)
-    .filter(Boolean);
+  const topTopics = region.topTopics.slice(0, 10);
   const extraTopicCount = Math.max(0, region.topTopics.length - 10);
   const hasPortalTrending =
     scope === "news" &&
@@ -29,10 +30,19 @@ export function RegionCard({ region, scope = "community" }: RegionCardProps) {
   const isPartiallyStale = region.dataState === "partially-stale";
 
   return (
-    <Link
-      href={`/region/${region.id}`}
-      className="block rounded-xl border border-[var(--border-default)] bg-[var(--gradient-card)] p-4 shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--border-hover)]"
+    <article
+      className="block cursor-pointer rounded-xl border border-[var(--border-default)] bg-[var(--gradient-card)] p-4 shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--border-hover)]"
       style={{ borderLeft: `3px solid ${region.color}` }}
+      role="button"
+      tabIndex={0}
+      aria-label={`${region.nameKo} 리전 상세 이동`}
+      onClick={() => router.push(`/region/${region.id}`)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          router.push(`/region/${region.id}`);
+        }
+      }}
     >
       <div className="flex items-center justify-between">
         <div className="font-medium">
@@ -51,9 +61,32 @@ export function RegionCard({ region, scope = "community" }: RegionCardProps) {
         TOP 키워드: {topKeywords.length > 0 ? topKeywords.join(" / ") : "데이터 수집 중"}
       </div>
 
-      <div className="mt-2 text-[11px] leading-relaxed text-[var(--text-tertiary)]">
-        Top Topics: {topicLabels.length > 0 ? topicLabels.join(" / ") : "수집 대기"}
-        {extraTopicCount > 0 ? ` / +${extraTopicCount}` : ""}
+      <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-[var(--text-tertiary)]">
+        {topTopics.length > 0 ? (
+          topTopics.map((topic) =>
+            typeof topic.id === "number" ? (
+              <button
+                key={topic.id}
+                type="button"
+                className="rounded-full border border-[var(--border-default)] px-2 py-0.5 hover:bg-[var(--bg-tertiary)]"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onTopicSelect?.(topic.id!);
+                }}
+                aria-label={`${topic.nameKo || topic.nameEn} 상세 열기`}
+              >
+                {topic.nameKo || topic.nameEn}
+              </button>
+            ) : (
+              <span key={topic.nameEn} className="rounded-full border border-[var(--border-default)] px-2 py-0.5">
+                {topic.nameKo || topic.nameEn}
+              </span>
+            ),
+          )
+        ) : (
+          <span>수집 대기</span>
+        )}
+        {extraTopicCount > 0 ? <span className="ml-1">+{extraTopicCount}</span> : null}
       </div>
 
       {isPartiallyStale && (
@@ -85,6 +118,6 @@ export function RegionCard({ region, scope = "community" }: RegionCardProps) {
           소스 {region.sourcesActive}/{region.sourcesTotal}
         </span>
       </div>
-    </Link>
+    </article>
   );
 }

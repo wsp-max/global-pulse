@@ -8,5 +8,6 @@ export { PropagationStream } from "./PropagationStream";
 export { DashboardClient } from "./DashboardClient";
 export { DualCompareClient } from "./DualCompareClient";
 export { MapControls } from "./MapControls";
+export { TopicDetailSheet } from "./TopicDetailSheet";
 
 

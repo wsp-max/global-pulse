@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   GlobalIssuePanel,
   HotTopicTicker,
@@ -8,6 +8,7 @@ import {
   PropagationStream,
   PulseSignalBoard,
   RegionCard,
+  TopicDetailSheet,
   WorldHeatMap,
 } from "@/components/dashboard";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -28,6 +29,8 @@ export function DashboardClient({
   initialGlobalTopics,
   scope = "community",
 }: DashboardClientProps) {
+  const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
+
   const {
     data: regionsData,
     isLoading: isRegionsLoading,
@@ -35,6 +38,7 @@ export function DashboardClient({
   } = useRegions(scope, {
     fallbackData: initialRegions,
   });
+
   const {
     data: globalTopicsData,
     isLoading: isGlobalLoading,
@@ -65,6 +69,43 @@ export function DashboardClient({
     )
     .slice(0, 10);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const applyHash = () => {
+      const match = window.location.hash.match(/^#topic=(\d+)$/);
+      if (!match) {
+        setSelectedTopicId(null);
+        return;
+      }
+      setSelectedTopicId(Number(match[1]));
+    };
+
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, []);
+
+  const openTopicSheet = (topicId: number) => {
+    setSelectedTopicId(topicId);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.hash = `topic=${topicId}`;
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
+
+  const closeTopicSheet = () => {
+    setSelectedTopicId(null);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.hash = "";
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
+
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-10 pt-6 lg:px-6">
       <HotTopicTicker items={tickerItems} />
@@ -93,7 +134,11 @@ export function DashboardClient({
       {!regionsError && sortedRegions.length > 0 && (
         <section className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
           <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3 shadow-[var(--shadow-card)] sm:p-4 md:flex md:flex-col">
-            <WorldHeatMap regions={sortedRegions} globalTopics={globalTopicsData?.globalTopics ?? []} />
+            <WorldHeatMap
+              regions={sortedRegions}
+              globalTopics={globalTopicsData?.globalTopics ?? []}
+              onTopicSelect={openTopicSheet}
+            />
             <div className="mt-4">
               <LivePulseIndicator />
             </div>
@@ -104,14 +149,18 @@ export function DashboardClient({
 
           <div className="space-y-4">
             {sortedRegions.map((region) => (
-              <RegionCard key={region.id} region={region} scope={scope} />
+              <RegionCard key={region.id} region={region} scope={scope} onTopicSelect={openTopicSheet} />
             ))}
           </div>
         </section>
       )}
 
       {!regionsError && sortedRegions.length > 0 && (
-        <PropagationStream regions={sortedRegions} globalTopics={globalTopicsData?.globalTopics ?? []} />
+        <PropagationStream
+          regions={sortedRegions}
+          globalTopics={globalTopicsData?.globalTopics ?? []}
+          onTopicSelect={openTopicSheet}
+        />
       )}
 
       {isGlobalLoading && <LoadingSkeleton className="h-28" />}
@@ -122,6 +171,8 @@ export function DashboardClient({
         />
       )}
       {!isGlobalLoading && !globalError && <GlobalIssuePanel topics={globalTopicsData?.globalTopics ?? []} />}
+
+      <TopicDetailSheet topicId={selectedTopicId} onClose={closeTopicSheet} />
     </main>
   );
 }

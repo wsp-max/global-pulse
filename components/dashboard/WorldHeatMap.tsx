@@ -12,6 +12,7 @@ interface WorldHeatMapProps {
   regions: RegionDashboardRow[];
   globalTopics?: GlobalTopic[];
   variant?: "community" | "news";
+  onTopicSelect?: (topicId: number) => void;
 }
 
 interface ClusterMarker {
@@ -155,7 +156,7 @@ function buildClusterMarkers(regions: RegionDashboardRow[], zoom: number): Clust
   return [...buckets.values()];
 }
 
-export function WorldHeatMap({ regions, globalTopics = [], variant = "community" }: WorldHeatMapProps) {
+export function WorldHeatMap({ regions, globalTopics = [], variant = "community", onTopicSelect }: WorldHeatMapProps) {
   const maxHeat = Math.max(...regions.map((region) => region.totalHeatScore), 1);
   const flowEdges = useMemo(
     () =>
@@ -279,7 +280,7 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                 </Geographies>
               </ComposableMap>
 
-              <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <defs>
                   {flowEdges.map((edge, index) => {
                     const volumeBand = toVolumeBand(edge.volumeHeatSum, maxVolume);
@@ -331,11 +332,12 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                         fill="none"
                         opacity={strokeOpacity}
                         markerEnd={`url(#arrow-${variant}-${index})`}
+                        style={{ pointerEvents: "none" }}
                       >
                         <title>{`From ${edge.from.toUpperCase()} to ${edge.to.toUpperCase()}, lag ${toLagText(edge.lagMinutes)}, confidence ${edge.confidence.toFixed(2)}, volume ${Math.round(edge.volumeHeatSum)}, edges ${edge.edgeCount}`}</title>
                       </path>
 
-                      <g transform={`translate(${curve.mx} ${curve.my})`}>
+                      <g transform={`translate(${curve.mx} ${curve.my})`} style={{ pointerEvents: "none" }}>
                         <rect x={-5} y={-3.4} width={10} height={4.8} rx={2.4} fill="rgba(10,14,23,0.75)" stroke="rgba(148,163,184,0.25)" />
                         <text textAnchor="middle" y={0.1} className="font-mono text-[2.6px]" fill={flowColor}>
                           {lagText}
@@ -370,9 +372,27 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                   const radius = marker.regions.length > 1 ? 1.4 + band * 3.1 : 1.1 + band * 2.6;
                   const fill = getTierColorByBand(band);
                   const primaryRegion = marker.regions[0]!;
+                  const targetTopicId = marker.regions
+                    .flatMap((region) => region.topTopics)
+                    .map((topic) => topic.id)
+                    .find((topicId): topicId is number => typeof topicId === "number");
+                  const canOpenTopic = Boolean(onTopicSelect && targetTopicId);
 
                   return (
-                    <g key={marker.key} transform={`translate(${marker.x} ${marker.y})`}>
+                    <g
+                      key={marker.key}
+                      transform={`translate(${marker.x} ${marker.y})`}
+                      className={canOpenTopic ? "cursor-pointer" : undefined}
+                      onPointerDown={(event) => {
+                        if (!canOpenTopic) return;
+                        event.stopPropagation();
+                      }}
+                      onClick={(event) => {
+                        if (!canOpenTopic || !targetTopicId) return;
+                        event.stopPropagation();
+                        onTopicSelect?.(targetTopicId);
+                      }}
+                    >
                       <circle
                         r={radius}
                         fill={fill}

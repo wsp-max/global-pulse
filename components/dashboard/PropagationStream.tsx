@@ -7,6 +7,7 @@ import type { RegionDashboardRow } from "@/lib/types/api";
 interface PropagationStreamProps {
   regions: RegionDashboardRow[];
   globalTopics: GlobalTopic[];
+  onTopicSelect?: (topicId: number) => void;
 }
 
 interface LaneStop {
@@ -103,7 +104,7 @@ function buildLanes(topics: GlobalTopic[]): PropagationLane[] {
   return topics.map(buildLane).filter((lane): lane is PropagationLane => Boolean(lane)).slice(0, 8);
 }
 
-export function PropagationStream({ regions, globalTopics }: PropagationStreamProps) {
+export function PropagationStream({ regions, globalTopics, onTopicSelect }: PropagationStreamProps) {
   void regions;
   const lanes = useMemo(() => buildLanes(globalTopics), [globalTopics]);
   const maxVelocity = Math.max(...lanes.map((lane) => lane.velocity), 1);
@@ -188,6 +189,19 @@ export function PropagationStream({ regions, globalTopics }: PropagationStreamPr
               );
 
               if (lane.topicId) {
+                if (onTopicSelect) {
+                  return (
+                    <button
+                      key={lane.key}
+                      type="button"
+                      className="block w-full text-left"
+                      aria-label={`${lane.label} 상세 열기`}
+                      onClick={() => onTopicSelect(lane.topicId!)}
+                    >
+                      {laneBody}
+                    </button>
+                  );
+                }
                 return (
                   <Link key={lane.key} href={`/topic/${lane.topicId}`}>
                     {laneBody}
