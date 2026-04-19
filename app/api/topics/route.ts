@@ -40,6 +40,14 @@ function periodStartIso(period: string): string {
   return start.toISOString();
 }
 
+function normalizeTopicKey(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 interface BatchSelectionRow {
   selected_created_at: string | null;
   is_fresh: boolean;
@@ -239,8 +247,32 @@ async function getTopics(request: Request) {
         dataState = "partially-stale";
       }
 
+      const sortedForDedupe = [...topicRows].sort((left, right) => {
+        const heatGap = Number(right.heat_score ?? 0) - Number(left.heat_score ?? 0);
+        if (heatGap !== 0) {
+          return heatGap;
+        }
+        const leftPeriod = new Date(left.period_end).getTime();
+        const rightPeriod = new Date(right.period_end).getTime();
+        return rightPeriod - leftPeriod;
+      });
+
+      const dedupedMap = new Map<string, TopicRow>();
+      for (const row of sortedForDedupe) {
+        const canonical = normalizeTopicKey(row.canonical_key);
+        const fallback = normalizeTopicKey(row.name_ko);
+        const key = canonical || fallback || normalizeTopicKey(row.name_en);
+        if (!key || dedupedMap.has(key)) {
+          continue;
+        }
+        dedupedMap.set(key, row);
+      }
+
+      const dedupedRows = [...dedupedMap.values()];
+      const dedupedCount = Math.max(0, topicRows.length - dedupedRows.length);
+
       return NextResponse.json({
-        topics: topicRows.map(mapTopicRow),
+        topics: dedupedRows.map(mapTopicRow),
         total: Number(countResult.rows[0]?.total ?? 0),
         region: getRegionById(region),
         snapshot: snapshotResult.rows[0] ?? null,
@@ -253,6 +285,7 @@ async function getTopics(request: Request) {
           periodStart: startIso,
           dataState,
           supplementedFromHistory,
+          dedupedCount,
           selectedBatchCreatedAt,
         },
         stale: dataState === "stale" || dataState === "partially-stale",
