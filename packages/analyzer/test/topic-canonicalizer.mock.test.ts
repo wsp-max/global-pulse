@@ -118,3 +118,64 @@ test("summarizeTopicsWithGemini maps category/entities/aliases from gemini respo
   assert.equal(summarized[1]?.category, "sports");
   assert.equal(typeof summarized[1]?.canonicalKey, "string");
 });
+
+test("summarizeTopicsWithGemini keeps lexical names when gemini returns low-signal clickbait labels", async () => {
+  process.env.GEMINI_API_KEY = "test-key";
+  process.env.ANALYZER_LLM_CANONICAL_BATCH = "1";
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes(":generateContent")) {
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify([
+                      {
+                        name_ko: "오늘의 주요 소식",
+                        name_en: "Major Related Update",
+                        summary_ko: "요약 텍스트",
+                        summary_en: "Summary text",
+                        sentiment: 0,
+                        category: "other",
+                        entities: [],
+                        aliases: [],
+                      },
+                    ]),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    if (url.includes("/models")) {
+      return new Response(
+        JSON.stringify({
+          models: [
+            {
+              name: "models/gemini-2.0-flash",
+              supportedGenerationMethods: ["generateContent"],
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response("not-found", { status: 404 });
+  };
+
+  const topics = [buildTopic("스트리트 파이터 대회", "Street Fighter Tournament")];
+  const summarized = await summarizeTopicsWithGemini(topics, { regionId: "kr" });
+
+  assert.equal(summarized.length, 1);
+  assert.equal(summarized[0]?.nameKo, "스트리트 파이터 대회");
+  assert.equal(summarized[0]?.nameEn, "Street Fighter Tournament");
+});

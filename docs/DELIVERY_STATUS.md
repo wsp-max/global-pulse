@@ -2573,3 +2573,10 @@
 ### Remaining
 1. Optional quality pass: US/EU/ME/RU nameEn quality tuning (still 일부 fallback 라벨 존재).
 2. Optional quality pass: region-specific sentiment lexicon 확장으로 null 비중 추가 감소.
+
+## Delivery Update (2026-04-19)
+- 수행: 상세 재검증(lint/test/build + EC2 서비스/API/타이머) 완료.
+- 보완: analyzer 토큰/라벨 필터 강화, Gemini 저신호 토픽명 자동 폴백 로직 추가.
+- 테스트: analyzer 테스트 22건 통과, 빌드 통과.
+- 배포: EC2 재배포 및 analyzer(지역/글로벌) 배치 재실행.
+- 운영확인: `/pulse` 및 `/pulse/api/health` 200, 글로벌 토픽 spread 정렬 응답 정상.

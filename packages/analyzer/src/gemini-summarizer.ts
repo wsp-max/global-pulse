@@ -36,6 +36,53 @@ const CATEGORY_VALUES: TopicCategory[] = [
 ];
 
 const ENTITY_TYPE_VALUES: TopicEntityType[] = ["person", "org", "product", "event", "place", "work", "other"];
+const LOW_SIGNAL_NAME_TERMS = new Set([
+  "news",
+  "issue",
+  "issues",
+  "topic",
+  "topics",
+  "update",
+  "updates",
+  "summary",
+  "digest",
+  "headline",
+  "headlines",
+  "content",
+  "contents",
+  "major",
+  "related",
+  "today",
+  "breaking",
+  "shocking",
+  "exclusive",
+  "controversy",
+  "viral",
+  "legend",
+  "소식",
+  "주요",
+  "관련",
+  "콘텐츠",
+  "이슈",
+  "충격",
+  "섬뜩",
+  "미쳤다",
+  "미친",
+  "만행",
+  "레전드",
+  "논란",
+  "속보",
+  "단독",
+  "입수",
+  "폭로",
+  "速報",
+  "話題",
+  "炎上",
+  "震惊",
+  "重磅",
+  "独家",
+  "热议",
+]);
 
 let cachedModels: string[] | null = null;
 let cachedModelsFetchedAt = 0;
@@ -80,6 +127,55 @@ function sanitizeJsonText(text: string): string {
 
 function normalizeCanonicalKey(value: string): string {
   return value.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function isLowSignalName(value: string): boolean {
+  const normalized = value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return true;
+  }
+
+  const tokens = normalized.split(" ").filter(Boolean);
+  let meaningfulCount = 0;
+  let lowSignalCount = 0;
+
+  for (const token of tokens) {
+    if (token.length < 2) {
+      continue;
+    }
+
+    if (LOW_SIGNAL_NAME_TERMS.has(token)) {
+      lowSignalCount += 1;
+      continue;
+    }
+
+    meaningfulCount += 1;
+  }
+
+  if (meaningfulCount === 0) {
+    return true;
+  }
+
+  if (lowSignalCount >= 1 && meaningfulCount <= 1) {
+    return true;
+  }
+
+  return false;
+}
+
+function preferMeaningfulName(candidate: string | undefined, fallback: string): string {
+  const trimmed = candidate?.trim() ?? "";
+  if (!trimmed) {
+    return fallback;
+  }
+
+  return isLowSignalName(trimmed) ? fallback : trimmed;
 }
 
 function toSentiment(value: unknown, fallback: number | null): number | null {
@@ -320,8 +416,8 @@ function chunkTopics(topics: Topic[], size: number): Topic[][] {
 }
 
 function applySummaryItem(topic: Topic, summary: GeminiSummaryItem | undefined): Topic {
-  const nameKo = summary?.name_ko?.trim() || topic.nameKo;
-  const nameEn = summary?.name_en?.trim() || topic.nameEn;
+  const nameKo = preferMeaningfulName(summary?.name_ko, topic.nameKo);
+  const nameEn = preferMeaningfulName(summary?.name_en, topic.nameEn);
   return {
     ...topic,
     nameKo,

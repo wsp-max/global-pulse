@@ -4396,3 +4396,36 @@ pm run ops:snapshot -> completed (egions=6)
   - `npm run analyze -- --hours 24`
   - `npm run analyze:global -- --hours 72 --limit 40 --similarity 0.24 --min-regions 2`
 - Result: refreshed topic/global-topic rows and sentiment now mixed with `null/non-zero` instead of forced all-zero output.
+
+---
+
+## GP-20260419-01 (Analyzer Quality Hardening + Re-Verification + Deploy)
+### Before -> After
+- Before:
+  - KR 상위 토픽에 클릭베이트 파편형 라벨(예: `섬뜩`, `주요`, `콘텐츠`)이 잔존
+  - Gemini canonical naming이 저신호 이름을 그대로 채택하는 경우가 있음
+- After:
+  - 토큰/라벨 stopword·blacklist 강화로 저품질 토픽명 필터링 강화
+  - Gemini 이름이 저신호일 때 기존 lexical 이름으로 자동 폴백
+  - lint/test/build 재검증 후 EC2 재배포 및 분석 배치 재실행
+
+### Changed Files
+- `packages/analyzer/src/keyword-extractor.ts`
+- `packages/analyzer/src/topic-clusterer.ts`
+- `packages/analyzer/src/gemini-summarizer.ts`
+- `packages/analyzer/test/topic-canonicalizer.mock.test.ts`
+
+### Verification
+- Local:
+  - `corepack pnpm lint`
+  - `corepack pnpm test` (22/22 pass)
+  - `corepack pnpm build`
+- EC2:
+  - `ALLOW_DIRTY_TRACKED=1 bash scripts/deploy-ec2.sh`
+  - `corepack pnpm analyze:gemini -- --hours 24`
+  - `corepack pnpm analyze:global -- --hours 24 --min-regions 2 --similarity 0.24`
+  - `/pulse`, `/pulse/api/health`, `/pulse/api/global-topics?sort=spread` HTTP 200 확인
+
+### Risk / Notes
+- 원격 워크트리에 운영 파일 변경(`infra/nginx/global-pulse.conf`)이 있어 배포 시 `ALLOW_DIRTY_TRACKED=1` 유지 필요.
+- 루트(`/`)는 현재 멀티사이트 라우팅 정책상 404이며 `/pulse`, `/stock` 영향 없음.
