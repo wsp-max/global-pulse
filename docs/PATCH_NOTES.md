@@ -4679,3 +4679,65 @@ pm run ops:snapshot -> completed (egions=6)
 
 ### Workspace hygiene
 - Removed root-level `.tmp*` artifacts before commit.
+
+## GP-20260419-019 (SEO/OG/sitemap/robots)
+### Changes
+- Added topic metadata + OG image route:
+  - app/topic/[topicId]/page.tsx (generateMetadata)
+  - app/topic/[topicId]/opengraph-image.tsx
+- Added crawler surfaces:
+  - app/sitemap.ts
+  - app/robots.ts
+
+### Validation
+- pnpm lint pass
+- pnpm test pass
+- pnpm build pass
+
+## GP-20260419-020 (Collector run observability + auto-disable)
+### Changes
+- Added collector run persistence utility:
+  - packages/collector/src/utils/collector-runs.ts
+- Wired collector run recording in packages/collector/src/run.ts
+- Updated persistence outcome reporting in packages/collector/src/utils/supabase-storage.ts
+- Auto-disable policy: source set is_active=false after 3 consecutive failed runs
+- Extended source health exposure:
+  - app/api/sources/health/route.ts
+  - app/admin/health/page.tsx
+  - components/dashboard/HealthStrip.tsx
+
+### Validation
+- pnpm lint pass
+- pnpm test pass
+
+## GP-20260419-021 (Semantic search + header SearchBar)
+### Changes
+- Expanded app/api/search/route.ts with semantic ranking via Gemini embeddings
+- Added query embedding LRU cache (size 500, ttl 1h)
+- Added header search UI:
+  - components/layout/SearchBar.tsx
+  - components/layout/Header.tsx wiring
+- Added search query prefill support in app/search/page.tsx
+- Updated i18n/type surfaces:
+  - lib/i18n/dictionary.ts
+  - lib/types/api.ts
+
+### Validation
+- pnpm lint pass
+- pnpm test pass
+
+## GP-20260419-022 (Admin runtime tuning + audit)
+### Changes
+- Added tuning definitions/util:
+  - lib/admin/tuning.ts
+- Added tuning API:
+  - app/api/admin/tuning/route.ts
+- Added tuning UI:
+  - app/admin/tuning/page.tsx
+  - components/admin/TuningPanel.tsx
+- Linked admin health page to tuning console
+
+### Validation
+- pnpm lint pass
+- pnpm test pass
+- pnpm build pass

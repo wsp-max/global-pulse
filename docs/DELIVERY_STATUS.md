@@ -2674,3 +2674,30 @@
 - Kept and validated Reddit/Fark degraded recovery patches.
 - Local validation passed: `lint`, `test` (25/25), `build`.
 - Degraded re-test delta: `40/63 -> 50/63` recovered, with reddit-403 `36/37` recovered.
+
+## 2026-04-19 Status Update (GP-20260419-019~022)
+- Branch: feat/phase-g-polish
+- Newly completed commits:
+  - GP-20260419-019 feat-seo-root-ssr-og-sitemap-robots
+  - GP-20260419-020 feat-collector-run-observability-and-auto-disable
+  - GP-20260419-021 feat-api-ui-semantic-search-embedding
+  - GP-20260419-022 feat-admin-runtime-tuning-with-audit
+
+### What changed
+1. SEO/OG surface completed for topic pages:
+   - metadata generation, dynamic OG image, sitemap, robots
+2. Collector observability completed:
+   - collector_runs write path, 24h success/p95 health reporting,
+   - 3-consecutive-failure auto-disable policy
+3. Search upgraded:
+   - semantic embedding ranking + lexical fallback in /api/search
+   - header SearchBar with / shortcut and quick topic open
+4. Admin tuning console added:
+   - /api/admin/tuning + /admin/tuning
+   - app_settings/app_settings_audit read/write with env override visibility
+
+### Validation snapshot
+- pnpm lint: pass
+- pnpm test: pass
+- pnpm build: pass
+- ops:gemini:verify: exit 2 locally (missing GEMINI_API_KEY in local shell)
