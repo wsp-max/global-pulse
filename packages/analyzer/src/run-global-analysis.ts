@@ -48,8 +48,8 @@ interface GlobalTopicInsertRow {
   summary_en: string | null;
   summary_ko: string | null;
   regions: string[];
-  regional_sentiments: Record<string, number>;
-  regional_heat_scores: Record<string, number>;
+  regional_sentiments: string;
+  regional_heat_scores: string;
   topic_ids: number[];
   total_heat_score: number;
   first_seen_region: string | null;
@@ -57,13 +57,8 @@ interface GlobalTopicInsertRow {
   velocity_per_hour: number;
   acceleration: number;
   spread_score: number;
-  propagation_timeline: Array<{
-    regionId: string;
-    firstPostAt: string;
-    heatAtDiscovery: number;
-    status?: "fading" | "steady" | "accelerating";
-  }>;
-  propagation_edges: Array<{ from: string; to: string; lagMinutes: number; confidence: number }>;
+  propagation_timeline: string;
+  propagation_edges: string;
   expires_at: string;
 }
 
@@ -506,8 +501,8 @@ async function runGlobalAnalysis(): Promise<void> {
     summary_en: topic.summaryEn ?? null,
     summary_ko: topic.summaryKo ?? null,
     regions: topic.regions,
-    regional_sentiments: topic.regionalSentiments,
-    regional_heat_scores: topic.regionalHeatScores,
+    regional_sentiments: JSON.stringify(topic.regionalSentiments),
+    regional_heat_scores: JSON.stringify(topic.regionalHeatScores),
     topic_ids: topic.topicIds,
     total_heat_score: topic.totalHeatScore,
     first_seen_region: topic.firstSeenRegion ?? null,
@@ -515,8 +510,8 @@ async function runGlobalAnalysis(): Promise<void> {
     velocity_per_hour: Number(topic.velocityPerHour ?? 0),
     acceleration: Number(topic.acceleration ?? 0),
     spread_score: Number(topic.spreadScore ?? 0),
-    propagation_timeline: topic.propagationTimeline ?? [],
-    propagation_edges: topic.propagationEdges ?? [],
+    propagation_timeline: JSON.stringify(topic.propagationTimeline ?? []),
+    propagation_edges: JSON.stringify(topic.propagationEdges ?? []),
     expires_at: expiresAt,
   }));
 

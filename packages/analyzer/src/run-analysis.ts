@@ -36,10 +36,10 @@ interface TopicInsertRow {
   keywords: string[];
   sentiment: number | null;
   category: string | null;
-  entities: Array<{ text: string; type: string }>;
+  entities: string;
   aliases: string[];
   canonical_key: string | null;
-  embedding_json: number[] | null;
+  embedding_json: string | null;
   heat_score: number;
   post_count: number;
   total_views: number;
@@ -373,10 +373,10 @@ async function runRegionAnalysis(params: {
     keywords: topic.keywords,
     sentiment: topic.sentiment,
     category: topic.category ?? null,
-    entities: topic.entities ?? [],
+    entities: JSON.stringify(topic.entities ?? []),
     aliases: topic.aliases ?? [],
     canonical_key: topic.canonicalKey ?? normalizeCanonicalKey(topic.nameEn),
-    embedding_json: topic.embeddingJson ?? null,
+    embedding_json: topic.embeddingJson ? JSON.stringify(topic.embeddingJson) : null,
     heat_score: topic.heatScore,
     post_count: topic.postCount,
     total_views: topic.totalViews,
