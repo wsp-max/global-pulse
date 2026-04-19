@@ -4500,3 +4500,31 @@ pm run ops:snapshot -> completed (egions=6)
   - `FEATURE_DUAL_MAP_UI=false` -> `/pulse` 200, `/pulse/news` 404, `/pulse/compare` 404
   - `FEATURE_DUAL_MAP_UI=true` -> `/pulse` 200, `/pulse/news` 200, `/pulse/compare` 200
 - `corepack pnpm ops:news:verify-feeds` -> pass (`total=73`, `reachable=51`, `shouldActivate=44`)
+
+## GP-20260419-110 (EC2 deploy + post-migration validation)
+### Deploy
+- Local commit `cae8a7f` pushed to `origin/master` and deployed on EC2 (`/srv/projects/project2/global-pulse`) via:
+  - `ALLOW_DIRTY_TRACKED=1 bash scripts/deploy-ec2.sh`
+- Remote web service state:
+  - `systemctl is-active global-pulse-web.service` -> `active`
+  - deployed commit on EC2 -> `cae8a7f`
+
+### Runtime smoke (external)
+- `http://3.36.83.199/stock` -> 200 (unchanged)
+- `http://3.36.83.199/pulse` -> 200
+- `http://3.36.83.199/pulse/api/health` -> 200
+- `http://3.36.83.199/` -> 404 (unchanged)
+
+### Feature gate hard check
+- `FEATURE_DUAL_MAP_UI=false` 상태에서:
+  - `/pulse/news` -> 404
+  - `/pulse/compare` -> 404
+
+### Post-deploy fix
+- `GET /pulse/api/regions?scope=news` returned 500 before migration 0005 apply.
+- Ran remote migration with env sourced:
+  - `npm run db:init` -> `Applied: 0005_news_sources_and_scope.sql`
+- After migration:
+  - `/pulse/api/regions?scope=news` -> 200
+  - `/pulse/api/topics?region=kr&scope=news` -> 200
+  - `/pulse/api/regions/compare?regionId=kr` -> 200

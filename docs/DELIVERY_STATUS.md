@@ -2606,3 +2606,15 @@
   - OFF: `/pulse` 200, `/pulse/news` 404, `/pulse/compare` 404
   - ON: `/pulse` 200, `/pulse/news` 200, `/pulse/compare` 200
 - Build/lint/test and feed verification all green in local gate run.
+
+## 2026-04-19 Deploy Update (master `cae8a7f`)
+- EC2 배포 완료 (`/srv/projects/project2/global-pulse`) 및 웹 서비스 `active` 확인.
+- 멀티사이트 영향 점검 통과:
+  - `/stock` 200 유지
+  - `/pulse` 200
+  - `/pulse/api/health` 200
+  - `/` 404 유지
+- dual-map feature gate 검증:
+  - `FEATURE_DUAL_MAP_UI=false` 기준 `/pulse/news`, `/pulse/compare` 404 동작 확인.
+- post-deploy에서 `scope=news` API 500 확인 후 DB 마이그레이션 적용(`0005_news_sources_and_scope.sql`)으로 복구.
+- 복구 후 news/compare API 200 정상화.
