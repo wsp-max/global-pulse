@@ -2651,3 +2651,16 @@
 - Admin runtime status page added: `/pulse/admin/pipeline-status`.
 - Local validation complete: lint pass, tests pass, build pass.
 - Pending runtime step on EC2: run source-health/backfill with production DB env and apply activation with operator approval flag.
+
+## 2026-04-19 Status Update (GP-20260419-116)
+- Fixed fallback topic leakage where `region xx topic n` appeared in `/pulse` HTML payload.
+- Applied topic-name cleanup consistently at API mapper layer (`nameKo/nameEn`) and canonical key normalization.
+- Repaired UTF-8 corruption in `lib/utils/topic-name.ts` placeholders/separators.
+- Re-validated and redeployed to EC2 (`3.36.83.199`).
+- Live checks passed:
+  - `/stock` 200
+  - `/pulse` 200
+  - `/pulse/news` 200
+  - `/pulse/compare` 200
+  - `/pulse/admin/pipeline-status` 200
+  - `/pulse` HTML fallback regex match count: 0

@@ -4632,3 +4632,25 @@ pm run ops:snapshot -> completed (egions=6)
   - `scripts/backfill-recent-topic-enrichment.ts`
 - Expanded community source coverage and wired new Reddit source IDs in constants/collector/test-scraper.
 - Validation: `npm run lint`, `npm test` (25/25), `npm run build` all pass.
+
+## GP-20260419-116 (Fallback topic string leak fix + redeploy)
+### Problem
+- `/pulse` HTML 내부 JSON에 `region xx topic n` 문자열이 `canonicalKey`로 남아 브라우저 검색 시 fallback 패턴이 노출됨.
+- `lib/utils/topic-name.ts` 일부 문자열이 깨진 상태(UTF-8 손상)로 남아있어 표시 일관성이 떨어짐.
+
+### Changes
+- `lib/utils/topic-name.ts`
+  - UTF-8로 재작성, pending/fallback 라벨 정리.
+  - keyword fallback joiner를 ` · `로 통일.
+  - placeholder를 `🌐 토픽 #id` 형식으로 정리.
+- `app/api/_shared/mappers.ts`
+  - `mapTopicRow` / `mapGlobalTopicRow`에서 `cleanupTopicName` 적용.
+  - `canonicalKey`가 `region xx topic n` 패턴이면 정제된 display 이름 기반 canonical key로 치환.
+
+### Verification
+- Local: `npm run lint`, `npm test`, `npm run build` 모두 통과.
+- Deploy: EC2 `ALLOW_DIRTY_TRACKED=1 bash scripts/deploy-ec2.sh` 성공.
+- Runtime:
+  - `/stock`, `/pulse`, `/pulse/news`, `/pulse/compare`, `/pulse/admin/pipeline-status` 모두 200.
+  - `/pulse` HTML fallback 패턴 `region xx topic n` 매치 수 = 0.
+  - `/pulse/api/topics?region=kr&limit=3`에서 `nameKo/nameEn/canonicalKey`가 정제값으로 반환됨.
