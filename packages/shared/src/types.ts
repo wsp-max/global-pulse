@@ -62,6 +62,14 @@ export interface Topic {
   sampleTitles?: string[];
   keywords: string[];
   sentiment: number | null;
+  sentimentDistribution?: {
+    positive: number;
+    negative: number;
+    neutral: number;
+    controversial: number;
+  } | null;
+  sentimentReasoningKo?: string | null;
+  sentimentReasoningEn?: string | null;
   heatScore: number;
   heatScoreDisplay?: number | null;
   postCount: number;

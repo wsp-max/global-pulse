@@ -1,4 +1,4 @@
-import { SOURCES } from "@global-pulse/shared";
+﻿import { SOURCES } from "@global-pulse/shared";
 import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
 import { getLogger } from "@global-pulse/shared/server-logger";
 import type { Pool } from "pg";
@@ -38,6 +38,9 @@ interface TopicInsertRow {
   summary_en: string | null;
   keywords: string[];
   sentiment: number | null;
+  sentiment_distribution: string | null;
+  sentiment_reasoning_ko: string | null;
+  sentiment_reasoning_en: string | null;
   category: string | null;
   entities: string;
   aliases: string[];
@@ -361,6 +364,9 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         "summary_en",
         "keywords",
         "sentiment",
+        "sentiment_distribution",
+        "sentiment_reasoning_ko",
+        "sentiment_reasoning_en",
         "category",
         "entities",
         "aliases",
@@ -550,6 +556,9 @@ async function runRegionAnalysis(params: {
     summary_en: topic.summaryEn ?? null,
     keywords: topic.keywords,
     sentiment: topic.sentiment,
+    sentiment_distribution: topic.sentimentDistribution ? JSON.stringify(topic.sentimentDistribution) : null,
+    sentiment_reasoning_ko: topic.sentimentReasoningKo ?? null,
+    sentiment_reasoning_en: topic.sentimentReasoningEn ?? null,
     category: topic.category ?? null,
     entities: JSON.stringify(topic.entities ?? []),
     aliases: topic.aliases ?? [],
@@ -677,4 +686,5 @@ runAnalysis().catch((error) => {
   logger.error(`Analysis failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });
+
 

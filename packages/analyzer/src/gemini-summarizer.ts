@@ -6,6 +6,11 @@
   type TopicEntityType,
 } from "@global-pulse/shared";
 import { getLogger } from "@global-pulse/shared/server-logger";
+import {
+  distributionFromSentiment,
+  normalizeSentimentDistribution,
+  normalizeSentimentReasoning,
+} from "./sentiment";
 
 const GEMINI_API_BASE = process.env.GEMINI_API_BASE?.trim() || "https://generativelanguage.googleapis.com";
 const GEMINI_API_VERSION = process.env.GEMINI_API_VERSION?.trim() || "v1beta";
@@ -29,6 +34,8 @@ const ANALYZER_GEMINI_TIMEOUT_MS = Math.max(
 
 const FALLBACK_SUMMARY_KO = "요약 준비 중";
 const FALLBACK_SUMMARY_EN = "Summary pending";
+const FALLBACK_SENTIMENT_REASONING_KO = "감성 근거 분석 중";
+const FALLBACK_SENTIMENT_REASONING_EN = "Sentiment reasoning pending";
 const SUMMARY_MIN_LENGTH = 40;
 
 const CATEGORY_VALUES: TopicCategory[] = [
@@ -102,13 +109,25 @@ const RESPONSE_SCHEMA = {
   type: "array",
   items: {
     type: "object",
-    required: ["name_ko", "name_en", "summary_ko", "summary_en", "sentiment", "category", "entities", "aliases"],
+    required: ["name_ko", "name_en", "summary_ko", "summary_en", "sentiment", "sentiment_distribution", "sentiment_reasoning_ko", "sentiment_reasoning_en", "category", "entities", "aliases"],
     properties: {
       name_ko: { type: "string", minLength: 2, maxLength: 24 },
       name_en: { type: "string", minLength: 2, maxLength: 64 },
       summary_ko: { type: "string", minLength: SUMMARY_MIN_LENGTH, maxLength: 600 },
       summary_en: { type: "string", minLength: SUMMARY_MIN_LENGTH, maxLength: 600 },
       sentiment: { type: "number", minimum: -1, maximum: 1 },
+      sentiment_distribution: {
+        type: "object",
+        required: ["positive", "negative", "neutral", "controversial"],
+        properties: {
+          positive: { type: "number", minimum: 0, maximum: 1 },
+          negative: { type: "number", minimum: 0, maximum: 1 },
+          neutral: { type: "number", minimum: 0, maximum: 1 },
+          controversial: { type: "number", minimum: 0, maximum: 1 },
+        },
+      },
+      sentiment_reasoning_ko: { type: "string", minLength: 2, maxLength: 60 },
+      sentiment_reasoning_en: { type: "string", minLength: 2, maxLength: 120 },
       category: { type: "string", enum: CATEGORY_VALUES },
       entities: {
         type: "array",
@@ -176,6 +195,14 @@ interface GeminiSummaryItem {
   summary_ko?: string;
   summary_en?: string;
   sentiment?: number;
+  sentiment_distribution?: {
+    positive?: number;
+    negative?: number;
+    neutral?: number;
+    controversial?: number;
+  };
+  sentiment_reasoning_ko?: string;
+  sentiment_reasoning_en?: string;
   category?: string;
   entities?: Array<{ text?: string; type?: string }>;
   aliases?: string[];
@@ -356,6 +383,7 @@ function buildPrompt(regionId: string, topics: Topic[]): string {
     current_name_ko: topic.nameKo,
     current_name_en: topic.nameEn,
     top_titles: (topic.sampleTitles ?? []).slice(0, 5),
+    representative_posts: (topic.sampleTitles ?? []).slice(0, 5),
     keywords: topic.keywords.slice(0, 12),
     heat_score: topic.heatScore,
     sentiment: topic.sentiment,
@@ -372,6 +400,8 @@ function buildPrompt(regionId: string, topics: Topic[]): string {
     "2) Each summary must include: trigger/event, who-or-what involved, dominant sentiment and reason.",
     "3) Keep name_ko concise and name_en within 2-6 words.",
     "4) Keep input topic order unchanged in output.",
+    "5) sentiment_reasoning_ko must be <= 60 chars and sentiment_reasoning_en <= 120 chars.",
+    "6) sentiment_distribution must sum approximately to 1.0 and reflect controversial mood when positive and negative are both high.",
     "Input topics JSON:",
     JSON.stringify(payload),
   ].join("\n");
@@ -539,6 +569,7 @@ function chunkTopics(topics: Topic[], size: number): Topic[][] {
 function applySummaryItem(topic: Topic, summary: GeminiSummaryItem | undefined): Topic {
   const nameKo = preferMeaningfulName(summary?.name_ko, topic.nameKo);
   const nameEn = preferMeaningfulName(summary?.name_en, topic.nameEn);
+  const sentiment = toSentiment(summary?.sentiment, topic.sentiment);
 
   const summaryKo = isValidSummaryText(summary?.summary_ko)
     ? summary?.summary_ko?.trim()
@@ -553,7 +584,16 @@ function applySummaryItem(topic: Topic, summary: GeminiSummaryItem | undefined):
     nameEn,
     summaryKo,
     summaryEn,
-    sentiment: toSentiment(summary?.sentiment, topic.sentiment),
+    sentiment,
+    sentimentDistribution: normalizeSentimentDistribution(summary?.sentiment_distribution, sentiment),
+    sentimentReasoningKo: normalizeSentimentReasoning(
+      summary?.sentiment_reasoning_ko,
+      topic.sentimentReasoningKo ?? FALLBACK_SENTIMENT_REASONING_KO,
+    ),
+    sentimentReasoningEn: normalizeSentimentReasoning(
+      summary?.sentiment_reasoning_en,
+      topic.sentimentReasoningEn ?? FALLBACK_SENTIMENT_REASONING_EN,
+    ),
     category: toCategory(summary?.category),
     entities: toEntities(summary?.entities),
     aliases: toAliases(summary?.aliases, topic),
@@ -570,6 +610,9 @@ export async function summarizeTopicsWithGemini(
     ...topic,
     summaryKo: topic.summaryKo ?? FALLBACK_SUMMARY_KO,
     summaryEn: topic.summaryEn ?? FALLBACK_SUMMARY_EN,
+    sentimentDistribution: topic.sentimentDistribution ?? distributionFromSentiment(topic.sentiment),
+    sentimentReasoningKo: topic.sentimentReasoningKo ?? FALLBACK_SENTIMENT_REASONING_KO,
+    sentimentReasoningEn: topic.sentimentReasoningEn ?? FALLBACK_SENTIMENT_REASONING_EN,
     canonicalKey: normalizeCanonicalKey(topic.nameEn),
   }));
 
@@ -671,6 +714,9 @@ export async function summarizeTopicsWithGemini(
           ...topic,
           summaryKo: topic.summaryKo ?? FALLBACK_SUMMARY_KO,
           summaryEn: topic.summaryEn ?? FALLBACK_SUMMARY_EN,
+          sentimentDistribution: topic.sentimentDistribution ?? distributionFromSentiment(topic.sentiment),
+          sentimentReasoningKo: topic.sentimentReasoningKo ?? FALLBACK_SENTIMENT_REASONING_KO,
+          sentimentReasoningEn: topic.sentimentReasoningEn ?? FALLBACK_SENTIMENT_REASONING_EN,
           canonicalKey: normalizeCanonicalKey(topic.nameEn),
         })),
       );
@@ -698,3 +744,4 @@ export async function summarizeTopicsWithGemini(
     },
   };
 }
+
