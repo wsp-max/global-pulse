@@ -24,6 +24,7 @@ require_command "tar"
 require_command "realpath"
 require_command "find"
 require_command "grep"
+require_command "git"
 
 if [[ ! -d "${APP_DIR}" ]]; then
   echo "[ERROR] app directory not found: ${APP_DIR}" >&2
@@ -65,11 +66,20 @@ safe_prune_evidence_dir() {
   local source_dir="$1"
   local source_real
   local evidence_root_prefix="${APP_DIR_REAL}/docs/evidence/"
+  local source_rel
 
   source_real="$(realpath "${source_dir}")"
   if [[ "${source_real}/" != "${evidence_root_prefix}"* ]]; then
     log_summary "[WARN] skip prune outside evidence root: ${source_real}"
     return 1
+  fi
+
+  source_rel="${source_real#${APP_DIR_REAL}/}"
+
+  if git -C "${APP_DIR_REAL}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "${APP_DIR_REAL}" clean -fd -- "${source_rel}" >/dev/null 2>&1 || true
+    log_summary "[OK] pruned untracked evidence entries via git clean: ${source_real}"
+    return 0
   fi
 
   find "${source_real}" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +

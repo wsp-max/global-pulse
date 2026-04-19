@@ -4441,3 +4441,11 @@ pm run ops:snapshot -> completed (egions=6)
 ### Verification
 - Local: `corepack pnpm lint`, `corepack pnpm build`
 - EC2 deploy 시 evidence rotation 경고가 fallback 동작으로 대체되는지 확인 예정.
+
+## GP-20260419-03 (Deploy Ops Hardening 2: preserve tracked evidence files)
+### Before -> After
+- Before: evidence prune가 tracked 파일까지 지워 remote git status에 대량 `D`가 누적됨.
+- After: prune 단계를 `git clean` 기반 untracked-only 정리로 변경해 tracked 파일 보존.
+
+### Changed Files
+- `scripts/rotate-runtime-evidence.sh`

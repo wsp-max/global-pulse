@@ -2582,3 +2582,5 @@
 - 운영확인: `/pulse` 및 `/pulse/api/health` 200, 글로벌 토픽 spread 정렬 응답 정상.
 
 - 추가 보완: evidence rotation 권한 폴백 적용(backup 경고 감소).
+
+- 추가 보완: evidence prune를 untracked-only로 수정(원격 tracked 삭제 방지).
