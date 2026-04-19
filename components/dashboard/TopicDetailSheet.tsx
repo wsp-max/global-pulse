@@ -8,6 +8,8 @@ import { useTopicTimeline } from "@/lib/hooks/useTopicTimeline";
 interface TopicDetailSheetProps {
   topicId: number | null;
   onClose: () => void;
+  isWatched?: boolean;
+  onToggleWatch?: () => void;
 }
 
 function buildSparklinePoints(values: number[], width: number, height: number): string {
@@ -35,7 +37,7 @@ function lifecycleClass(stage: "emerging" | "peaking" | "fading" | null | undefi
   return "border-cyan-400/40 bg-cyan-500/10 text-cyan-200";
 }
 
-export function TopicDetailSheet({ topicId, onClose }: TopicDetailSheetProps) {
+export function TopicDetailSheet({ topicId, onClose, isWatched = false, onToggleWatch }: TopicDetailSheetProps) {
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const { data, isLoading, error } = useTopicDetail(topicId ? String(topicId) : "");
   const { data: timelineData } = useTopicTimeline(topicId);
@@ -135,15 +137,29 @@ export function TopicDetailSheet({ topicId, onClose }: TopicDetailSheetProps) {
             </div>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">{resolved.subtitle}</p>
           </div>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            aria-label="상세 패널 닫기"
-            onClick={onClose}
-            className="h-9 w-9 rounded-lg border border-[var(--border-default)] text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-tertiary)]"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="워치리스트 토글"
+              onClick={onToggleWatch}
+              className={`rounded-lg border px-2 py-1 text-xs transition ${
+                isWatched
+                  ? "border-amber-400/50 bg-amber-400/10 text-amber-300"
+                  : "border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
+              }`}
+            >
+              🔔 {isWatched ? "Watching" : "Watch"}
+            </button>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              aria-label="상세 패널 닫기"
+              onClick={onClose}
+              className="h-9 w-9 rounded-lg border border-[var(--border-default)] text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-tertiary)]"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {isLoading && (

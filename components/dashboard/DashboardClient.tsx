@@ -11,6 +11,7 @@ import {
   PropagationMatrix,
   PulseSignalBoard,
   RegionCard,
+  WatchBell,
 } from "@/components/dashboard";
 import { CompareDrawer } from "@/components/dashboard/CompareDrawer";
 import { FilterBar, type DashboardFilters } from "@/components/dashboard/FilterBar";
@@ -18,6 +19,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGlobalTopics } from "@/lib/hooks/useGlobalTopics";
 import { useRegions } from "@/lib/hooks/useRegions";
+import { useWatchlist } from "@/lib/hooks/useWatchlist";
 import { useLanguage } from "@/lib/i18n/use-language";
 import type { DashboardScope, GlobalTopicsApiResponse, RegionsApiResponse } from "@/lib/types/api";
 import { cleanupTopicName } from "@/lib/utils/topic-name";
@@ -295,6 +297,14 @@ export function DashboardClient({
     () => pinnedTopicIds.filter((topicId) => comparePool.some((topic) => topic.id === topicId)),
     [comparePool, pinnedTopicIds],
   );
+  const {
+    items: watchedItems,
+    alertCount,
+    isWatched,
+    toggleWatch,
+    clearAlerts,
+    requestBrowserNotification,
+  } = useWatchlist(comparePool);
 
   const tickerItems = filteredRegions
     .flatMap((region) =>
@@ -375,11 +385,18 @@ export function DashboardClient({
       <FilterBar value={filters} onChange={updateFilters} />
 
       <div className="flex items-center justify-end">
+        <WatchBell
+          items={watchedItems}
+          alertCount={alertCount}
+          onClearAlerts={clearAlerts}
+          onRequestNotification={requestBrowserNotification}
+          onTopicSelect={openTopicSheet}
+        />
         <button
           type="button"
           aria-label="비교 드로어 열기"
           onClick={() => setIsCompareOpen(true)}
-          className="rounded-md border border-[var(--border-default)] bg-[var(--bg-secondary)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
+          className="ml-2 rounded-md border border-[var(--border-default)] bg-[var(--bg-secondary)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
         >
           {t("dashboard.compareDrawer")} ({validPinnedTopicIds.length}/3)
         </button>
@@ -426,7 +443,14 @@ export function DashboardClient({
 
           <div className="space-y-4">
             {filteredRegions.map((region) => (
-              <RegionCard key={region.id} region={region} scope={activeScope} onTopicSelect={openTopicSheet} />
+              <RegionCard
+                key={region.id}
+                region={region}
+                scope={activeScope}
+                onTopicSelect={openTopicSheet}
+                onToggleWatch={toggleWatch}
+                isTopicWatched={isWatched}
+              />
             ))}
           </div>
         </section>
@@ -451,7 +475,17 @@ export function DashboardClient({
       )}
       {!isGlobalLoading && !globalError && <GlobalIssuePanel topics={filteredGlobalTopics} />}
 
-      <TopicDetailSheet topicId={selectedTopicId} onClose={closeTopicSheet} />
+      <TopicDetailSheet
+        topicId={selectedTopicId}
+        onClose={closeTopicSheet}
+        isWatched={isWatched(selectedTopicId ?? undefined)}
+        onToggleWatch={() => {
+          const target = comparePool.find((topic) => topic.id === selectedTopicId);
+          if (target) {
+            toggleWatch(target);
+          }
+        }}
+      />
       <CompareDrawer
         open={isCompareOpen}
         topics={comparePool}

@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useRouter } from "next/navigation";
-import { SOURCES } from "@global-pulse/shared";
+import { SOURCES, type Topic } from "@global-pulse/shared";
 import { HeatBadge } from "@/components/shared/HeatBadge";
 import type { DashboardScope, RegionDashboardRow } from "@/lib/types/api";
 import { toHeatPercent } from "@/lib/utils/heat";
@@ -10,6 +10,8 @@ interface RegionCardProps {
   region: RegionDashboardRow;
   scope?: DashboardScope;
   onTopicSelect?: (topicId: number) => void;
+  onToggleWatch?: (topic: Topic) => void;
+  isTopicWatched?: (topicId: number | undefined) => boolean;
 }
 
 const PORTAL_SOURCE_ID_SET = new Set(
@@ -31,7 +33,13 @@ function buildMiniSparkline(values: number[] | null | undefined): string {
     .join(" ");
 }
 
-export function RegionCard({ region, scope = "community", onTopicSelect }: RegionCardProps) {
+export function RegionCard({
+  region,
+  scope = "community",
+  onTopicSelect,
+  onToggleWatch,
+  isTopicWatched,
+}: RegionCardProps) {
   const router = useRouter();
   const heatScore = Math.round(region.totalHeatScore);
   const sentimentPercent = Math.round(((region.avgSentiment + 1) / 2) * 100);
@@ -80,31 +88,53 @@ export function RegionCard({ region, scope = "community", onTopicSelect }: Regio
         {topTopics.length > 0 ? (
           topTopics.map((topic) => {
             const sparkline = buildMiniSparkline(topic.miniTrend ?? null);
-            return typeof topic.id === "number" ? (
-              <button
-                key={topic.id}
-                type="button"
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] px-2 py-0.5 hover:bg-[var(--bg-tertiary)]"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onTopicSelect?.(topic.id!);
-                }}
-                aria-label={`${topic.nameKo || topic.nameEn} 상세 열기`}
-              >
-                <span>{topic.nameKo || topic.nameEn}</span>
-                {topic.dominantSourceShare !== null && topic.dominantSourceShare !== undefined && topic.dominantSourceShare > 0.8 ? (
-                  <span className="rounded-full border border-slate-500/40 bg-slate-500/10 px-1 text-[9px] text-slate-200">⚠️ 단일 출처</span>
-                ) : null}
-                {topic.sourceDiversity !== null && topic.sourceDiversity !== undefined && topic.sourceDiversity > 0.7 ? (
-                  <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1 text-[9px] text-emerald-200">✅ 다출처</span>
-                ) : null}
-                {sparkline ? (
-                  <svg viewBox="0 0 28 8" className="h-2 w-7" aria-hidden="true">
-                    <polyline points={sparkline} fill="none" stroke="var(--text-accent)" strokeWidth="1" />
-                  </svg>
-                ) : null}
-              </button>
-            ) : (
+            const watched = isTopicWatched?.(topic.id) ?? false;
+
+            if (typeof topic.id === "number") {
+              return (
+                <span key={topic.id} className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] px-2 py-0.5">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 hover:text-[var(--text-primary)]"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onTopicSelect?.(topic.id!);
+                    }}
+                    aria-label={`${topic.nameKo || topic.nameEn} 상세 열기`}
+                  >
+                    <span>{topic.nameKo || topic.nameEn}</span>
+                    {topic.dominantSourceShare !== null && topic.dominantSourceShare !== undefined && topic.dominantSourceShare > 0.8 ? (
+                      <span className="rounded-full border border-slate-500/40 bg-slate-500/10 px-1 text-[9px] text-slate-200">⚠️ 단일 출처</span>
+                    ) : null}
+                    {topic.sourceDiversity !== null && topic.sourceDiversity !== undefined && topic.sourceDiversity > 0.7 ? (
+                      <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1 text-[9px] text-emerald-200">✅ 다출처</span>
+                    ) : null}
+                    {sparkline ? (
+                      <svg viewBox="0 0 28 8" className="h-2 w-7" aria-hidden="true">
+                        <polyline points={sparkline} fill="none" stroke="var(--text-accent)" strokeWidth="1" />
+                      </svg>
+                    ) : null}
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-full border px-1 text-[9px] ${
+                      watched
+                        ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
+                        : "border-[var(--border-default)] text-[var(--text-secondary)]"
+                    }`}
+                    aria-label={`${topic.nameKo || topic.nameEn} 워치리스트 토글`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onToggleWatch?.(topic);
+                    }}
+                  >
+                    🔔
+                  </button>
+                </span>
+              );
+            }
+
+            return (
               <span key={topic.nameEn} className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] px-2 py-0.5">
                 <span>{topic.nameKo || topic.nameEn}</span>
                 {topic.dominantSourceShare !== null && topic.dominantSourceShare !== undefined && topic.dominantSourceShare > 0.8 ? (
@@ -159,5 +189,3 @@ export function RegionCard({ region, scope = "community", onTopicSelect }: Regio
     </article>
   );
 }
-
-
