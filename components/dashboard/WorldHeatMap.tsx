@@ -1,8 +1,9 @@
 ﻿"use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { GlobalTopic } from "@global-pulse/shared";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
+import { MapControls } from "@/components/dashboard/MapControls";
 import type { RegionDashboardRow } from "@/lib/types/api";
 import { aggregateFlowEdges, getFlowStrokeColor, toVolumeBand } from "@/lib/utils/propagation-flow";
 import { getHeatTier, toHeatBand } from "@/lib/utils/heat";
@@ -13,7 +14,18 @@ interface WorldHeatMapProps {
   variant?: "community" | "news";
 }
 
+interface ClusterMarker {
+  key: string;
+  x: number;
+  y: number;
+  regions: RegionDashboardRow[];
+  totalHeat: number;
+  representativeColor: string;
+}
+
 const GEO_URL = "/pulse/geo/countries-110m.json";
+const MIN_ZOOM = 0.8;
+const MAX_ZOOM = 6;
 
 const REGION_COORDINATES: Record<string, [number, number]> = {
   kr: [127.8, 36.3],
@@ -42,6 +54,10 @@ const HEAT_LEGEND = [
   { label: "mid", color: "var(--heat-mid)" },
   { label: "high", color: "var(--heat-high)" },
 ];
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
 
 function toMapPercent([lon, lat]: [number, number]): { x: number; y: number } {
   const x = ((lon + 180) / 360) * 100;
@@ -81,6 +97,64 @@ function isSurging(topic: GlobalTopic, velocityThreshold: number): boolean {
   return burst !== null ? burst >= 2.5 : acceleration > 0 && velocity >= velocityThreshold;
 }
 
+function buildClusterMarkers(regions: RegionDashboardRow[], zoom: number): ClusterMarker[] {
+  const markers = regions
+    .map((region) => {
+      const coord = REGION_COORDINATES[region.id];
+      if (!coord) {
+        return null;
+      }
+      const pos = toMapPercent(coord);
+      return {
+        region,
+        x: pos.x,
+        y: pos.y,
+      };
+    })
+    .filter((item): item is { region: RegionDashboardRow; x: number; y: number } => Boolean(item));
+
+  if (zoom >= 1.5) {
+    return markers.map((marker) => ({
+      key: marker.region.id,
+      x: marker.x,
+      y: marker.y,
+      regions: [marker.region],
+      totalHeat: marker.region.totalHeatScore,
+      representativeColor: marker.region.color,
+    }));
+  }
+
+  const gridSize = 6;
+  const buckets = new Map<string, ClusterMarker>();
+
+  for (const marker of markers) {
+    const gridX = Math.floor(marker.x / gridSize);
+    const gridY = Math.floor(marker.y / gridSize);
+    const key = `${gridX}:${gridY}`;
+    const current = buckets.get(key);
+
+    if (!current) {
+      buckets.set(key, {
+        key,
+        x: marker.x,
+        y: marker.y,
+        regions: [marker.region],
+        totalHeat: marker.region.totalHeatScore,
+        representativeColor: marker.region.color,
+      });
+      continue;
+    }
+
+    const totalCount = current.regions.length + 1;
+    current.x = (current.x * current.regions.length + marker.x) / totalCount;
+    current.y = (current.y * current.regions.length + marker.y) / totalCount;
+    current.regions.push(marker.region);
+    current.totalHeat += marker.region.totalHeatScore;
+  }
+
+  return [...buckets.values()];
+}
+
 export function WorldHeatMap({ regions, globalTopics = [], variant = "community" }: WorldHeatMapProps) {
   const maxHeat = Math.max(...regions.map((region) => region.totalHeatScore), 1);
   const flowEdges = useMemo(
@@ -102,6 +176,45 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
   const maxVelocity = Math.max(...globalTopics.map((topic) => topic.velocityPerHour ?? 0), 1);
   const surgingVelocityCutoff = maxVelocity * 0.9;
 
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReducedMotion(media.matches);
+    sync();
+
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  const clampOffset = (nextX: number, nextY: number, nextZoom = zoom) => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) {
+      return { x: nextX, y: nextY };
+    }
+
+    const maxX = ((nextZoom - 1) * rect.width) / 2;
+    const maxY = ((nextZoom - 1) * rect.height) / 2;
+
+    return {
+      x: clamp(nextX, -maxX, maxX),
+      y: clamp(nextY, -maxY, maxY),
+    };
+  };
+
+  const applyZoom = (nextZoom: number) => {
+    const clamped = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
+    setZoom(clamped);
+    setOffset((prev) => clampOffset(prev.x, prev.y, clamped));
+  };
+
+  const markers = useMemo(() => buildClusterMarkers(regions, zoom), [regions, zoom]);
+
   return (
     <div className="panel-grid relative overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4">
       <div className={`absolute inset-0 ${radialGlow}`} />
@@ -110,128 +223,184 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
         <p className="mt-1 text-xs text-[var(--text-secondary)]">Regional heat and cross-region signal routes.</p>
 
         <div className="mt-4 rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-2">
-          <div className="relative h-[220px] sm:h-[300px]">
-            <ComposableMap projectionConfig={{ scale: 145 }} style={{ width: "100%", height: "100%" }}>
-              <Geographies geography={GEO_URL}>
-                {({ geographies }) =>
-                  geographies.map((geo) => (
-                    <Geography key={geo.rsmKey} geography={geo} fill="#0f172a" stroke="#334155" strokeWidth={0.45} />
-                  ))
-                }
-              </Geographies>
-            </ComposableMap>
+          <div
+            ref={viewportRef}
+            className="relative h-[220px] overflow-hidden rounded-lg sm:h-[300px]"
+            style={{ touchAction: "none" }}
+            onWheel={(event) => {
+              event.preventDefault();
+              const ratio = event.deltaY < 0 ? 1.4 : 1 / 1.4;
+              applyZoom(zoom * ratio);
+            }}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              dragRef.current = {
+                startX: event.clientX,
+                startY: event.clientY,
+                originX: offset.x,
+                originY: offset.y,
+              };
+              setIsDragging(true);
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerMove={(event) => {
+              if (!dragRef.current) {
+                return;
+              }
+              const dx = event.clientX - dragRef.current.startX;
+              const dy = event.clientY - dragRef.current.startY;
+              setOffset(clampOffset(dragRef.current.originX + dx, dragRef.current.originY + dy));
+            }}
+            onPointerUp={(event) => {
+              event.currentTarget.releasePointerCapture(event.pointerId);
+              dragRef.current = null;
+              setIsDragging(false);
+            }}
+            onPointerCancel={() => {
+              dragRef.current = null;
+              setIsDragging(false);
+            }}
+          >
+            <div
+              className="absolute inset-0"
+              style={{
+                transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+                transformOrigin: "center center",
+                transition: reducedMotion || isDragging ? "none" : "transform 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            >
+              <ComposableMap projectionConfig={{ scale: 145 }} style={{ width: "100%", height: "100%" }}>
+                <Geographies geography={GEO_URL}>
+                  {({ geographies }) =>
+                    geographies.map((geo) => (
+                      <Geography key={geo.rsmKey} geography={geo} fill="#0f172a" stroke="#334155" strokeWidth={0.45} />
+                    ))
+                  }
+                </Geographies>
+              </ComposableMap>
 
-            <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <defs>
+              <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <defs>
+                  {flowEdges.map((edge, index) => {
+                    const volumeBand = toVolumeBand(edge.volumeHeatSum, maxVolume);
+                    const flowColor = getFlowStrokeColor(variant, volumeBand);
+                    return (
+                      <marker
+                        key={`arrow-${edge.from}-${edge.to}-${index}`}
+                        id={`arrow-${variant}-${index}`}
+                        markerWidth="5"
+                        markerHeight="5"
+                        refX="4.2"
+                        refY="2.5"
+                        orient="auto"
+                        markerUnits="strokeWidth"
+                      >
+                        <path d={variant === "news" ? "M 0 0 L 5 2.5 L 0 5 L 1.6 2.5 z" : "M 0 0 L 5 2.5 L 0 5 z"} fill={flowColor} />
+                      </marker>
+                    );
+                  })}
+                  <filter id={`particle-glow-${variant}`} x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="0.6" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+
                 {flowEdges.map((edge, index) => {
+                  const from = toMapPercent(REGION_COORDINATES[edge.from]!);
+                  const to = toMapPercent(REGION_COORDINATES[edge.to]!);
+                  const curve = curvePath(from, to);
                   const volumeBand = toVolumeBand(edge.volumeHeatSum, maxVolume);
+                  const durationSec = Math.max(3.2, Math.min(5.5, 5.7 - volumeBand * 2.5));
                   const flowColor = getFlowStrokeColor(variant, volumeBand);
+                  const strokeOpacity = Math.max(0.3, Math.min(0.9, edge.confidence));
+                  const strokeWidth = 0.5 + Math.max(0, Math.min(0.8, volumeBand * 0.8));
+                  const isFast = edge.velocity >= surgingVelocityCutoff;
+                  const particleCount = edge.confidence >= 0.75 ? 3 : edge.confidence >= 0.45 ? 2 : 1;
+                  const lagText = `${toLagText(edge.lagMinutes)}${isFast ? " ⚡" : ""}`;
+
                   return (
-                    <marker
-                      key={`arrow-${edge.from}-${edge.to}-${index}`}
-                      id={`arrow-${variant}-${index}`}
-                      markerWidth="5"
-                      markerHeight="5"
-                      refX="4.2"
-                      refY="2.5"
-                      orient="auto"
-                      markerUnits="strokeWidth"
-                    >
-                      <path d={variant === "news" ? "M 0 0 L 5 2.5 L 0 5 L 1.6 2.5 z" : "M 0 0 L 5 2.5 L 0 5 z"} fill={flowColor} />
-                    </marker>
+                    <g key={`${edge.from}-${edge.to}-${index}`}>
+                      <path
+                        className="map-flow-path"
+                        d={curve.d}
+                        stroke={flowColor}
+                        strokeWidth={strokeWidth}
+                        fill="none"
+                        opacity={strokeOpacity}
+                        markerEnd={`url(#arrow-${variant}-${index})`}
+                      >
+                        <title>{`From ${edge.from.toUpperCase()} to ${edge.to.toUpperCase()}, lag ${toLagText(edge.lagMinutes)}, confidence ${edge.confidence.toFixed(2)}, volume ${Math.round(edge.volumeHeatSum)}, edges ${edge.edgeCount}`}</title>
+                      </path>
+
+                      <g transform={`translate(${curve.mx} ${curve.my})`}>
+                        <rect x={-5} y={-3.4} width={10} height={4.8} rx={2.4} fill="rgba(10,14,23,0.75)" stroke="rgba(148,163,184,0.25)" />
+                        <text textAnchor="middle" y={0.1} className="font-mono text-[2.6px]" fill={flowColor}>
+                          {lagText}
+                        </text>
+                      </g>
+
+                      {!reducedMotion &&
+                        Array.from({ length: particleCount }).map((_, particleIndex) => (
+                          <circle
+                            key={`particle-${index}-${particleIndex}`}
+                            r="0.35"
+                            fill={flowColor}
+                            opacity={0.75}
+                            filter={`url(#particle-glow-${variant})`}
+                            className="map-particle"
+                          >
+                            <animateMotion
+                              dur={`${durationSec}s`}
+                              begin={`${particleIndex * 0.6}s`}
+                              repeatCount="indefinite"
+                              rotate="auto"
+                              path={curve.d}
+                            />
+                          </circle>
+                        ))}
+                    </g>
                   );
                 })}
-                <filter id={`particle-glow-${variant}`} x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="0.6" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
 
-              {flowEdges.map((edge, index) => {
-                const from = toMapPercent(REGION_COORDINATES[edge.from]!);
-                const to = toMapPercent(REGION_COORDINATES[edge.to]!);
-                const curve = curvePath(from, to);
-                const volumeBand = toVolumeBand(edge.volumeHeatSum, maxVolume);
-                const durationSec = Math.max(3.2, Math.min(5.5, 5.7 - volumeBand * 2.5));
-                const flowColor = getFlowStrokeColor(variant, volumeBand);
-                const strokeOpacity = Math.max(0.3, Math.min(0.9, edge.confidence));
-                const strokeWidth = 0.5 + Math.max(0, Math.min(0.8, volumeBand * 0.8));
-                const isFast = edge.velocity >= surgingVelocityCutoff;
-                const particleCount = edge.confidence >= 0.75 ? 3 : edge.confidence >= 0.45 ? 2 : 1;
-                const lagText = `${toLagText(edge.lagMinutes)}${isFast ? " ⚡" : ""}`;
+                {markers.map((marker) => {
+                  const band = toHeatBand(marker.totalHeat, maxHeat * Math.max(1, marker.regions.length));
+                  const radius = marker.regions.length > 1 ? 1.4 + band * 3.1 : 1.1 + band * 2.6;
+                  const fill = getTierColorByBand(band);
+                  const primaryRegion = marker.regions[0]!;
 
-                return (
-                  <g key={`${edge.from}-${edge.to}-${index}`}>
-                    <path
-                      className="map-flow-path"
-                      d={curve.d}
-                      stroke={flowColor}
-                      strokeWidth={strokeWidth}
-                      fill="none"
-                      opacity={strokeOpacity}
-                      markerEnd={`url(#arrow-${variant}-${index})`}
-                    >
-                      <title>{`From ${edge.from.toUpperCase()} to ${edge.to.toUpperCase()}, lag ${toLagText(edge.lagMinutes)}, confidence ${edge.confidence.toFixed(2)}, volume ${Math.round(edge.volumeHeatSum)}, edges ${edge.edgeCount}`}</title>
-                    </path>
-
-                    <g transform={`translate(${curve.mx} ${curve.my})`}>
-                      <rect x={-5} y={-3.4} width={10} height={4.8} rx={2.4} fill="rgba(10,14,23,0.75)" stroke="rgba(148,163,184,0.25)" />
-                      <text textAnchor="middle" y={0.1} className="font-mono text-[2.6px]" fill={flowColor}>
-                        {lagText}
+                  return (
+                    <g key={marker.key} transform={`translate(${marker.x} ${marker.y})`}>
+                      <circle
+                        r={radius}
+                        fill={fill}
+                        fillOpacity={0.22}
+                        stroke={marker.representativeColor}
+                        strokeWidth={0.35}
+                        aria-label={`${primaryRegion.flagEmoji} ${primaryRegion.nameKo} heat ${Math.round(marker.totalHeat)} tier ${getHeatTier(band)}`}
+                      />
+                      <circle r={activeFlowRegionIds.has(primaryRegion.id) ? 0.62 : 0.5} fill={fill} />
+                      <text y={-(radius + 0.75)} textAnchor="middle" className="text-[2.9px] font-medium" fill="#e2e8f0">
+                        {marker.regions.length > 1
+                          ? `+${marker.regions.length}`
+                          : `${primaryRegion.flagEmoji} ${Math.round(primaryRegion.totalHeatScore)}`}
                       </text>
                     </g>
+                  );
+                })}
+              </svg>
+            </div>
 
-                    {Array.from({ length: particleCount }).map((_, particleIndex) => (
-                      <circle
-                        key={`particle-${index}-${particleIndex}`}
-                        r="0.35"
-                        fill={flowColor}
-                        opacity={0.75}
-                        filter={`url(#particle-glow-${variant})`}
-                        className="map-particle"
-                      >
-                        <animateMotion
-                          dur={`${durationSec}s`}
-                          begin={`${particleIndex * 0.6}s`}
-                          repeatCount="indefinite"
-                          rotate="auto"
-                          path={curve.d}
-                        />
-                      </circle>
-                    ))}
-                  </g>
-                );
-              })}
-
-              {regions.map((region) => {
-                const coord = REGION_COORDINATES[region.id];
-                if (!coord) return null;
-                const pos = toMapPercent(coord);
-                const band = typeof region.totalHeatScore === "number" ? toHeatBand(region.totalHeatScore, maxHeat) : 0;
-                const radius = 1.1 + band * 2.6;
-                const fill = getTierColorByBand(band);
-
-                return (
-                  <g key={region.id} transform={`translate(${pos.x} ${pos.y})`}>
-                    <circle
-                      r={radius}
-                      fill={fill}
-                      fillOpacity={0.22}
-                      stroke={region.color}
-                      strokeWidth={0.35}
-                      aria-label={`${region.flagEmoji} ${region.nameKo} heat ${Math.round(region.totalHeatScore)} tier ${getHeatTier(band)}`}
-                    />
-                    <circle r={activeFlowRegionIds.has(region.id) ? 0.62 : 0.5} fill={fill} />
-                    <text y={-(radius + 0.75)} textAnchor="middle" className="text-[2.9px] font-medium" fill="#e2e8f0">
-                      {region.flagEmoji} {Math.round(region.totalHeatScore)}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
+            <MapControls
+              onZoomIn={() => applyZoom(zoom * 1.4)}
+              onZoomOut={() => applyZoom(zoom / 1.4)}
+              onReset={() => {
+                setZoom(1);
+                setOffset({ x: 0, y: 0 });
+              }}
+            />
 
             {flowEdges.length === 0 && (
               <div className="pointer-events-none absolute inset-x-0 bottom-2 text-center text-[10px] text-[var(--text-tertiary)]">
