@@ -198,3 +198,31 @@ export interface PropagationMatrixApiResponse {
   provider?: "postgres" | "none";
   lastUpdated?: string;
 }
+
+export interface AdminTuningSetting {
+  key: string;
+  label: string;
+  description: string;
+  valueType: "number" | "string";
+  envKey: string;
+  value: unknown;
+  effectiveValue: unknown;
+  overriddenByEnv: boolean;
+  updatedAt: string | null;
+}
+
+export interface AdminTuningAuditEntry {
+  id: number;
+  key: string;
+  before: unknown;
+  after: unknown;
+  changedBy: string;
+  changedAt: string;
+}
+
+export interface AdminTuningApiResponse {
+  enabled: boolean;
+  settings: AdminTuningSetting[];
+  audit: AdminTuningAuditEntry[];
+  lastUpdated?: string;
+}

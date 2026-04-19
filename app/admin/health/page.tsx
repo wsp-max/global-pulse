@@ -211,7 +211,15 @@ export default async function AdminHealthPage() {
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6">
-      <h1 className="font-display text-2xl text-[var(--text-accent)]">Admin Health</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl text-[var(--text-accent)]">Admin Health</h1>
+        <a
+          href="/pulse/admin/tuning"
+          className="rounded-md border border-[var(--border-default)] px-3 py-1 text-xs text-[var(--text-secondary)] transition hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+        >
+          Open Tuning
+        </a>
+      </div>
       <p className="mt-1 text-xs text-[var(--text-tertiary)]">/pulse/admin/health · 최근 24시간 수집 상태</p>
 
       <section className="mt-4 grid gap-3 sm:grid-cols-4">
@@ -308,4 +316,3 @@ export default async function AdminHealthPage() {
     </main>
   );
 }
-
