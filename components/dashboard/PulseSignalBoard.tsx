@@ -1,5 +1,6 @@
-﻿import type { GlobalTopic } from "@global-pulse/shared";
+import type { GlobalTopic } from "@global-pulse/shared";
 import type { RegionDashboardRow } from "@/lib/types/api";
+import { toHeatBand, toHeatPercent } from "@/lib/utils/heat";
 
 interface PulseSignalBoardProps {
   regions: RegionDashboardRow[];
@@ -99,14 +100,18 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
             <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-accent)]">REGION MOMENTUM</p>
             <div className="mt-3 space-y-3">
               {hottestRegions.map((region) => {
-                const width = Math.max(8, Math.round((region.totalHeatScore / maxHeat) * 100));
+                const band = toHeatBand(region.totalHeatScore, maxHeat);
+                const width = toHeatPercent(region.totalHeatScore, maxHeat, 12);
+
                 return (
                   <div key={region.id}>
                     <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
                       <span className="truncate">
                         {region.flagEmoji} {region.nameKo}
                       </span>
-                      <span className="font-mono text-[var(--text-primary)]">{Math.round(region.totalHeatScore)}</span>
+                      <span className="font-mono text-[var(--text-primary)]">
+                        {Math.round(region.totalHeatScore)} ({Math.round(band * 100)}%)
+                      </span>
                     </div>
                     <div className="h-1.5 rounded-full bg-[var(--bg-tertiary)]">
                       <div

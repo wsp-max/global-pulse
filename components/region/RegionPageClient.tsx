@@ -1,11 +1,13 @@
-﻿"use client";
+"use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Topic } from "@global-pulse/shared";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useTimeline } from "@/lib/hooks/useTimeline";
-import { useTopics } from "@/lib/hooks/useTopics";
+import { useTopics, type TopicPeriod, type TopicSort } from "@/lib/hooks/useTopics";
+import { FilterBar } from "./FilterBar";
 import { RegionHeader } from "./RegionHeader";
 import { SentimentGauge } from "./SentimentGauge";
 import { SourceBreakdown } from "./SourceBreakdown";
@@ -16,8 +18,32 @@ interface RegionPageClientProps {
   regionId: string;
 }
 
+const PERIOD_OPTIONS: TopicPeriod[] = ["1h", "6h", "24h", "7d"];
+const SORT_OPTIONS: TopicSort[] = ["heat", "recent", "sentiment"];
+
+function parsePeriod(input: string | null): TopicPeriod {
+  if (!input) return "24h";
+  return PERIOD_OPTIONS.includes(input as TopicPeriod) ? (input as TopicPeriod) : "24h";
+}
+
+function parseSort(input: string | null): TopicSort {
+  if (!input) return "heat";
+  return SORT_OPTIONS.includes(input as TopicSort) ? (input as TopicSort) : "heat";
+}
+
 export function RegionPageClient({ regionId }: RegionPageClientProps) {
-  const { data, isLoading, error } = useTopics(regionId, 30);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const period = parsePeriod(searchParams?.get("period") ?? null);
+  const sort = parseSort(searchParams?.get("sort") ?? null);
+
+  const { data, isLoading, error } = useTopics(regionId, {
+    limit: 30,
+    period,
+    sort,
+  });
   const topics = useMemo(() => data?.topics ?? [], [data?.topics]);
 
   const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
@@ -34,9 +60,28 @@ export function RegionPageClient({ regionId }: RegionPageClientProps) {
   const { data: timelineData, isLoading: timelineLoading } = useTimeline(selectedTopic?.nameEn, regionId, 24);
   const timeline = timelineData?.timeline ?? [];
 
+  const updateFilter = useCallback(
+    (next: { period?: TopicPeriod; sort?: TopicSort }) => {
+      const params = new URLSearchParams(searchParams?.toString() ?? "");
+      const nextPeriod = next.period ?? period;
+      const nextSort = next.sort ?? sort;
+
+      params.set("period", nextPeriod);
+      params.set("sort", nextSort);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, period, router, searchParams, sort],
+  );
+
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 lg:px-6">
       <RegionHeader regionId={regionId} snapshot={data?.snapshot} />
+      <FilterBar
+        period={period}
+        sort={sort}
+        onPeriodChange={(nextPeriod) => updateFilter({ period: nextPeriod })}
+        onSortChange={(nextSort) => updateFilter({ sort: nextSort })}
+      />
 
       {timelineLoading ? <LoadingSkeleton className="h-32" /> : <TrendChart points={timeline} />}
 
@@ -74,7 +119,7 @@ export function RegionPageClient({ regionId }: RegionPageClientProps) {
             <p className="text-xs text-[var(--text-secondary)]">
               {selectedTopic?.summaryKo ?? "요약 데이터가 아직 없습니다."}
             </p>
-            <SentimentGauge value={selectedTopic?.sentiment ?? 0} />
+            <SentimentGauge value={selectedTopic?.sentiment ?? null} />
             <SourceBreakdown sourceIds={selectedTopic?.sourceIds ?? []} />
             <div className="text-xs text-[var(--text-tertiary)]">
               게시글 {selectedTopic?.postCount ?? 0} / 댓글 {selectedTopic?.totalComments ?? 0}

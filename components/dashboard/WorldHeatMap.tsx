@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import type { CSSProperties } from "react";
 import type { GlobalTopic } from "@global-pulse/shared";
@@ -10,7 +10,7 @@ interface WorldHeatMapProps {
   globalTopics?: GlobalTopic[];
 }
 
-const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+const GEO_URL = "/pulse/geo/countries-110m.json";
 
 const REGION_COORDINATES: Record<string, [number, number]> = {
   kr: [127.8, 36.3],
@@ -22,6 +22,14 @@ const REGION_COORDINATES: Record<string, [number, number]> = {
   me: [45.0, 24.0],
   ru: [90.0, 61.0],
 };
+
+const HEAT_LEGEND = [
+  { label: "cold < 100", color: "var(--heat-cold)" },
+  { label: "warm < 300", color: "var(--heat-warm)" },
+  { label: "hot < 600", color: "var(--heat-hot)" },
+  { label: "fire < 1000", color: "var(--heat-fire)" },
+  { label: "explosive ≥ 1000", color: "var(--heat-explosive)" },
+];
 
 function getHeatColor(score: number): string {
   if (score < 100) return "var(--heat-cold)";
@@ -40,9 +48,10 @@ function getFlowPairs(globalTopics: GlobalTopic[]): Array<[string, string]> {
       continue;
     }
 
-    const origin = topic.firstSeenRegion && REGION_COORDINATES[topic.firstSeenRegion]
-      ? topic.firstSeenRegion
-      : topic.regions.find((regionId) => REGION_COORDINATES[regionId]);
+    const origin =
+      topic.firstSeenRegion && REGION_COORDINATES[topic.firstSeenRegion]
+        ? topic.firstSeenRegion
+        : topic.regions.find((regionId) => REGION_COORDINATES[regionId]);
     if (!origin) {
       continue;
     }
@@ -177,7 +186,11 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
                 return (
                   <Marker key={region.id} coordinates={coordinates}>
                     <circle r={radius} fill={color} fillOpacity={0.22} stroke={color} strokeWidth={1.2} />
-                    <circle r={2.6} fill={color} className={activeFlowRegionIds.has(region.id) ? "map-node-pulse" : ""} />
+                    <circle
+                      r={2.6}
+                      fill={color}
+                      className={activeFlowRegionIds.has(region.id) ? "map-node-pulse" : ""}
+                    />
                     <text y={-radius - 4} textAnchor="middle" className="fill-slate-200 text-[10px] font-medium">
                       {region.flagEmoji} {Math.round(region.totalHeatScore)}
                     </text>
@@ -192,6 +205,32 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
               </div>
             )}
           </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {HEAT_LEGEND.map((item) => (
+            <span
+              key={item.label}
+              className="rounded-full border border-[var(--border-default)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
+            >
+              <span
+                className="mr-1 inline-block h-2 w-2 rounded-full"
+                style={{ backgroundColor: item.color }}
+                aria-hidden
+              />
+              {item.label}
+            </span>
+          ))}
+
+          <details className="ml-auto text-[10px] text-[var(--text-secondary)]">
+            <summary className="cursor-pointer select-none rounded-full border border-[var(--border-default)] px-2 py-1 hover:bg-[var(--bg-tertiary)]">
+              Heat Score 란?
+            </summary>
+            <p className="mt-2 max-w-sm rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)] p-2 leading-relaxed">
+              Heat Score는 대화량과 반응량을 묶어 계산한 지표입니다.
+              대략적으로 (posts + comments*0.5 + views/1000) * source_diversity 형태로 해석할 수 있습니다.
+            </p>
+          </details>
         </div>
       </div>
     </div>
