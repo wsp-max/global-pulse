@@ -53,6 +53,7 @@ export interface Topic {
   totalLikes: number;
   totalComments: number;
   sourceIds: string[];
+  rawPostIds?: number[];
   category?: TopicCategory;
   entities?: TopicEntity[];
   aliases?: string[];
@@ -97,6 +98,21 @@ export interface GlobalTopic {
   totalHeatScore: number;
   firstSeenRegion?: string;
   firstSeenAt?: string;
+  propagationTimeline?: Array<{
+    regionId: string;
+    firstPostAt: string;
+    heatAtDiscovery: number;
+    status?: "fading" | "steady" | "accelerating";
+  }>;
+  propagationEdges?: Array<{
+    from: string;
+    to: string;
+    lagMinutes: number;
+    confidence: number;
+  }>;
+  velocityPerHour?: number;
+  acceleration?: number;
+  spreadScore?: number;
 }
 
 export interface HeatHistory {

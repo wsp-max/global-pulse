@@ -21,9 +21,16 @@ interface TopicRow {
   total_likes: number | null;
   total_comments: number | null;
   source_ids: string[] | null;
+  raw_post_ids: number[] | null;
   rank: number | null;
   period_start: string;
   period_end: string;
+}
+
+interface TopicFirstPostRow {
+  topic_id: number;
+  region_id: string;
+  first_post_at: string | null;
 }
 
 interface GlobalTopicInsertRow {
@@ -38,12 +45,14 @@ interface GlobalTopicInsertRow {
   total_heat_score: number;
   first_seen_region: string | null;
   first_seen_at: string | null;
+  propagation_timeline: Array<{ regionId: string; firstPostAt: string; heatAtDiscovery: number }>;
   expires_at: string;
 }
 
 interface GlobalAnalysisStorage {
   mode: "postgres";
   fetchTopics(periodStartIso: string): Promise<TopicRow[]>;
+  fetchTopicFirstPostMoments(topicIds: number[]): Promise<TopicFirstPostRow[]>;
   expireActiveGlobalTopics(nowIso: string): Promise<void>;
   insertGlobalTopics(rows: GlobalTopicInsertRow[]): Promise<void>;
 }
@@ -91,6 +100,7 @@ function toTopic(row: TopicRow): Topic {
     totalLikes: toNumber(row.total_likes),
     totalComments: toNumber(row.total_comments),
     sourceIds: row.source_ids ?? [],
+    rawPostIds: row.raw_post_ids ?? [],
     rank: row.rank === null || row.rank === undefined ? undefined : toNumber(row.rank),
     periodStart: row.period_start,
     periodEnd: row.period_end,
@@ -204,6 +214,48 @@ function sanitizeGlobalTopicByRegions(topic: GlobalTopic, topicMap: Map<number, 
   };
 }
 
+function toTimestamp(value: string | undefined): number {
+  if (!value) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+}
+
+function buildPropagationTimelineForTopic(
+  globalTopic: GlobalTopic,
+  topicMap: Map<number, Topic>,
+  firstPostMap: Map<number, TopicFirstPostRow>,
+): Array<{ regionId: string; firstPostAt: string; heatAtDiscovery: number }> {
+  const byRegion = new Map<string, { firstPostAt: string; heatAtDiscovery: number }>();
+
+  for (const topicId of globalTopic.topicIds) {
+    const topic = topicMap.get(topicId);
+    if (!topic) {
+      continue;
+    }
+
+    const firstPostRow = firstPostMap.get(topicId);
+    const firstPostAt = firstPostRow?.first_post_at ?? topic.periodStart;
+    const existing = byRegion.get(topic.regionId);
+
+    if (!existing || toTimestamp(firstPostAt) < toTimestamp(existing.firstPostAt)) {
+      byRegion.set(topic.regionId, {
+        firstPostAt,
+        heatAtDiscovery: Number(topic.heatScore.toFixed(3)),
+      });
+    }
+  }
+
+  return [...byRegion.entries()]
+    .map(([regionId, payload]) => ({
+      regionId,
+      firstPostAt: payload.firstPostAt,
+      heatAtDiscovery: payload.heatAtDiscovery,
+    }))
+    .sort((left, right) => toTimestamp(left.firstPostAt) - toTimestamp(right.firstPostAt));
+}
+
 function buildBatchInsert<T extends object>(
   tableName: string,
   columns: Array<keyof T & string>,
@@ -255,7 +307,7 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
         )
         select
           t.id,t.region_id,t.name_ko,t.name_en,t.summary_ko,t.summary_en,t.keywords,t.sentiment,t.heat_score,t.post_count,
-          t.total_views,t.total_likes,t.total_comments,t.source_ids,t.rank,t.period_start,t.period_end
+          t.total_views,t.total_likes,t.total_comments,t.source_ids,t.raw_post_ids,t.rank,t.period_start,t.period_end
         from topics t
         join selected_region_batches b
           on t.region_id = b.region_id
@@ -264,6 +316,26 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
         limit 4500
         `,
         [periodStartIso],
+      );
+      return rows;
+    },
+    async fetchTopicFirstPostMoments(topicIds) {
+      if (topicIds.length === 0) {
+        return [];
+      }
+      const { rows } = await pool.query<TopicFirstPostRow>(
+        `
+        select
+          t.id as topic_id,
+          t.region_id,
+          coalesce(min(coalesce(rp.posted_at, rp.collected_at)), min(t.period_start)) as first_post_at
+        from topics t
+        left join raw_posts rp
+          on rp.id = any(t.raw_post_ids)
+        where t.id = any($1::bigint[])
+        group by t.id, t.region_id
+        `,
+        [topicIds],
       );
       return rows;
     },
@@ -291,6 +363,7 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
         "total_heat_score",
         "first_seen_region",
         "first_seen_at",
+        "propagation_timeline",
         "expires_at",
       ];
       const batch = buildBatchInsert("global_topics", columns, rows);
@@ -358,7 +431,25 @@ async function runGlobalAnalysis(): Promise<void> {
     return;
   }
 
-  const payload: GlobalTopicInsertRow[] = mapped.map((topic) => ({
+  const allTopicIds = [...new Set(mapped.flatMap((topic) => topic.topicIds))];
+  const firstPostRows = await storage.fetchTopicFirstPostMoments(allTopicIds);
+  const firstPostByTopicId = new Map<number, TopicFirstPostRow>(
+    firstPostRows.map((row) => [toNumber(row.topic_id), row]),
+  );
+
+  const enrichedMapped = mapped.map((topic) => {
+    const propagationTimeline = buildPropagationTimelineForTopic(topic, topicById, firstPostByTopicId);
+    const origin = propagationTimeline[0];
+
+    return {
+      ...topic,
+      firstSeenRegion: origin?.regionId ?? topic.firstSeenRegion,
+      firstSeenAt: origin?.firstPostAt ?? topic.firstSeenAt,
+      propagationTimeline,
+    };
+  });
+
+  const payload: GlobalTopicInsertRow[] = enrichedMapped.map((topic) => ({
     name_en: topic.nameEn,
     name_ko: topic.nameKo,
     summary_en: topic.summaryEn ?? null,
@@ -370,12 +461,13 @@ async function runGlobalAnalysis(): Promise<void> {
     total_heat_score: topic.totalHeatScore,
     first_seen_region: topic.firstSeenRegion ?? null,
     first_seen_at: topic.firstSeenAt ?? null,
+    propagation_timeline: topic.propagationTimeline ?? [],
     expires_at: expiresAt,
   }));
 
   await storage.insertGlobalTopics(payload);
 
-  log(`Global analysis completed. generated=${mapped.length}`);
+  log(`Global analysis completed. generated=${enrichedMapped.length}`);
 }
 
 runGlobalAnalysis().catch((error) => {

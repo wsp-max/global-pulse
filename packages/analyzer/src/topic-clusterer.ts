@@ -740,6 +740,9 @@ export async function clusterTopics(
       totalLikes: relatedPosts.reduce((sum, post) => sum + post.likeCount, 0),
       totalComments: relatedPosts.reduce((sum, post) => sum + post.commentCount, 0),
       sourceIds,
+      rawPostIds: relatedPosts
+        .map((post) => Number(post.id))
+        .filter((postId) => Number.isInteger(postId) && postId > 0),
       periodStart: options.periodStart,
       periodEnd: options.periodEnd,
     });

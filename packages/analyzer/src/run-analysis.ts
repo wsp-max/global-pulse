@@ -46,6 +46,7 @@ interface TopicInsertRow {
   total_likes: number;
   total_comments: number;
   source_ids: string[];
+  raw_post_ids: number[];
   burst_z: number | null;
   rank: number | null;
   period_start: string;
@@ -235,6 +236,7 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         "total_likes",
         "total_comments",
         "source_ids",
+        "raw_post_ids",
         "burst_z",
         "rank",
         "period_start",
@@ -381,6 +383,7 @@ async function runRegionAnalysis(params: {
     total_likes: topic.totalLikes,
     total_comments: topic.totalComments,
     source_ids: topic.sourceIds,
+    raw_post_ids: topic.rawPostIds ?? [],
     burst_z: topic.burstZ ?? null,
     rank: topic.rank ?? null,
     period_start: topic.periodStart,

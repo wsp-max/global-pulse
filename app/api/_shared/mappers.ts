@@ -44,6 +44,7 @@ export interface TopicRow {
   total_likes: number | null;
   total_comments: number | null;
   source_ids: string[] | null;
+  raw_post_ids?: number[] | null;
   burst_z?: number | null;
   rank: number | null;
   period_start: string;
@@ -64,6 +65,21 @@ export interface GlobalTopicRow {
   total_heat_score: number | null;
   first_seen_region: string | null;
   first_seen_at: string | null;
+  propagation_timeline?: Array<{
+    regionId: string;
+    firstPostAt: string;
+    heatAtDiscovery: number;
+    status?: "fading" | "steady" | "accelerating";
+  }> | null;
+  propagation_edges?: Array<{
+    from: string;
+    to: string;
+    lagMinutes: number;
+    confidence: number;
+  }> | null;
+  velocity_per_hour?: number | null;
+  acceleration?: number | null;
+  spread_score?: number | null;
   created_at?: string;
 }
 
@@ -89,6 +105,7 @@ export function mapTopicRow(row: TopicRow): Topic {
     totalLikes: toNumber(row.total_likes),
     totalComments: toNumber(row.total_comments),
     sourceIds: row.source_ids ?? [],
+    rawPostIds: row.raw_post_ids ?? undefined,
     burstZ: toNullableNumber(row.burst_z),
     rank: toOptionalNumber(row.rank),
     periodStart: row.period_start,
@@ -110,5 +127,10 @@ export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
     totalHeatScore: toNumber(row.total_heat_score),
     firstSeenRegion: row.first_seen_region ?? undefined,
     firstSeenAt: row.first_seen_at ?? undefined,
+    propagationTimeline: row.propagation_timeline ?? undefined,
+    propagationEdges: row.propagation_edges ?? undefined,
+    velocityPerHour: toOptionalNumber(row.velocity_per_hour),
+    acceleration: toOptionalNumber(row.acceleration),
+    spreadScore: toOptionalNumber(row.spread_score),
   };
 }

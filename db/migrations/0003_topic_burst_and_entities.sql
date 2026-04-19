@@ -5,7 +5,8 @@ ALTER TABLE topics
   ADD COLUMN IF NOT EXISTS category TEXT,
   ADD COLUMN IF NOT EXISTS entities JSONB DEFAULT '[]'::jsonb,
   ADD COLUMN IF NOT EXISTS aliases TEXT[] DEFAULT '{}'::text[],
-  ADD COLUMN IF NOT EXISTS canonical_key TEXT;
+  ADD COLUMN IF NOT EXISTS canonical_key TEXT,
+  ADD COLUMN IF NOT EXISTS raw_post_ids BIGINT[] DEFAULT '{}'::bigint[];
 
 CREATE INDEX IF NOT EXISTS topics_canonical_key_idx ON topics(canonical_key);
 
@@ -34,3 +35,10 @@ $$;
 
 ALTER TABLE topics
   ADD COLUMN IF NOT EXISTS embedding_json JSONB;
+
+ALTER TABLE global_topics
+  ADD COLUMN IF NOT EXISTS propagation_timeline JSONB DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS propagation_edges JSONB DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS velocity_per_hour FLOAT DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS acceleration FLOAT DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS spread_score FLOAT DEFAULT 0;
