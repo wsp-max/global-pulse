@@ -3,6 +3,7 @@ import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/post
 import { getLogger } from "@global-pulse/shared/server-logger";
 import type { Pool } from "pg";
 import { mapCrossRegionTopics } from "./cross-region-mapper";
+import { applyPropagationMetrics, type GlobalTopicHistoryPoint } from "./propagation-metrics";
 
 const logger = getLogger("global-analyzer");
 
@@ -33,6 +34,14 @@ interface TopicFirstPostRow {
   first_post_at: string | null;
 }
 
+interface GlobalTopicHistoryRow {
+  name_en: string;
+  name_ko: string;
+  total_heat_score: number | null;
+  regional_heat_scores: Record<string, number> | null;
+  created_at: string;
+}
+
 interface GlobalTopicInsertRow {
   name_en: string;
   name_ko: string;
@@ -45,7 +54,16 @@ interface GlobalTopicInsertRow {
   total_heat_score: number;
   first_seen_region: string | null;
   first_seen_at: string | null;
-  propagation_timeline: Array<{ regionId: string; firstPostAt: string; heatAtDiscovery: number }>;
+  velocity_per_hour: number;
+  acceleration: number;
+  spread_score: number;
+  propagation_timeline: Array<{
+    regionId: string;
+    firstPostAt: string;
+    heatAtDiscovery: number;
+    status?: "fading" | "steady" | "accelerating";
+  }>;
+  propagation_edges: Array<{ from: string; to: string; lagMinutes: number; confidence: number }>;
   expires_at: string;
 }
 
@@ -53,6 +71,7 @@ interface GlobalAnalysisStorage {
   mode: "postgres";
   fetchTopics(periodStartIso: string): Promise<TopicRow[]>;
   fetchTopicFirstPostMoments(topicIds: number[]): Promise<TopicFirstPostRow[]>;
+  fetchRecentGlobalTopicHistory(historyHours: number): Promise<GlobalTopicHistoryPoint[]>;
   expireActiveGlobalTopics(nowIso: string): Promise<void>;
   insertGlobalTopics(rows: GlobalTopicInsertRow[]): Promise<void>;
 }
@@ -339,6 +358,31 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
       );
       return rows;
     },
+    async fetchRecentGlobalTopicHistory(historyHours) {
+      const safeHours = Math.max(1, Math.min(historyHours, 168));
+      const { rows } = await pool.query<GlobalTopicHistoryRow>(
+        `
+        select
+          name_en,
+          name_ko,
+          total_heat_score,
+          regional_heat_scores,
+          created_at
+        from global_topics
+        where created_at >= now() - make_interval(hours => $1)
+        order by created_at asc
+        `,
+        [safeHours],
+      );
+
+      return rows.map((row) => ({
+        nameEn: row.name_en,
+        nameKo: row.name_ko,
+        totalHeatScore: toNumber(row.total_heat_score),
+        regionalHeatScores: row.regional_heat_scores ?? {},
+        createdAt: row.created_at,
+      }));
+    },
     async expireActiveGlobalTopics(nowIso) {
       await pool.query(
         `
@@ -363,7 +407,11 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
         "total_heat_score",
         "first_seen_region",
         "first_seen_at",
+        "velocity_per_hour",
+        "acceleration",
+        "spread_score",
         "propagation_timeline",
+        "propagation_edges",
         "expires_at",
       ];
       const batch = buildBatchInsert("global_topics", columns, rows);
@@ -407,6 +455,7 @@ async function runGlobalAnalysis(): Promise<void> {
     `Starting global analysis. db=${storage.mode} window=${windowHours}h minRegions=${minRegions} similarity=${threshold}`,
   );
 
+  const historyPoints = await storage.fetchRecentGlobalTopicHistory(30);
   await storage.expireActiveGlobalTopics(nowIso);
 
   const fetchedTopics = (await storage.fetchTopics(periodStartIso))
@@ -449,7 +498,9 @@ async function runGlobalAnalysis(): Promise<void> {
     };
   });
 
-  const payload: GlobalTopicInsertRow[] = enrichedMapped.map((topic) => ({
+  const metricsApplied = applyPropagationMetrics(enrichedMapped, historyPoints, nowIso);
+
+  const payload: GlobalTopicInsertRow[] = metricsApplied.map((topic) => ({
     name_en: topic.nameEn,
     name_ko: topic.nameKo,
     summary_en: topic.summaryEn ?? null,
@@ -461,13 +512,17 @@ async function runGlobalAnalysis(): Promise<void> {
     total_heat_score: topic.totalHeatScore,
     first_seen_region: topic.firstSeenRegion ?? null,
     first_seen_at: topic.firstSeenAt ?? null,
+    velocity_per_hour: Number(topic.velocityPerHour ?? 0),
+    acceleration: Number(topic.acceleration ?? 0),
+    spread_score: Number(topic.spreadScore ?? 0),
     propagation_timeline: topic.propagationTimeline ?? [],
+    propagation_edges: topic.propagationEdges ?? [],
     expires_at: expiresAt,
   }));
 
   await storage.insertGlobalTopics(payload);
 
-  log(`Global analysis completed. generated=${enrichedMapped.length}`);
+  log(`Global analysis completed. generated=${metricsApplied.length}`);
 }
 
 runGlobalAnalysis().catch((error) => {
