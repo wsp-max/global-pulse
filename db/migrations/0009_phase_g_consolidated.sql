@@ -1,4 +1,4 @@
-﻿ALTER TABLE topics
+ALTER TABLE topics
   ADD COLUMN IF NOT EXISTS sentiment_distribution JSONB,
   ADD COLUMN IF NOT EXISTS sentiment_reasoning_ko TEXT,
   ADD COLUMN IF NOT EXISTS sentiment_reasoning_en TEXT,
