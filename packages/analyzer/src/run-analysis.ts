@@ -5,6 +5,7 @@ import type { Pool } from "pg";
 import { detectKeywordBursts } from "./burst-detector";
 import { extractKeywords, type AnalysisPostInput } from "./keyword-extractor";
 import { summarizeTopicsWithGemini } from "./gemini-summarizer";
+import { calculateAnomalyScore, computeHeatStats, type HeatStats } from "./baseline";
 import { enrichTopicsWithEmbeddings } from "./topic-embeddings";
 import { clusterTopics } from "./topic-clusterer";
 
@@ -55,6 +56,7 @@ interface TopicInsertRow {
   source_ids: string[];
   raw_post_ids: number[];
   burst_z: number | null;
+  anomaly_score: number | null;
   scope: AnalysisScope;
   rank: number | null;
   period_start: string;
@@ -89,10 +91,26 @@ interface PortalRankingSignalRow {
   view_count: number | string | null;
 }
 
+interface BaselineRow {
+  category: string;
+  heat_mean: number | string | null;
+  heat_std: number | string | null;
+}
+
+interface DailyBaselineUpsertRow {
+  region_id: string;
+  category: string;
+  day: string;
+  heat_mean: number;
+  heat_std: number;
+}
+
 interface AnalysisStorage {
   mode: "postgres";
   fetchRawPosts(sourceIds: string[], periodStartIso: string): Promise<RawPostRow[]>;
   fetchPortalRankingSignals(regionId: string, fromIso: string): Promise<PortalRankingSignalRow[]>;
+  fetchBaseline(regionId: string, categories: string[]): Promise<BaselineRow[]>;
+  upsertDailyBaseline(rows: DailyBaselineUpsertRow[]): Promise<void>;
   insertTopics(rows: TopicInsertRow[]): Promise<void>;
   insertHeatHistory(rows: HeatHistoryInsertRow[]): Promise<void>;
   insertRegionSnapshot(row: SnapshotInsertRow): Promise<void>;
@@ -354,6 +372,43 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
       );
       return rows;
     },
+    async fetchBaseline(regionId, categories) {
+      if (categories.length === 0) {
+        return [];
+      }
+
+      const { rows } = await pool.query<BaselineRow>(
+        `
+        select
+          category,
+          avg(heat_mean) as heat_mean,
+          avg(heat_std) as heat_std
+        from topic_baseline_daily
+        where region_id = $1
+          and category = any($2::text[])
+          and day >= current_date - interval '7 days'
+        group by category
+        `,
+        [regionId, categories],
+      );
+
+      return rows;
+    },
+    async upsertDailyBaseline(rows) {
+      for (const row of rows) {
+        await pool.query(
+          `
+          insert into topic_baseline_daily (region_id, category, day, heat_mean, heat_std)
+          values ($1, $2, $3::date, $4, $5)
+          on conflict (region_id, category, day)
+          do update set
+            heat_mean = excluded.heat_mean,
+            heat_std = excluded.heat_std
+          `,
+          [row.region_id, row.category, row.day, row.heat_mean, row.heat_std],
+        );
+      }
+    },
     async insertTopics(rows) {
       if (rows.length === 0) return;
       const columns: Array<keyof TopicInsertRow & string> = [
@@ -381,6 +436,7 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         "source_ids",
         "raw_post_ids",
         "burst_z",
+        "anomaly_score",
         "scope",
         "rank",
         "period_start",
@@ -545,10 +601,48 @@ async function runRegionAnalysis(params: {
     return summarizedTopics;
   });
 
-  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
-  const maxHeatScoreInBatch = Math.max(...analyzedTopics.map((topic) => topic.heatScore), 1);
+  const baselineCategories = [...new Set(analyzedTopics.map((topic) => topic.category ?? "other"))];
+  const baselineRows = await storage.fetchBaseline(regionId, baselineCategories);
+  const baselineMap = new Map<string, HeatStats>();
+  for (const row of baselineRows) {
+    baselineMap.set(row.category, {
+      mean: toNumber(row.heat_mean),
+      std: toNumber(row.heat_std),
+    });
+  }
 
-  const topicRows: TopicInsertRow[] = analyzedTopics.map((topic) => ({
+  const topicsWithAnomaly = analyzedTopics.map((topic) => {
+    const baseline = baselineMap.get(topic.category ?? "other") ?? null;
+    return {
+      ...topic,
+      anomalyScore: calculateAnomalyScore(topic.heatScore, baseline),
+    };
+  });
+
+  const baselineByCategory = new Map<string, number[]>();
+  for (const topic of topicsWithAnomaly) {
+    const key = topic.category ?? "other";
+    const list = baselineByCategory.get(key) ?? [];
+    list.push(topic.heatScore);
+    baselineByCategory.set(key, list);
+  }
+
+  const baselineUpserts: DailyBaselineUpsertRow[] = [...baselineByCategory.entries()].map(([category, values]) => {
+    const stats = computeHeatStats(values);
+    return {
+      region_id: regionId,
+      category,
+      day: periodEndIso,
+      heat_mean: Number(stats.mean.toFixed(4)),
+      heat_std: Number(stats.std.toFixed(4)),
+    };
+  });
+  await storage.upsertDailyBaseline(baselineUpserts);
+
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  const maxHeatScoreInBatch = Math.max(...topicsWithAnomaly.map((topic) => topic.heatScore), 1);
+
+  const topicRows: TopicInsertRow[] = topicsWithAnomaly.map((topic) => ({
     region_id: topic.regionId,
     name_ko: topic.nameKo,
     name_en: topic.nameEn,
@@ -573,6 +667,7 @@ async function runRegionAnalysis(params: {
     source_ids: topic.sourceIds,
     raw_post_ids: topic.rawPostIds ?? [],
     burst_z: topic.burstZ ?? null,
+    anomaly_score: topic.anomalyScore ?? null,
     scope,
     rank: topic.rank ?? null,
     period_start: topic.periodStart,
@@ -582,7 +677,7 @@ async function runRegionAnalysis(params: {
 
   await storage.insertTopics(topicRows);
 
-  const historyRows: HeatHistoryInsertRow[] = analyzedTopics.map((topic) => ({
+  const historyRows: HeatHistoryInsertRow[] = topicsWithAnomaly.map((topic) => ({
     region_id: topic.regionId,
     topic_name: topic.nameEn,
     heat_score: topic.heatScore,
@@ -593,8 +688,8 @@ async function runRegionAnalysis(params: {
 
   await storage.insertHeatHistory(historyRows);
 
-  const totalHeatScore = analyzedTopics.reduce((sum, topic) => sum + topic.heatScore, 0);
-  const sentimentValues = analyzedTopics
+  const totalHeatScore = topicsWithAnomaly.reduce((sum, topic) => sum + topic.heatScore, 0);
+  const sentimentValues = topicsWithAnomaly
     .map((topic) => topic.sentiment)
     .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
   const avgSentiment =
@@ -605,7 +700,7 @@ async function runRegionAnalysis(params: {
   await storage.insertRegionSnapshot({
     region_id: regionId,
     total_heat_score: totalHeatScore,
-    active_topics: analyzedTopics.length,
+    active_topics: topicsWithAnomaly.length,
     avg_sentiment: avgSentiment === null ? null : Number(avgSentiment.toFixed(4)),
     top_keywords: keywords.slice(0, 10).map((keyword) => keyword.keyword),
     sources_active: new Set(posts.map((post) => post.sourceId)).size,
@@ -615,7 +710,7 @@ async function runRegionAnalysis(params: {
   });
 
   log(
-    `[${regionId}:${scope}] posts=${posts.length}, keywords=${keywords.length}, topics=${analyzedTopics.length}, totalHeat=${totalHeatScore.toFixed(
+    `[${regionId}:${scope}] posts=${posts.length}, keywords=${keywords.length}, topics=${topicsWithAnomaly.length}, totalHeat=${totalHeatScore.toFixed(
       1,
     )}`,
   );
@@ -686,5 +781,7 @@ runAnalysis().catch((error) => {
   logger.error(`Analysis failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });
+
+
 
 

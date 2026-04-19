@@ -1,4 +1,4 @@
-export interface Region {
+﻿export interface Region {
   id: string;
   nameKo: string;
   nameEn: string;
@@ -70,6 +70,7 @@ export interface Topic {
   } | null;
   sentimentReasoningKo?: string | null;
   sentimentReasoningEn?: string | null;
+  anomalyScore?: number | null;
   heatScore: number;
   heatScoreDisplay?: number | null;
   postCount: number;
@@ -223,4 +224,5 @@ export const SENTIMENT_COLORS = {
   neutral: "#6B7280",
   negative: "#EF4444",
 };
+
 
