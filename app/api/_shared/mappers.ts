@@ -1,4 +1,4 @@
-import type { GlobalTopic, Topic } from "@global-pulse/shared";
+import type { GlobalTopic, Topic, TopicCategory, TopicEntity, TopicEntityType } from "@global-pulse/shared";
 
 function toNumber(value: unknown, fallback = 0): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -21,6 +21,59 @@ function toNullableNumber(value: unknown): number | null {
   const parsed = toNumber(value, Number.NaN);
   if (Number.isNaN(parsed)) return null;
   return parsed;
+}
+
+const TOPIC_CATEGORIES = new Set<TopicCategory>([
+  "politics",
+  "economy",
+  "tech",
+  "entertainment",
+  "sports",
+  "society",
+  "crime",
+  "culture",
+  "health",
+  "science",
+  "other",
+]);
+
+const TOPIC_ENTITY_TYPES = new Set<TopicEntityType>([
+  "person",
+  "org",
+  "product",
+  "event",
+  "place",
+  "work",
+  "other",
+]);
+
+function toTopicCategory(value: unknown): TopicCategory | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const normalized = value.trim().toLowerCase() as TopicCategory;
+  return TOPIC_CATEGORIES.has(normalized) ? normalized : undefined;
+}
+
+function toTopicEntities(
+  value: Array<{ text: string; type: string }> | null | undefined,
+): TopicEntity[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const mapped = value
+    .map((item) => {
+      const text = item?.text?.trim();
+      const rawType = item?.type?.trim().toLowerCase() as TopicEntityType;
+      if (!text) {
+        return null;
+      }
+      const type = TOPIC_ENTITY_TYPES.has(rawType) ? rawType : "other";
+      return { text, type };
+    })
+    .filter((item): item is TopicEntity => Boolean(item));
+
+  return mapped.length > 0 ? mapped : undefined;
 }
 
 export interface TopicRow {
@@ -94,8 +147,8 @@ export function mapTopicRow(row: TopicRow): Topic {
     sampleTitles: row.sample_titles ?? undefined,
     keywords: row.keywords ?? [],
     sentiment: toNullableNumber(row.sentiment),
-    category: row.category ?? undefined,
-    entities: row.entities ?? undefined,
+    category: toTopicCategory(row.category),
+    entities: toTopicEntities(row.entities),
     aliases: row.aliases ?? undefined,
     canonicalKey: row.canonical_key ?? undefined,
     embeddingJson: row.embedding_json ?? undefined,

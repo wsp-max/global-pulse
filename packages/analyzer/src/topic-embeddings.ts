@@ -15,16 +15,12 @@ interface EmbeddingOptions {
 }
 
 interface GeminiEmbeddingResponse {
-  embeddings?: Array<
-    | {
-        values?: number[];
-      }
-    | {
-        embedding?: {
-          values?: number[];
-        };
-      }
-  >;
+  embeddings?: Array<{
+    values?: number[];
+    embedding?: {
+      values?: number[];
+    };
+  }>;
 }
 
 let lastRequestAt = 0;
@@ -58,7 +54,9 @@ async function waitForRateLimit(): Promise<void> {
   lastRequestAt = Date.now();
 }
 
-function parseEmbeddingValues(item: GeminiEmbeddingResponse["embeddings"] extends Array<infer T> ? T : never): number[] | null {
+function parseEmbeddingValues(
+  item: { values?: number[]; embedding?: { values?: number[] } } | null | undefined,
+): number[] | null {
   if (!item || typeof item !== "object") {
     return null;
   }
