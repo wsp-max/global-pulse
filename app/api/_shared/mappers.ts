@@ -53,12 +53,27 @@ const TOPIC_ENTITY_TYPES = new Set<TopicEntityType>([
   "other",
 ]);
 
+const REGION_TOPIC_FALLBACK_REGEX = /^region\s+[a-z]{2}\s+topic\s+\d+$/i;
+
 function toTopicCategory(value: unknown): TopicCategory | undefined {
   if (typeof value !== "string") {
     return undefined;
   }
   const normalized = value.trim().toLowerCase() as TopicCategory;
   return TOPIC_CATEGORIES.has(normalized) ? normalized : undefined;
+}
+
+function normalizeCanonicalKey(value: string | null | undefined, fallbackLabel: string): string | null {
+  const raw = (value ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+
+  if (REGION_TOPIC_FALLBACK_REGEX.test(raw)) {
+    return fallbackLabel.normalize("NFKC").toLowerCase();
+  }
+
+  return raw;
 }
 
 function toTopicCategoryOrNull(value: unknown): TopicCategory | null {
@@ -194,7 +209,7 @@ export function mapTopicRow(row: TopicRow): Topic {
     category: toTopicCategoryOrNull(row.category),
     entities: toTopicEntitiesOrNull(row.entities),
     aliases: row.aliases ?? null,
-    canonicalKey: row.canonical_key ?? null,
+    canonicalKey: normalizeCanonicalKey(row.canonical_key, cleaned.displayEn),
     embeddingJson: row.embedding_json ?? undefined,
     heatScore: toNumber(row.heat_score),
     heatScoreDisplay: toOptionalNumberOrNull(row.heat_score_display),
