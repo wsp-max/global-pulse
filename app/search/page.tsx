@@ -2,16 +2,11 @@
 
 import useSWR from "swr";
 import { useMemo, useState } from "react";
-import type { GlobalTopic, Topic } from "@global-pulse/shared";
+import { useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useLanguage } from "@/lib/i18n/use-language";
-
-interface SearchResponse {
-  topics: Topic[];
-  globalTopics: GlobalTopic[];
-  total: number;
-}
+import type { SearchApiResponse } from "@/lib/types/api";
 
 const rawBasePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim() ?? "";
 const normalizedBasePath = rawBasePath
@@ -20,17 +15,19 @@ const normalizedBasePath = rawBasePath
     : `/${rawBasePath.replace(/\/+$/, "")}`
   : "";
 
-const fetcher = async (url: string): Promise<SearchResponse> => {
+const fetcher = async (url: string): Promise<SearchApiResponse> => {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch search results: ${response.status}`);
   }
-  return (await response.json()) as SearchResponse;
+  return (await response.json()) as SearchApiResponse;
 };
 
 export default function SearchPage() {
-  const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q")?.trim() ?? "";
+  const [query, setQuery] = useState(initialQuery);
+  const [submittedQuery, setSubmittedQuery] = useState(initialQuery);
   const { t } = useLanguage("ko");
 
   const endpoint = useMemo(() => {

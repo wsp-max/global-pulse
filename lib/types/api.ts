@@ -53,6 +53,25 @@ export interface GlobalTopicsApiResponse {
   lastUpdated?: string;
 }
 
+export interface SearchSemanticMeta {
+  enabled: boolean;
+  used: boolean;
+  model: string | null;
+  cacheHit: boolean;
+  candidateCount: number;
+}
+
+export interface SearchApiResponse {
+  query: string;
+  region: string | null;
+  topics: Topic[];
+  globalTopics: GlobalTopic[];
+  total: number;
+  semantic?: SearchSemanticMeta;
+  configured?: boolean;
+  provider?: "postgres" | "none";
+}
+
 export interface TimelinePoint {
   regionId: string;
   topicName: string;

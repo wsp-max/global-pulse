@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n/use-language";
 import { HeaderClock } from "./HeaderClock";
+import { SearchBar } from "./SearchBar";
 
 export function Header() {
   const { lang, setLanguage, t } = useLanguage("ko");
@@ -37,6 +38,8 @@ export function Header() {
             </Link>
             <span className="hidden text-xs text-[var(--text-tertiary)] sm:inline">{t("app.subtitle")}</span>
           </div>
+
+          <SearchBar />
 
           <div className="flex items-center gap-2">
             <HeaderClock keyRegions={keyRegions} />
