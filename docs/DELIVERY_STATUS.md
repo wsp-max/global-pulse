@@ -2624,3 +2624,8 @@
 - Pulse 네비게이션 라벨 한글 깨짐 복구.
 - Pulse 탭 노출 확장: 뉴스 트랙(`/news`), 커뮤 vs 뉴스(`/compare`)를 feature flag 기반으로 노출.
 - EC2 env에서 dual-map/news pipeline 활성화 값 적용 완료.
+
+## 2026-04-19 Runtime Recovery Confirmed
+- EC2에 dual-map/news pipeline flag 활성화 + 재배포 완료.
+- `sources` 카탈로그 재시드 후 news 수집 FK 오류 복구 확인(대상 3소스 3/3 성공).
+- `/pulse/news`, `/pulse/compare` 접근 가능(HTTP 200) 및 `scope=news` API 데이터 응답 확인.

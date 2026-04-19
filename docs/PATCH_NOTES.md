@@ -4553,3 +4553,28 @@ pm run ops:snapshot -> completed (egions=6)
 - `pnpm lint` pass
 - `pnpm test` pass (24/24)
 - `pnpm build` pass
+
+## GP-20260419-112 (EC2 recovery deployment + news scope activation)
+### Applied on EC2
+- Deployed commit: `2f88af7`
+- Env toggles applied in `/etc/global-pulse/global-pulse.env`:
+  - `FEATURE_NEWS_PIPELINE=true`
+  - `FEATURE_DUAL_MAP_UI=true`
+  - `NEXT_PUBLIC_FEATURE_DUAL_MAP_UI=true`
+
+### Recovery verification
+- Re-seeded catalog: `npm run seed:regions` -> `sources=129`
+- Targeted news collect rerun:
+  - `npm run collect -- --type news --source tuoitre_rss,news24_rss,thisday_rss`
+  - result: `3/3 succeeded` (no `raw_posts_source_id_fkey`)
+- News analysis rerun:
+  - `npm run analyze -- --scope news --hours 24`
+  - `npm run analyze:global -- --scope news --hours 72 --min-regions 2 --similarity 0.24`
+
+### External runtime checks
+- `/stock` 200 (unchanged)
+- `/pulse` 200
+- `/pulse/news` 200
+- `/pulse/compare` 200
+- `/pulse/api/regions?scope=news` 200 (news topics now visible for seeded/collected regions)
+- `/pulse/api/topics?region=vn&scope=news` 200 (non-empty)
