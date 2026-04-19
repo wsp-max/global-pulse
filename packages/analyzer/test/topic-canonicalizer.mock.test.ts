@@ -47,11 +47,9 @@ test("summarizeTopicsWithGemini maps category/entities/aliases from gemini respo
   process.env.GEMINI_API_KEY = "test-key";
   process.env.ANALYZER_LLM_CANONICAL_BATCH = "1";
 
-  let generateCalls = 0;
   globalThis.fetch = async (input) => {
     const url = String(input);
     if (url.includes(":generateContent")) {
-      generateCalls += 1;
       const payload = [
         {
           name_ko: "스트리트 파이터 대회",
