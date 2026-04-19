@@ -130,14 +130,14 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                     <marker
                       key={`arrow-${edge.from}-${edge.to}-${index}`}
                       id={`arrow-${variant}-${index}`}
-                      markerWidth="4"
-                      markerHeight="4"
-                      refX="3.5"
-                      refY="2"
+                      markerWidth="5"
+                      markerHeight="5"
+                      refX="4.2"
+                      refY="2.5"
                       orient="auto"
                       markerUnits="strokeWidth"
                     >
-                      <path d={variant === "news" ? "M 0 0 L 4 2 L 0 4 L 1.2 2 z" : "M 0 0 L 4 2 L 0 4 z"} fill={flowColor} />
+                      <path d={variant === "news" ? "M 0 0 L 5 2.5 L 0 5 L 1.6 2.5 z" : "M 0 0 L 5 2.5 L 0 5 z"} fill={flowColor} />
                     </marker>
                   );
                 })}
@@ -154,12 +154,11 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                 const from = toMapPercent(REGION_COORDINATES[edge.from]!);
                 const to = toMapPercent(REGION_COORDINATES[edge.to]!);
                 const curve = curvePath(from, to);
-                const lagHours = Math.max(1, Math.round(edge.lagMinutes / 60));
-                const durationSec = Math.max(3, Math.min(9, lagHours / 2));
                 const volumeBand = toVolumeBand(edge.volumeHeatSum, maxVolume);
+                const durationSec = Math.max(3.2, Math.min(5.5, 5.7 - volumeBand * 2.5));
                 const flowColor = getFlowStrokeColor(variant, volumeBand);
                 const strokeOpacity = Math.max(0.3, Math.min(0.9, edge.confidence));
-                const strokeWidth = 0.75 + Math.max(0.2, Math.min(1.2, edge.confidence * 1.2));
+                const strokeWidth = 0.5 + Math.max(0, Math.min(0.8, volumeBand * 0.8));
                 const isFast = edge.velocity >= surgingVelocityCutoff;
                 const particleCount = edge.confidence >= 0.75 ? 3 : edge.confidence >= 0.45 ? 2 : 1;
                 const lagText = `${toLagText(edge.lagMinutes)}${isFast ? " ⚡" : ""}`;
@@ -167,6 +166,7 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                 return (
                   <g key={`${edge.from}-${edge.to}-${index}`}>
                     <path
+                      className="map-flow-path"
                       d={curve.d}
                       stroke={flowColor}
                       strokeWidth={strokeWidth}
@@ -187,8 +187,9 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                     {Array.from({ length: particleCount }).map((_, particleIndex) => (
                       <circle
                         key={`particle-${index}-${particleIndex}`}
-                        r="0.45"
+                        r="0.35"
                         fill={flowColor}
+                        opacity={0.75}
                         filter={`url(#particle-glow-${variant})`}
                         className="map-particle"
                       >

@@ -111,6 +111,10 @@ a {
   .map-particle {
     display: none !important;
   }
+
+  .map-flow-path {
+    stroke-dasharray: 1.4 1.2;
+  }
 }
 
 

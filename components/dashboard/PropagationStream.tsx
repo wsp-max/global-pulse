@@ -154,7 +154,7 @@ export function PropagationStream({ regions, globalTopics }: PropagationStreamPr
                     )}
                   </div>
 
-                  <div className="relative mt-2 h-7 rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.82)]">
+                  <div className="relative mt-2 h-5 rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.82)]">
                     <div
                       className="absolute left-0 top-0 h-full rounded-lg bg-[linear-gradient(90deg,rgba(56,189,248,0.2),rgba(56,189,248,0.45))]"
                       style={{ width: `${Math.max(4, lane.progress)}%` }}
@@ -176,8 +176,8 @@ export function PropagationStream({ regions, globalTopics }: PropagationStreamPr
                           style={{ left: `${stop.left}%` }}
                           title={`${label} ${timeLabel}`}
                         >
-                          <div className="mt-0.5 h-2 w-2 rounded-full border border-[var(--bg-primary)] bg-[var(--text-accent)]" />
-                          <div className="mt-1 whitespace-nowrap rounded-full border border-[var(--border-default)] bg-[rgba(15,23,42,0.9)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]">
+                          <div className="mt-0.5 h-[6px] w-[6px] rounded-full border border-[var(--bg-primary)] bg-[var(--text-accent)]" />
+                          <div className="mt-1 whitespace-nowrap rounded-full border border-[var(--border-default)] bg-[rgba(15,23,42,0.9)] px-1.5 py-0.5 text-[9px] text-[var(--text-secondary)]">
                             {region?.flagEmoji ?? "🌐"}
                           </div>
                         </div>
