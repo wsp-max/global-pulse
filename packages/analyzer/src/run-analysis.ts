@@ -2,6 +2,7 @@ import { SOURCES } from "@global-pulse/shared";
 import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
 import { getLogger } from "@global-pulse/shared/server-logger";
 import type { Pool } from "pg";
+import { detectKeywordBursts } from "./burst-detector";
 import { extractKeywords, type AnalysisPostInput } from "./keyword-extractor";
 import { summarizeTopicsWithGemini } from "./gemini-summarizer";
 import { clusterTopics } from "./topic-clusterer";
@@ -39,6 +40,7 @@ interface TopicInsertRow {
   total_likes: number;
   total_comments: number;
   source_ids: string[];
+  burst_z: number | null;
   rank: number | null;
   period_start: string;
   period_end: string;
@@ -105,6 +107,59 @@ function toAnalysisPost(row: RawPostRow): AnalysisPostInput {
   };
 }
 
+function normalizeBurstTerm(value: string): string {
+  return value.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function applyBurstBoost(
+  regionId: string,
+  topics: Awaited<ReturnType<typeof clusterTopics>>,
+  posts: AnalysisPostInput[],
+  keywordTerms: string[],
+  periodEndIso: string,
+): Awaited<ReturnType<typeof clusterTopics>> {
+  const burstMap = detectKeywordBursts(regionId, posts, keywordTerms, { endAtIso: periodEndIso });
+  if (burstMap.size === 0) {
+    return topics;
+  }
+
+  const boosted = topics.map((topic) => {
+    const candidateTerms = [topic.nameKo, topic.nameEn, ...topic.keywords]
+      .map((term) => normalizeBurstTerm(term))
+      .filter((term) => term.length > 0);
+
+    let maxBoost = 1;
+    let maxBurstZ: number | null = null;
+
+    for (const term of candidateTerms) {
+      const burst = burstMap.get(term);
+      if (!burst) {
+        continue;
+      }
+
+      if (burst.burstBoost > maxBoost) {
+        maxBoost = burst.burstBoost;
+      }
+      if (maxBurstZ === null || burst.zScore > maxBurstZ) {
+        maxBurstZ = burst.zScore;
+      }
+    }
+
+    return {
+      ...topic,
+      heatScore: Number((topic.heatScore * maxBoost).toFixed(4)),
+      burstZ: maxBurstZ,
+    };
+  });
+
+  return [...boosted]
+    .sort((left, right) => right.heatScore - left.heatScore)
+    .map((topic, index) => ({
+      ...topic,
+      rank: index + 1,
+    }));
+}
+
 function buildBatchInsert<T extends object>(
   tableName: string,
   columns: Array<keyof T & string>,
@@ -165,6 +220,7 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         "total_likes",
         "total_comments",
         "source_ids",
+        "burst_z",
         "rank",
         "period_start",
         "period_end",
@@ -253,10 +309,17 @@ async function runRegionAnalysis(params: {
   }
 
   const keywords = await extractKeywords(regionId, posts);
-  const topics = await clusterTopics(regionId, keywords, posts, {
+  const clusteredTopics = await clusterTopics(regionId, keywords, posts, {
     periodStart: periodStartIso,
     periodEnd: periodEndIso,
   });
+  const topics = applyBurstBoost(
+    regionId,
+    clusteredTopics,
+    posts,
+    keywords.map((keyword) => keyword.keyword),
+    periodEndIso,
+  );
 
   if (topics.length === 0) {
     log(`[${regionId}] no topics generated.`);
@@ -290,6 +353,7 @@ async function runRegionAnalysis(params: {
     total_likes: topic.totalLikes,
     total_comments: topic.totalComments,
     source_ids: topic.sourceIds,
+    burst_z: topic.burstZ ?? null,
     rank: topic.rank ?? null,
     period_start: topic.periodStart,
     period_end: topic.periodEnd,

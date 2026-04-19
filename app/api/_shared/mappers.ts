@@ -38,6 +38,7 @@ export interface TopicRow {
   total_likes: number | null;
   total_comments: number | null;
   source_ids: string[] | null;
+  burst_z?: number | null;
   rank: number | null;
   period_start: string;
   period_end: string;
@@ -76,6 +77,7 @@ export function mapTopicRow(row: TopicRow): Topic {
     totalLikes: toNumber(row.total_likes),
     totalComments: toNumber(row.total_comments),
     sourceIds: row.source_ids ?? [],
+    burstZ: toNullableNumber(row.burst_z),
     rank: toOptionalNumber(row.rank),
     periodStart: row.period_start,
     periodEnd: row.period_end,

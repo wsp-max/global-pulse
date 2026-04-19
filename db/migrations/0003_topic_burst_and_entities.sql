@@ -1,0 +1,2 @@
+ALTER TABLE topics
+  ADD COLUMN IF NOT EXISTS burst_z FLOAT;

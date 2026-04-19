@@ -52,6 +52,7 @@ export interface Topic {
   totalLikes: number;
   totalComments: number;
   sourceIds: string[];
+  burstZ?: number | null;
   rank?: number;
   periodStart: string;
   periodEnd: string;
