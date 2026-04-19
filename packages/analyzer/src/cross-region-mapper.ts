@@ -12,6 +12,7 @@ interface TopicNode {
   nameTokens: Set<string>;
   keywordTokens: Set<string>;
   tokens: Set<string>;
+  embedding: number[] | null;
 }
 
 interface SimilarityMetrics {
@@ -19,11 +20,15 @@ interface SimilarityMetrics {
   keywordJaccard: number;
   nameDice: number;
   sharedTokens: number;
+  cosine: number | null;
   hasExactKeywordPhrase: boolean;
   hasStrongNameContainment: boolean;
   hasPrimaryNameTokenMatch: boolean;
   score: number;
 }
+
+const ANALYZER_SIMILARITY_COSINE_AUTO = Number(process.env.ANALYZER_SIMILARITY_COSINE_AUTO ?? 0.82);
+const ANALYZER_SIMILARITY_COSINE_ASSIST = Number(process.env.ANALYZER_SIMILARITY_COSINE_ASSIST ?? 0.7);
 
 const GENERIC_STOPWORDS = new Set([
   "news",
@@ -191,6 +196,52 @@ function diceCoefficient(a: Set<string>, b: Set<string>): number {
   return (2 * intersection) / (a.size + b.size);
 }
 
+function normalizeEmbedding(values: number[] | null | undefined): number[] | null {
+  if (!Array.isArray(values) || values.length === 0) {
+    return null;
+  }
+
+  const normalized = values
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
+
+  return normalized.length > 0 ? normalized : null;
+}
+
+function cosineSimilarity(left: number[] | null, right: number[] | null): number | null {
+  if (!left || !right || left.length === 0 || right.length === 0) {
+    return null;
+  }
+
+  const length = Math.min(left.length, right.length);
+  if (length === 0) {
+    return null;
+  }
+
+  let dot = 0;
+  let leftNorm = 0;
+  let rightNorm = 0;
+
+  for (let index = 0; index < length; index += 1) {
+    const l = left[index] ?? 0;
+    const r = right[index] ?? 0;
+    dot += l * r;
+    leftNorm += l * l;
+    rightNorm += r * r;
+  }
+
+  if (leftNorm <= 0 || rightNorm <= 0) {
+    return null;
+  }
+
+  const cosine = dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm));
+  if (!Number.isFinite(cosine)) {
+    return null;
+  }
+
+  return Math.max(-1, Math.min(1, Number(cosine.toFixed(6))));
+}
+
 function toNode(topic: Topic): TopicNode {
   const normalizedName = normalizeToken(`${topic.nameEn} ${topic.nameKo}`.replace(/\s+/g, " "));
   const englishNameTokens = tokenizeText(topic.nameEn);
@@ -219,6 +270,7 @@ function toNode(topic: Topic): TopicNode {
     nameTokens,
     keywordTokens: new Set([...keywordTokens, ...keywordPhraseTokens]),
     tokens,
+    embedding: normalizeEmbedding(topic.embeddingJson),
   };
 }
 
@@ -227,6 +279,7 @@ function computeSimilarity(a: TopicNode, b: TopicNode): SimilarityMetrics {
   const keywordJaccard = jaccard(a.keywordTokens, b.keywordTokens);
   const nameDice = diceCoefficient(a.nameTokens, b.nameTokens);
   const sharedTokens = setIntersectionCount(a.tokens, b.tokens);
+  const cosine = cosineSimilarity(a.embedding, b.embedding);
 
   const hasStrongNameContainment =
     a.normalizedName.length >= 6 &&
@@ -272,6 +325,7 @@ function computeSimilarity(a: TopicNode, b: TopicNode): SimilarityMetrics {
     keywordJaccard,
     nameDice,
     sharedTokens,
+    cosine,
     hasExactKeywordPhrase,
     hasStrongNameContainment,
     hasPrimaryNameTokenMatch,
@@ -285,6 +339,18 @@ function areTopicsSimilar(a: TopicNode, b: TopicNode, threshold: number): boolea
   }
 
   const metrics = computeSimilarity(a, b);
+
+  if (metrics.cosine !== null && metrics.cosine >= ANALYZER_SIMILARITY_COSINE_AUTO) {
+    return true;
+  }
+
+  if (
+    metrics.cosine !== null &&
+    metrics.cosine >= ANALYZER_SIMILARITY_COSINE_ASSIST &&
+    metrics.score + 0.15 >= threshold
+  ) {
+    return true;
+  }
 
   if (metrics.sharedTokens >= 3 && metrics.score >= Math.max(0.18, threshold * 0.7)) {
     return true;
