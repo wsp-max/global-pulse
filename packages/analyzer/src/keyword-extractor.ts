@@ -1,3 +1,8 @@
+import { SOURCES } from "@global-pulse/shared";
+import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
+import { getLogger } from "@global-pulse/shared/server-logger";
+import type { Pool } from "pg";
+
 export interface KeywordScore {
   keyword: string;
   score: number;
@@ -205,6 +210,29 @@ const DATE_LIKE_REGEX = /^(?:19|20)\d{2}[-/.](?:0?[1-9]|1[0-2])[-/.](?:0?[1-9]|[
 const LATIN_TOKEN_REGEX = /^[a-z][a-z0-9._-]*$/;
 const HANGUL_ONLY_REGEX = /^[\p{Script=Hangul}]+$/u;
 const NOISE_TOKEN_REGEX = /^(?:img|jpg|jpeg|png|gif|webp|fyp|lol+|lmao|haha+|www+)$/u;
+const ANALYZER_TFIDF_WINDOW_HOURS = Number(process.env.ANALYZER_TFIDF_WINDOW_HOURS ?? 168);
+const ANALYZER_TFIDF_DOC_LIMIT = Number(process.env.ANALYZER_TFIDF_DOC_LIMIT ?? 8000);
+const IDF_CACHE_TTL_MS = 30 * 60 * 1000;
+
+const logger = getLogger("keyword-extractor");
+
+interface TermIdfSnapshot {
+  idfByTerm: Map<string, number>;
+  genericTerms: Set<string>;
+  totalDocs: number;
+}
+
+interface TermIdfCacheEntry extends TermIdfSnapshot {
+  expiresAt: number;
+}
+
+interface RawPostTitleRow {
+  source_id: string;
+  title: string;
+}
+
+const termIdfCache = new Map<string, TermIdfCacheEntry>();
+let cachedPool: Pool | null = null;
 
 const KOREAN_SUFFIXES = [
   "에서",
@@ -382,6 +410,151 @@ function regionScriptMultiplier(token: string, regionId: string): number {
   return 1;
 }
 
+function getPoolOrNull(): Pool | null {
+  if (cachedPool) {
+    return cachedPool;
+  }
+  if (!hasPostgresConfig()) {
+    return null;
+  }
+  cachedPool = createPostgresPool();
+  return cachedPool;
+}
+
+export function buildIdfFromDocumentTokens(documentTokens: string[][]): TermIdfSnapshot {
+  const docFrequency = new Map<string, number>();
+  let totalDocs = 0;
+
+  for (const tokens of documentTokens) {
+    if (tokens.length === 0) {
+      continue;
+    }
+
+    totalDocs += 1;
+    const uniqueTerms = new Set(tokens);
+    for (const term of uniqueTerms) {
+      docFrequency.set(term, (docFrequency.get(term) ?? 0) + 1);
+    }
+  }
+
+  const idfByTerm = new Map<string, number>();
+  for (const [term, frequency] of docFrequency.entries()) {
+    const idf = Math.log((totalDocs + 1) / (frequency + 1)) + 1;
+    idfByTerm.set(term, Number(idf.toFixed(6)));
+  }
+
+  const sortedByIdfAsc = [...idfByTerm.entries()].sort((a, b) => a[1] - b[1]);
+  const genericCount = Math.max(1, Math.ceil(sortedByIdfAsc.length * 0.02));
+  const genericTerms = new Set(sortedByIdfAsc.slice(0, genericCount).map(([term]) => term));
+
+  return { idfByTerm, genericTerms, totalDocs };
+}
+
+async function persistIdfCacheToDb(
+  pool: Pool,
+  regionId: string,
+  snapshot: TermIdfSnapshot,
+): Promise<void> {
+  if (snapshot.idfByTerm.size === 0) {
+    return;
+  }
+
+  const rows = [...snapshot.idfByTerm.entries()].slice(0, 3000);
+  const values: unknown[] = [];
+  const tuples: string[] = [];
+
+  rows.forEach(([term, idf], index) => {
+    const offset = index * 4;
+    tuples.push(`($${offset + 1},$${offset + 2},$${offset + 3},$${offset + 4})`);
+    values.push(regionId, term, idf, new Date().toISOString());
+  });
+
+  try {
+    await pool.query(
+      `
+      insert into term_idf_cache (region_id, term, idf, computed_at)
+      values ${tuples.join(",")}
+      on conflict (region_id, term)
+      do update set idf = excluded.idf, computed_at = excluded.computed_at
+      `,
+      values,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.toLowerCase().includes("term_idf_cache")) {
+      logger.warn(`[idf-cache] persist skipped: ${message}`);
+    }
+  }
+}
+
+export async function computeTermIdf(regionId: string, periodHours = ANALYZER_TFIDF_WINDOW_HOURS): Promise<TermIdfSnapshot> {
+  const cacheKey = `${regionId}:${periodHours}`;
+  const now = Date.now();
+  const cached = termIdfCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return {
+      idfByTerm: new Map(cached.idfByTerm),
+      genericTerms: new Set(cached.genericTerms),
+      totalDocs: cached.totalDocs,
+    };
+  }
+
+  const pool = getPoolOrNull();
+  if (!pool) {
+    return {
+      idfByTerm: new Map(),
+      genericTerms: new Set(),
+      totalDocs: 0,
+    };
+  }
+
+  const sourceIds = SOURCES.filter((source) => source.regionId === regionId).map((source) => source.id);
+  if (sourceIds.length === 0) {
+    return {
+      idfByTerm: new Map(),
+      genericTerms: new Set(),
+      totalDocs: 0,
+    };
+  }
+
+  const startedAt = Date.now();
+  const periodStart = new Date(now - Math.max(1, periodHours) * 60 * 60 * 1000).toISOString();
+
+  const { rows } = await pool.query<RawPostTitleRow>(
+    `
+    select source_id, title
+    from raw_posts
+    where source_id = any($1::text[])
+      and collected_at >= $2
+    order by collected_at desc
+    limit $3
+    `,
+    [sourceIds, periodStart, Math.max(500, ANALYZER_TFIDF_DOC_LIMIT)],
+  );
+
+  const documentTokens = rows.map((row) => tokenizeForAnalysis(row.title, regionId, row.source_id));
+  const snapshot = buildIdfFromDocumentTokens(documentTokens);
+
+  await persistIdfCacheToDb(pool, regionId, snapshot);
+
+  termIdfCache.set(cacheKey, {
+    ...snapshot,
+    expiresAt: now + IDF_CACHE_TTL_MS,
+  });
+
+  logger.info(
+    `[idf-cache] region=${regionId} docs=${snapshot.totalDocs} terms=${snapshot.idfByTerm.size} generic=${snapshot.genericTerms.size} elapsedMs=${
+      Date.now() - startedAt
+    }`,
+  );
+
+  return {
+    idfByTerm: new Map(snapshot.idfByTerm),
+    genericTerms: new Set(snapshot.genericTerms),
+    totalDocs: snapshot.totalDocs,
+  };
+}
+
 export function tokenizeForAnalysis(text: string, regionId: string, sourceId?: string): string[] {
   const prepared = sourceId ? sanitizePostTitle(text, sourceId) : text;
   const normalized = normalizeInputText(prepared);
@@ -466,7 +639,7 @@ export async function extractKeywords(
     termCounts: Map<string, number>;
     totalTerms: number;
   }> = [];
-  const docFrequency = new Map<string, number>();
+  const localDocFrequency = new Map<string, number>();
 
   for (const post of posts) {
     const sanitizedTitle = sanitizePostTitle(post.title, post.sourceId);
@@ -491,13 +664,17 @@ export async function extractKeywords(
     });
 
     for (const term of termCounts.keys()) {
-      docFrequency.set(term, (docFrequency.get(term) ?? 0) + 1);
+      localDocFrequency.set(term, (localDocFrequency.get(term) ?? 0) + 1);
     }
   }
 
   if (indexedPosts.length === 0) {
     return [];
   }
+
+  const regionalIdf = await computeTermIdf(regionId, ANALYZER_TFIDF_WINDOW_HOURS);
+  const regionalIdfByTerm = regionalIdf.idfByTerm;
+  const genericTerms = regionalIdf.genericTerms;
 
   const scoreMap = new Map<string, number>();
   const postIdMap = new Map<string, Set<string>>();
@@ -507,13 +684,18 @@ export async function extractKeywords(
     const weight = getEngagementWeight(post);
     const rankedTerms = [...termCounts.entries()]
       .map(([term, count]) => {
+        if (genericTerms.has(term)) {
+          return null;
+        }
         const tf = count / totalTerms;
-        const df = docFrequency.get(term) ?? 0;
-        const idf = Math.log((totalDocumentCount + 1) / (df + 1)) + 1;
+        const localDf = localDocFrequency.get(term) ?? 0;
+        const localIdf = Math.log((totalDocumentCount + 1) / (localDf + 1)) + 1;
+        const idf = regionalIdfByTerm.get(term) ?? localIdf;
         const phraseBoost = term.includes(" ") ? 1.55 : 1;
         const scriptBoost = regionScriptMultiplier(term, regionId);
-        return [term, tf * idf * weight * phraseBoost * scriptBoost] as const;
+        return [term, weight * tf * idf * phraseBoost * scriptBoost] as const;
       })
+      .filter((item): item is readonly [string, number] => Boolean(item))
       .sort((a, b) => b[1] - a[1])
       .slice(0, 40);
 
@@ -531,7 +713,7 @@ export async function extractKeywords(
   const selectedKeywords: Array<[string, number]> = [];
 
   for (const [keyword, score] of sorted) {
-    const hits = docFrequency.get(keyword) ?? 0;
+    const hits = localDocFrequency.get(keyword) ?? 0;
     if (hits < minimumDocFrequency && !keyword.includes(" ")) {
       continue;
     }
