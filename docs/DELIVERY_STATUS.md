@@ -2636,3 +2636,10 @@
 - 범위: community 스코프 계산식은 유지, news/mixed에서만 baseline 적용.
 - 검증: `npm run lint`, `npm run test`(25/25), `npm run build` 통과.
 - 다음: EC2에서 `analyze --scope news` 재실행 후 `/pulse/news`, `/pulse/api/topics?scope=news` 값 확인.
+
+## 2026-04-19 Deploy Verification (a109c31)
+- EC2 재배포 완료: `/srv/projects/project2/global-pulse`.
+- 뉴스 분석 재실행 완료: `scope=news` 및 `global news` 배치 성공.
+- 결과: 뉴스 토픽 `heat_score=0` 고착 해소(실데이터에서 non-zero 확인).
+- 탭 노출 확인: `/pulse`에서 `/pulse/news`, `/pulse/compare` 링크 존재.
+- 멀티사이트 확인: `/stock` 200, `/pulse` 200, `/` 404 유지.

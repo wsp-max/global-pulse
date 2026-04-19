@@ -4599,3 +4599,25 @@ pm run ops:snapshot -> completed (egions=6)
 - `npm run lint` pass
 - `npm run test` pass (25/25)
 - `npm run build` pass
+
+## GP-20260419-114 (EC2 deploy + news heat runtime verification)
+### Deploy
+- Remote deploy path: `/srv/projects/project2/global-pulse`
+- Deployed commit: `a109c31`
+- Command: `ALLOW_DIRTY_TRACKED=1 bash scripts/deploy-ec2.sh`
+- Build on EC2: success
+- Web service: `global-pulse-web.service` active after deploy
+
+### Batch refresh
+- `npm run analyze -- --scope news --hours 24` (EC2) success
+- `npm run analyze:global -- --scope news --hours 72 --min-regions 2 --similarity 0.24` success (`generated=11`)
+
+### Runtime checks
+- `GET /stock` -> 200 (unchanged)
+- `GET /pulse` -> 200
+- `GET /pulse/news` -> 200
+- `GET /pulse/compare` -> 200
+- `GET /pulse/api/health` -> 200
+- `GET /` -> 404 (unchanged)
+- `/pulse` HTML contains links to `/pulse/news` and `/pulse/compare`
+- `/pulse/api/topics?region=kr&scope=news&limit=5` returns non-zero `heatScore`
