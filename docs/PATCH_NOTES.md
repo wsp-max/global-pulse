@@ -4578,3 +4578,24 @@ pm run ops:snapshot -> completed (egions=6)
 - `/pulse/compare` 200
 - `/pulse/api/regions?scope=news` 200 (news topics now visible for seeded/collected regions)
 - `/pulse/api/topics?region=vn&scope=news` 200 (non-empty)
+
+## GP-20260419-113 (News heat_score normalization fix)
+### Problem
+- `scope=news` topics were frequently rendered with `heat_score=0` because RSS/portal sources rarely provide `view/like/comment` metrics.
+
+### Code changes
+- `packages/analyzer/src/heat-score-calculator.ts`
+  - Added optional `baselineSignal` to `HeatScoreInput`.
+  - Added news-only fallback heat path when engagement signals are absent.
+- `packages/analyzer/src/topic-clusterer.ts`
+  - Added `scope` to cluster options and passed through to heat calculator.
+  - Added news-source baseline signal derivation from sanitized title token/phrase richness.
+- `packages/analyzer/src/run-analysis.ts`
+  - Passes current analysis `scope` into `clusterTopics`.
+- `packages/analyzer/test/source-diversity.test.ts`
+  - Added regression test proving `scope=news` gets non-zero heat on zero-engagement inputs.
+
+### Local verification
+- `npm run lint` pass
+- `npm run test` pass (25/25)
+- `npm run build` pass

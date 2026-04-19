@@ -463,6 +463,7 @@ async function runRegionAnalysis(params: {
   const clusteredTopics = await clusterTopics(regionId, keywords, posts, {
     periodStart: periodStartIso,
     periodEnd: periodEndIso,
+    scope,
   });
   const topics = applyBurstBoost(
     regionId,

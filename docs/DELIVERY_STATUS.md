@@ -2629,3 +2629,10 @@
 - EC2에 dual-map/news pipeline flag 활성화 + 재배포 완료.
 - `sources` 카탈로그 재시드 후 news 수집 FK 오류 복구 확인(대상 3소스 3/3 성공).
 - `/pulse/news`, `/pulse/compare` 접근 가능(HTTP 200) 및 `scope=news` API 데이터 응답 확인.
+
+## 2026-04-19 Update (News Heat Recovery)
+- 원인: 뉴스/RSS 소스의 참여지표 부족으로 `heat_score`가 0으로 수렴.
+- 조치: analyzer heat 계산에 뉴스 전용 baseline 신호와 fallback heat 경로를 추가.
+- 범위: community 스코프 계산식은 유지, news/mixed에서만 baseline 적용.
+- 검증: `npm run lint`, `npm run test`(25/25), `npm run build` 통과.
+- 다음: EC2에서 `analyze --scope news` 재실행 후 `/pulse/news`, `/pulse/api/topics?scope=news` 값 확인.

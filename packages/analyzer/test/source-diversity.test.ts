@@ -24,3 +24,36 @@ test("source diversity multiplier increases heat score for multi-source topic", 
   assert.ok(eightSources >= threeSources);
   assert.ok(eightSources <= 2000);
 });
+
+test("news scope applies fallback heat when engagement metrics are absent", () => {
+  const zeroInputs: HeatScoreInput[] = [
+    {
+      viewCount: 0,
+      likeCount: 0,
+      commentCount: 0,
+      dislikeCount: 0,
+      hoursSincePosted: 0.5,
+      sourceWeight: 1,
+    },
+    {
+      viewCount: 0,
+      likeCount: 0,
+      commentCount: 0,
+      dislikeCount: 0,
+      hoursSincePosted: 1.5,
+      sourceWeight: 1,
+    },
+  ];
+
+  const communityHeat = calculateHeatScoreWithSourceDiversity(zeroInputs, {
+    sourceDiversityCount: 2,
+    scope: "community",
+  });
+  const newsHeat = calculateHeatScoreWithSourceDiversity(zeroInputs, {
+    sourceDiversityCount: 2,
+    scope: "news",
+  });
+
+  assert.equal(communityHeat, 0);
+  assert.ok(newsHeat > 0);
+});

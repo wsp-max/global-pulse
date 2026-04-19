@@ -1,4 +1,4 @@
-import type { Topic } from "@global-pulse/shared";
+import { SOURCES, type Topic } from "@global-pulse/shared";
 import { analyzeSentiment } from "./sentiment-analyzer";
 import { calculateHeatScoreWithSourceDiversity } from "./heat-score-calculator";
 import {
@@ -12,6 +12,7 @@ import {
 interface ClusterOptions {
   periodStart: string;
   periodEnd: string;
+  scope?: "community" | "news" | "mixed";
 }
 
 const ANALYZER_MAX_TOPICS = Number(process.env.ANALYZER_MAX_TOPICS ?? 20);
@@ -292,6 +293,10 @@ const LOW_SIGNAL_LABEL_PARTS = new Set([
   "热议",
 ]);
 
+const NEWS_SOURCE_IDS = new Set(
+  SOURCES.filter((source) => source.type === "news").map((source) => source.id),
+);
+
 function normalizeText(text: string): string {
   return text.toLowerCase().replace(/\s+/g, " ").trim();
 }
@@ -308,6 +313,31 @@ function parsePostTimestamp(postedAt: string | undefined): Date | null {
 
 function sourceWeight(sourceId: string): number {
   return SOURCE_WEIGHT_MAP[sourceId] ?? 1;
+}
+
+function isNewsSource(sourceId: string): boolean {
+  return NEWS_SOURCE_IDS.has(sourceId);
+}
+
+function computeNewsBaselineSignal(post: AnalysisPostInput, regionId: string): number {
+  const sanitizedTitle = sanitizePostTitle(post.title, post.sourceId);
+  if (sanitizedTitle.length === 0) {
+    return 0;
+  }
+
+  const tokens = tokenizeForAnalysis(sanitizedTitle, regionId, post.sourceId);
+  const phrases = buildTitlePhrases(tokens, regionId);
+  const uniqueTokenCount = new Set(tokens).size;
+
+  let baseline = 1;
+  baseline += Math.min(uniqueTokenCount, 12) * 0.07;
+  baseline += Math.min(phrases.length, 6) * 0.05;
+
+  if ((post.bodyPreview ?? "").trim().length > 0) {
+    baseline += 0.15;
+  }
+
+  return Number(Math.min(baseline, 2.4).toFixed(3));
 }
 
 function getEngagementWeight(post: AnalysisPostInput): number {
@@ -744,12 +774,15 @@ export async function clusterTopics(
     }
 
     const now = new Date();
+    const applyNewsBaseline = options.scope === "news" || options.scope === "mixed";
     const heatInputs = relatedPosts.map((post) => {
       const postedAt =
         parsePostTimestamp(post.postedAt ?? undefined) ?? parsePostTimestamp(post.collectedAt ?? undefined);
       const hoursSince = postedAt
         ? Math.max(0, (now.getTime() - postedAt.getTime()) / (1000 * 60 * 60))
         : 0;
+      const baselineSignal =
+        applyNewsBaseline && isNewsSource(post.sourceId) ? computeNewsBaselineSignal(post, regionId) : 0;
 
       return {
         viewCount: post.viewCount,
@@ -758,6 +791,7 @@ export async function clusterTopics(
         dislikeCount: post.dislikeCount,
         hoursSincePosted: hoursSince,
         sourceWeight: sourceWeight(post.sourceId),
+        baselineSignal,
       };
     });
 
@@ -798,6 +832,7 @@ export async function clusterTopics(
       sentiment: avgSentiment === null ? null : Number(avgSentiment.toFixed(3)),
       heatScore: calculateHeatScoreWithSourceDiversity(heatInputs, {
         sourceDiversityCount: sourceIds.length,
+        scope: options.scope,
       }),
       postCount: relatedPosts.length,
       totalViews: relatedPosts.reduce((sum, post) => sum + post.viewCount, 0),
