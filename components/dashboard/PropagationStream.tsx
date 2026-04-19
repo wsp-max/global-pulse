@@ -128,7 +128,7 @@ export function PropagationStream({ regions, globalTopics }: PropagationStreamPr
               No shared cross-region propagation detected in the current batch.
             </div>
           ) : (
-            lanes.map((lane, laneIndex) => {
+            lanes.map((lane) => {
               const laneBody = (
                 <article className="rounded-xl border border-[var(--border-default)] bg-[rgba(15,23,42,0.72)] p-3 transition-colors hover:border-[var(--border-hover)]">
                   <div className="flex items-center justify-between gap-2">
@@ -156,8 +156,8 @@ export function PropagationStream({ regions, globalTopics }: PropagationStreamPr
 
                   <div className="relative mt-2 h-7 rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.82)]">
                     <div
-                      className="absolute left-0 top-0 h-full rounded-lg bg-[linear-gradient(90deg,rgba(56,189,248,0.2),rgba(56,189,248,0.45))] transition-[width] duration-700"
-                      style={{ width: `${Math.max(4, lane.progress)}%`, transitionDelay: `${laneIndex * 80}ms` }}
+                      className="absolute left-0 top-0 h-full rounded-lg bg-[linear-gradient(90deg,rgba(56,189,248,0.2),rgba(56,189,248,0.45))]"
+                      style={{ width: `${Math.max(4, lane.progress)}%` }}
                     />
 
                     {lane.stops.map((stop, stopIndex) => {

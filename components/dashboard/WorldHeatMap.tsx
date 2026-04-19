@@ -4,22 +4,13 @@ import { useMemo } from "react";
 import type { GlobalTopic } from "@global-pulse/shared";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import type { RegionDashboardRow } from "@/lib/types/api";
+import { aggregateFlowEdges, getFlowStrokeColor, toVolumeBand } from "@/lib/utils/propagation-flow";
 import { getHeatTier, toHeatBand } from "@/lib/utils/heat";
 
 interface WorldHeatMapProps {
   regions: RegionDashboardRow[];
   globalTopics?: GlobalTopic[];
   variant?: "community" | "news";
-}
-
-interface FlowEdge {
-  from: string;
-  to: string;
-  lagMinutes: number;
-  confidence: number;
-  heatScore: number;
-  velocity: number;
-  spreadScore: number;
 }
 
 const GEO_URL = "/pulse/geo/countries-110m.json";
@@ -72,37 +63,6 @@ function getTierColorByBand(band: number): string {
   return "var(--heat-high)";
 }
 
-function getFlowEdges(globalTopics: GlobalTopic[]): FlowEdge[] {
-  const edges = new Map<string, FlowEdge>();
-  for (const topic of globalTopics.slice(0, 48)) {
-    for (const edge of topic.propagationEdges ?? []) {
-      if (!REGION_COORDINATES[edge.from] || !REGION_COORDINATES[edge.to]) {
-        continue;
-      }
-
-      const key = `${edge.from}:${edge.to}`;
-      const current = edges.get(key);
-      const merged: FlowEdge = {
-        from: edge.from,
-        to: edge.to,
-        lagMinutes: edge.lagMinutes,
-        confidence: edge.confidence,
-        heatScore: topic.totalHeatScore,
-        velocity: topic.velocityPerHour ?? 0,
-        spreadScore: topic.spreadScore ?? 0,
-      };
-
-      if (!current || merged.heatScore * merged.confidence > current.heatScore * current.confidence) {
-        edges.set(key, merged);
-      }
-    }
-  }
-
-  return [...edges.values()]
-    .sort((left, right) => right.heatScore * right.confidence - left.heatScore * left.confidence)
-    .slice(0, 20);
-}
-
 function curvePath(from: { x: number; y: number }, to: { x: number; y: number }): { d: string; mx: number; my: number } {
   const mx = (from.x + to.x) / 2;
   const arcOffset = Math.max(6, Math.abs(to.x - from.x) * 0.18);
@@ -123,9 +83,17 @@ function isSurging(topic: GlobalTopic, velocityThreshold: number): boolean {
 
 export function WorldHeatMap({ regions, globalTopics = [], variant = "community" }: WorldHeatMapProps) {
   const maxHeat = Math.max(...regions.map((region) => region.totalHeatScore), 1);
-  const flowEdges = useMemo(() => getFlowEdges(globalTopics), [globalTopics]);
+  const flowEdges = useMemo(
+    () =>
+      aggregateFlowEdges(globalTopics, {
+        limit: 20,
+        maxTopics: 64,
+        isValidRegion: (regionId) => Boolean(REGION_COORDINATES[regionId]),
+      }),
+    [globalTopics],
+  );
+  const maxVolume = Math.max(...flowEdges.map((edge) => edge.volumeHeatSum), 1);
   const activeFlowRegionIds = new Set(flowEdges.flatMap((edge) => [edge.from, edge.to]));
-  const accentFill = variant === "news" ? "#FCD34D" : "#67E8F9";
   const radialGlow =
     variant === "news"
       ? "bg-[radial-gradient(circle_at_center,rgba(251,146,60,0.18),transparent_50%)]"
@@ -155,15 +123,24 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
 
             <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
               <defs>
-                {flowEdges.map((edge, index) => (
-                  <linearGradient key={`grad-${edge.from}-${edge.to}-${index}`} id={`edge-grad-${variant}-${index}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor={variant === "news" ? "#F59E0B" : "#38BDF8"} />
-                    <stop offset="100%" stopColor={variant === "news" ? "#FB923C" : "#22D3EE"} />
-                  </linearGradient>
-                ))}
-                <marker id={`arrow-${variant}`} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
-                  <path d={variant === "news" ? "M 0 0 L 6 3 L 0 6 L 2 3 z" : "M 0 0 L 6 3 L 0 6 z"} fill={accentFill} />
-                </marker>
+                {flowEdges.map((edge, index) => {
+                  const volumeBand = toVolumeBand(edge.volumeHeatSum, maxVolume);
+                  const flowColor = getFlowStrokeColor(variant, volumeBand);
+                  return (
+                    <marker
+                      key={`arrow-${edge.from}-${edge.to}-${index}`}
+                      id={`arrow-${variant}-${index}`}
+                      markerWidth="4"
+                      markerHeight="4"
+                      refX="3.5"
+                      refY="2"
+                      orient="auto"
+                      markerUnits="strokeWidth"
+                    >
+                      <path d={variant === "news" ? "M 0 0 L 4 2 L 0 4 L 1.2 2 z" : "M 0 0 L 4 2 L 0 4 z"} fill={flowColor} />
+                    </marker>
+                  );
+                })}
                 <filter id={`particle-glow-${variant}`} x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur stdDeviation="0.6" result="blur" />
                   <feMerge>
@@ -179,8 +156,10 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                 const curve = curvePath(from, to);
                 const lagHours = Math.max(1, Math.round(edge.lagMinutes / 60));
                 const durationSec = Math.max(3, Math.min(9, lagHours / 2));
+                const volumeBand = toVolumeBand(edge.volumeHeatSum, maxVolume);
+                const flowColor = getFlowStrokeColor(variant, volumeBand);
                 const strokeOpacity = Math.max(0.3, Math.min(0.9, edge.confidence));
-                const strokeWidth = 1 + Math.max(0, Math.min(1.4, edge.confidence * 1.4));
+                const strokeWidth = 0.75 + Math.max(0.2, Math.min(1.2, edge.confidence * 1.2));
                 const isFast = edge.velocity >= surgingVelocityCutoff;
                 const particleCount = edge.confidence >= 0.75 ? 3 : edge.confidence >= 0.45 ? 2 : 1;
                 const lagText = `${toLagText(edge.lagMinutes)}${isFast ? " ⚡" : ""}`;
@@ -189,18 +168,18 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                   <g key={`${edge.from}-${edge.to}-${index}`}>
                     <path
                       d={curve.d}
-                      stroke={`url(#edge-grad-${variant}-${index})`}
+                      stroke={flowColor}
                       strokeWidth={strokeWidth}
                       fill="none"
                       opacity={strokeOpacity}
-                      markerEnd={`url(#arrow-${variant})`}
+                      markerEnd={`url(#arrow-${variant}-${index})`}
                     >
-                      <title>{`From ${edge.from.toUpperCase()} to ${edge.to.toUpperCase()}, lag ${toLagText(edge.lagMinutes)}, confidence ${edge.confidence.toFixed(2)}`}</title>
+                      <title>{`From ${edge.from.toUpperCase()} to ${edge.to.toUpperCase()}, lag ${toLagText(edge.lagMinutes)}, confidence ${edge.confidence.toFixed(2)}, volume ${Math.round(edge.volumeHeatSum)}, edges ${edge.edgeCount}`}</title>
                     </path>
 
                     <g transform={`translate(${curve.mx} ${curve.my})`}>
                       <rect x={-5} y={-3.4} width={10} height={4.8} rx={2.4} fill="rgba(10,14,23,0.75)" stroke="rgba(148,163,184,0.25)" />
-                      <text textAnchor="middle" y={0.1} className="font-mono text-[2.6px]" fill={accentFill}>
+                      <text textAnchor="middle" y={0.1} className="font-mono text-[2.6px]" fill={flowColor}>
                         {lagText}
                       </text>
                     </g>
@@ -209,7 +188,7 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                       <circle
                         key={`particle-${index}-${particleIndex}`}
                         r="0.45"
-                        fill={variant === "news" ? "#FB923C" : "#22D3EE"}
+                        fill={flowColor}
                         filter={`url(#particle-glow-${variant})`}
                         className="map-particle"
                       >
@@ -244,7 +223,7 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                       strokeWidth={0.35}
                       aria-label={`${region.flagEmoji} ${region.nameKo} heat ${Math.round(region.totalHeatScore)} tier ${getHeatTier(band)}`}
                     />
-                    <circle r={0.55} fill={fill} className={activeFlowRegionIds.has(region.id) ? "map-node-pulse" : ""} />
+                    <circle r={activeFlowRegionIds.has(region.id) ? 0.62 : 0.5} fill={fill} />
                     <text y={-(radius + 0.75)} textAnchor="middle" className="text-[2.9px] font-medium" fill="#e2e8f0">
                       {region.flagEmoji} {Math.round(region.totalHeatScore)}
                     </text>

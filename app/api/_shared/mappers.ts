@@ -1,5 +1,6 @@
 import type { GlobalTopic, Topic, TopicCategory, TopicEntity, TopicEntityType } from "@global-pulse/shared";
 import { cleanupTopicName } from "@/lib/utils/topic-name";
+import { buildTopicSummaries } from "@/lib/utils/topic-summary";
 
 function toNumber(value: unknown, fallback = 0): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -195,19 +196,29 @@ export function mapTopicRow(row: TopicRow): Topic {
     keywords: row.keywords ?? [],
     entities: row.entities ?? [],
   });
+  const entities = toTopicEntitiesOrNull(row.entities);
+  const summaries = buildTopicSummaries({
+    summaryKo: row.summary_ko,
+    summaryEn: row.summary_en,
+    nameKo: cleaned.displayKo,
+    nameEn: cleaned.displayEn,
+    keywords: row.keywords ?? [],
+    entities: entities ?? [],
+    sampleTitles: row.sample_titles ?? [],
+  });
 
   return {
     id: toOptionalNumber(row.id),
     regionId: row.region_id,
     nameKo: cleaned.displayKo,
     nameEn: cleaned.displayEn,
-    summaryKo: row.summary_ko ?? null,
-    summaryEn: row.summary_en ?? null,
+    summaryKo: summaries.summaryKo,
+    summaryEn: summaries.summaryEn,
     sampleTitles: row.sample_titles ?? undefined,
     keywords: row.keywords ?? [],
     sentiment: toNullableNumber(row.sentiment),
     category: toTopicCategoryOrNull(row.category),
-    entities: toTopicEntitiesOrNull(row.entities),
+    entities,
     aliases: row.aliases ?? null,
     canonicalKey: normalizeCanonicalKey(row.canonical_key, cleaned.displayEn),
     embeddingJson: row.embedding_json ?? undefined,
@@ -240,13 +251,19 @@ export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
     keywords: [],
     entities: [],
   });
+  const summaries = buildTopicSummaries({
+    summaryKo: row.summary_ko,
+    summaryEn: row.summary_en,
+    nameKo: cleaned.displayKo,
+    nameEn: cleaned.displayEn,
+  });
 
   return {
     id: toOptionalNumber(row.id),
     nameEn: cleaned.displayEn,
     nameKo: cleaned.displayKo,
-    summaryEn: row.summary_en ?? null,
-    summaryKo: row.summary_ko ?? null,
+    summaryEn: summaries.summaryEn,
+    summaryKo: summaries.summaryKo,
     regions: row.regions ?? [],
     regionalSentiments: row.regional_sentiments ?? {},
     regionalHeatScores: row.regional_heat_scores ?? {},

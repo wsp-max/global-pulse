@@ -97,30 +97,8 @@ a {
   background-size: 16px 16px;
 }
 
-.map-node-pulse {
-  animation: map-node-pulse 2.1s ease-in-out infinite;
-  transform-origin: center;
-}
-
 .map-particle {
   will-change: transform, opacity;
-}
-
-@keyframes map-node-pulse {
-  0% {
-    opacity: 0.65;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.35);
-  }
-
-  100% {
-    opacity: 0.65;
-    transform: scale(1);
-  }
 }
 
 @media (max-width: 767px) {
@@ -132,10 +110,6 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .map-particle {
     display: none !important;
-  }
-
-  .map-node-pulse {
-    animation: none !important;
   }
 }
 
