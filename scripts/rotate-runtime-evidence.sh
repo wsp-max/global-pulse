@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 APP_DIR="${APP_DIR:-/srv/projects/project2/global-pulse}"
 ARCHIVE_ROOT="${ARCHIVE_ROOT:-/var/backups/global-pulse/evidence}"
+ARCHIVE_ROOT_FALLBACK="${ARCHIVE_ROOT_FALLBACK:-}"
 PRUNE="${PRUNE:-0}"
 EVIDENCE_REL_DIRS=(
   "docs/evidence/ops-monitoring"
@@ -31,11 +32,22 @@ fi
 
 APP_DIR_REAL="$(realpath "${APP_DIR}")"
 
+if [[ -z "${ARCHIVE_ROOT_FALLBACK}" ]]; then
+  ARCHIVE_ROOT_FALLBACK="${APP_DIR_REAL}/docs/evidence/archive"
+fi
+
 STAMP="$(date +'%Y%m%d_%H%M%S')"
 TARGET_DIR="${ARCHIVE_ROOT}/${STAMP}"
 SUMMARY_FILE="${TARGET_DIR}/summary.txt"
 
-mkdir -p "${TARGET_DIR}"
+if ! mkdir -p "${TARGET_DIR}" 2>/dev/null; then
+  echo "[WARN] archive root not writable: ${ARCHIVE_ROOT}" >&2
+  echo "[WARN] falling back to: ${ARCHIVE_ROOT_FALLBACK}" >&2
+  ARCHIVE_ROOT="${ARCHIVE_ROOT_FALLBACK}"
+  TARGET_DIR="${ARCHIVE_ROOT}/${STAMP}"
+  SUMMARY_FILE="${TARGET_DIR}/summary.txt"
+  mkdir -p "${TARGET_DIR}"
+fi
 
 cat >"${SUMMARY_FILE}" <<EOF
 Global Pulse Runtime Evidence Rotation

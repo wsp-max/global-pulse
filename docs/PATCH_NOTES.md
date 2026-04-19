@@ -4429,3 +4429,15 @@ pm run ops:snapshot -> completed (egions=6)
 ### Risk / Notes
 - 원격 워크트리에 운영 파일 변경(`infra/nginx/global-pulse.conf`)이 있어 배포 시 `ALLOW_DIRTY_TRACKED=1` 유지 필요.
 - 루트(`/`)는 현재 멀티사이트 라우팅 정책상 404이며 `/pulse`, `/stock` 영향 없음.
+
+## GP-20260419-02 (Deploy Ops Hardening: evidence rotation permission fallback)
+### Before -> After
+- Before: `scripts/rotate-runtime-evidence.sh` 가 `/var/backups/global-pulse/evidence` 권한 부족 시 경고를 내고 실패.
+- After: 기본 archive root가 쓰기 불가하면 `${APP_DIR}/docs/evidence/archive` 로 자동 폴백.
+
+### Changed Files
+- `scripts/rotate-runtime-evidence.sh`
+
+### Verification
+- Local: `corepack pnpm lint`, `corepack pnpm build`
+- EC2 deploy 시 evidence rotation 경고가 fallback 동작으로 대체되는지 확인 예정.

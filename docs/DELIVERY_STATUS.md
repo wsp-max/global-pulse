@@ -2580,3 +2580,5 @@
 - 테스트: analyzer 테스트 22건 통과, 빌드 통과.
 - 배포: EC2 재배포 및 analyzer(지역/글로벌) 배치 재실행.
 - 운영확인: `/pulse` 및 `/pulse/api/health` 200, 글로벌 토픽 spread 정렬 응답 정상.
+
+- 추가 보완: evidence rotation 권한 폴백 적용(backup 경고 감소).
