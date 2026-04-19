@@ -62,6 +62,38 @@ const SOURCE_WEIGHT_MAP: Record<string, number> = {
   reddit_russia: 1.05,
   reddit_russian: 1.0,
   reddit_ukraine: 1.0,
+  reddit_belarus: 1.0,
+  reddit_brasil: 1.0,
+  reddit_brazil: 1.0,
+  reddit_brasilivre: 1.0,
+  reddit_india: 1.0,
+  reddit_indianews: 1.0,
+  reddit_indiaspeaks: 1.0,
+  reddit_developersindia: 1.0,
+  reddit_indonesia: 1.0,
+  reddit_jakarta: 1.0,
+  reddit_bali: 1.0,
+  reddit_mexico: 1.0,
+  reddit_mexicocity: 1.0,
+  reddit_australia: 1.0,
+  reddit_sydney: 1.0,
+  reddit_vietnam: 1.0,
+  reddit_vietnamese: 1.0,
+  reddit_thailand: 1.0,
+  reddit_bangkok: 1.0,
+  reddit_argentina: 1.0,
+  reddit_buenosaires: 1.0,
+  reddit_canada: 1.0,
+  reddit_ontario: 1.0,
+  reddit_nigeria: 1.0,
+  reddit_lagos: 1.0,
+  reddit_southafrica: 1.0,
+  reddit_johannesburg: 1.0,
+  reddit_unitedkingdom: 1.0,
+  reddit_spain: 1.0,
+  reddit_italy: 1.0,
+  reddit_turkey: 1.0,
+  reddit_middleeast: 1.0,
   habr: 1.08,
   slashdot: 1.05,
   fark: 0.92,
@@ -856,20 +888,72 @@ export async function clusterTopics(
   const ranked = clusteredTopics.sort((a, b) => b.heatScore - a.heatScore);
   const deduped: Topic[] = [];
 
+  const normalizeLabel = (value: string | undefined): string =>
+    (value ?? "")
+      .normalize("NFKC")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const toCanonicalKey = (topic: Topic): string =>
+    normalizeLabel(topic.canonicalKey ?? topic.nameEn ?? topic.nameKo ?? "");
+
+  const keywordJaccard = (left: string[], right: string[]): number => {
+    const leftSet = new Set(left.map((item) => normalizeLabel(item)).filter(Boolean));
+    const rightSet = new Set(right.map((item) => normalizeLabel(item)).filter(Boolean));
+    if (leftSet.size === 0 || rightSet.size === 0) {
+      return 0;
+    }
+    let intersection = 0;
+    for (const value of leftSet) {
+      if (rightSet.has(value)) {
+        intersection += 1;
+      }
+    }
+    const union = new Set([...leftSet, ...rightSet]).size;
+    return union > 0 ? intersection / union : 0;
+  };
+
+  const entitiesSignature = (topic: Topic): string => {
+    const entities = (topic.entities ?? [])
+      .map((entity) => normalizeLabel(entity.text))
+      .filter(Boolean)
+      .sort();
+    return entities.join("|");
+  };
+
   for (const topic of ranked) {
-    const normalized = topic.nameEn.toLowerCase().replace(/\s+/g, " ").trim();
+    const normalizedEn = normalizeLabel(topic.nameEn);
+    const normalizedKo = normalizeLabel(topic.nameKo);
+    const canonicalKey = toCanonicalKey(topic);
+    const topicEntitiesSignature = entitiesSignature(topic);
+
     const isDuplicate = deduped.some((existing) => {
-      const existingNormalized = existing.nameEn.toLowerCase().replace(/\s+/g, " ").trim();
-      if (existingNormalized === normalized) {
+      const existingEn = normalizeLabel(existing.nameEn);
+      const existingKo = normalizeLabel(existing.nameKo);
+      const existingCanonical = toCanonicalKey(existing);
+
+      if (normalizedKo && existingKo && normalizedKo === existingKo) {
         return true;
       }
 
-      const shorterLength = Math.min(existingNormalized.length, normalized.length);
-      if (shorterLength < 5) {
-        return false;
+      if (normalizedEn && existingEn && normalizedEn === existingEn) {
+        return true;
       }
 
-      return existingNormalized.includes(normalized) || normalized.includes(existingNormalized);
+      if (canonicalKey && existingCanonical && canonicalKey === existingCanonical) {
+        return true;
+      }
+
+      if (keywordJaccard(topic.keywords, existing.keywords) >= 0.5) {
+        return true;
+      }
+
+      if (topicEntitiesSignature && existing.entities && existing.entities.length > 0) {
+        return topicEntitiesSignature === entitiesSignature(existing);
+      }
+      return false;
     });
 
     if (isDuplicate) {

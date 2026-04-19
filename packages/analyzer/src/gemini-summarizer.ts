@@ -20,6 +20,10 @@ const ANALYZER_LLM_CANONICAL_BATCH = Math.min(
   Math.max(Number(process.env.ANALYZER_LLM_CANONICAL_BATCH ?? 12), 1),
   12,
 );
+const ANALYZER_GEMINI_TIMEOUT_MS = Math.max(
+  Number(process.env.ANALYZER_GEMINI_TIMEOUT_MS ?? 25_000),
+  5_000,
+);
 
 const CATEGORY_VALUES: TopicCategory[] = [
   "politics",
@@ -34,8 +38,8 @@ const CATEGORY_VALUES: TopicCategory[] = [
   "science",
   "other",
 ];
-
 const ENTITY_TYPE_VALUES: TopicEntityType[] = ["person", "org", "product", "event", "place", "work", "other"];
+
 const LOW_SIGNAL_NAME_TERMS = new Set([
   "news",
   "issue",
@@ -49,7 +53,6 @@ const LOW_SIGNAL_NAME_TERMS = new Set([
   "headline",
   "headlines",
   "content",
-  "contents",
   "major",
   "related",
   "today",
@@ -59,11 +62,14 @@ const LOW_SIGNAL_NAME_TERMS = new Set([
   "controversy",
   "viral",
   "legend",
-  "소식",
+  "오늘",
   "주요",
-  "관련",
-  "콘텐츠",
+  "소식",
+  "뉴스",
   "이슈",
+  "토픽",
+  "업데이트",
+  "요약",
   "충격",
   "섬뜩",
   "미쳤다",
@@ -74,13 +80,19 @@ const LOW_SIGNAL_NAME_TERMS = new Set([
   "속보",
   "단독",
   "입수",
+  "공개",
   "폭로",
+  "衝撃",
   "速報",
-  "話題",
+  "緊急",
+  "悲報",
   "炎上",
+  "話題",
+  "徹底",
   "震惊",
   "重磅",
   "独家",
+  "最新",
   "热议",
 ]);
 
@@ -91,6 +103,21 @@ const logger = getLogger("analyzer-gemini");
 
 interface SummarizeOptions {
   regionId: string;
+}
+
+export interface GeminiSummarizeStats {
+  requestCount: number;
+  fallbackCount: number;
+  modelUsed: string[];
+  durationMs: number;
+  promptCharsTotal: number;
+  batches: number;
+  errors: string[];
+}
+
+export interface GeminiSummarizeResult {
+  topics: Topic[];
+  stats: GeminiSummarizeStats;
 }
 
 interface GeminiResponse {
@@ -149,24 +176,17 @@ function isLowSignalName(value: string): boolean {
     if (token.length < 2) {
       continue;
     }
-
     if (LOW_SIGNAL_NAME_TERMS.has(token)) {
       lowSignalCount += 1;
       continue;
     }
-
     meaningfulCount += 1;
   }
 
   if (meaningfulCount === 0) {
     return true;
   }
-
-  if (lowSignalCount >= 1 && meaningfulCount <= 1) {
-    return true;
-  }
-
-  return false;
+  return lowSignalCount >= 1 && meaningfulCount <= 1;
 }
 
 function preferMeaningfulName(candidate: string | undefined, fallback: string): string {
@@ -174,7 +194,6 @@ function preferMeaningfulName(candidate: string | undefined, fallback: string): 
   if (!trimmed) {
     return fallback;
   }
-
   return isLowSignalName(trimmed) ? fallback : trimmed;
 }
 
@@ -273,8 +292,8 @@ function buildPrompt(regionId: string, topics: Topic[]): string {
 
   return [
     "당신은 글로벌 여론 분석가입니다.",
-    `${regionNameKo} (${regionNameEn}) 리전의 토픽을 표준화하고 요약하세요.`,
-    "입력 토픽과 동일한 순서/개수의 순수 JSON 배열만 반환하세요.",
+    `${regionNameKo} (${regionNameEn}) 리전의 토픽을 정제하고 요약하세요.`,
+    "반드시 JSON 배열만 반환하세요. 설명 문장이나 마크다운 금지.",
     "각 항목 스키마:",
     `{
   "name_ko": string,
@@ -287,12 +306,12 @@ function buildPrompt(regionId: string, topics: Topic[]): string {
   "aliases": string[]
 }`,
     "규칙:",
-    "1) name_ko 는 2~20자, name_en 은 2~6단어",
-    "2) summary_ko/summary_en는 각각 1~2문장",
+    "1) name_ko는 2~20자, name_en은 2~6단어",
+    "2) summary_ko/summary_en은 각각 1~2문장",
     "3) sentiment는 -1.0~1.0",
     "4) entities는 최대 8개",
     "5) aliases는 최대 8개",
-    "6) 마크다운/설명 문장 금지",
+    "6) 입력 토픽 순서를 유지",
     "입력 JSON:",
     JSON.stringify(payload),
   ].join("\n");
@@ -365,24 +384,44 @@ async function resolveCandidateModels(apiKey: string): Promise<string[]> {
 }
 
 async function requestGemini(apiKey: string, model: string, prompt: string): Promise<{ text: string; error?: string }> {
-  const response = await fetch(`${endpointForGenerate(model)}?key=${apiKey}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": apiKey,
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.2,
+  const controller = new AbortController();
+  const timeoutRef = setTimeout(() => controller.abort(), ANALYZER_GEMINI_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${endpointForGenerate(model)}?key=${apiKey}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
       },
-    }),
-  });
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.2,
+        },
+      }),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return {
+        text: "",
+        error: `timeout after ${ANALYZER_GEMINI_TIMEOUT_MS}ms`,
+      };
+    }
+    return {
+      text: "",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    clearTimeout(timeoutRef);
+  }
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
@@ -418,6 +457,7 @@ function chunkTopics(topics: Topic[], size: number): Topic[][] {
 function applySummaryItem(topic: Topic, summary: GeminiSummaryItem | undefined): Topic {
   const nameKo = preferMeaningfulName(summary?.name_ko, topic.nameKo);
   const nameEn = preferMeaningfulName(summary?.name_en, topic.nameEn);
+
   return {
     ...topic,
     nameKo,
@@ -432,20 +472,47 @@ function applySummaryItem(topic: Topic, summary: GeminiSummaryItem | undefined):
   };
 }
 
-export async function summarizeTopicsWithGemini(topics: Topic[], options: SummarizeOptions): Promise<Topic[]> {
+export async function summarizeTopicsWithGemini(
+  topics: Topic[],
+  options: SummarizeOptions,
+): Promise<GeminiSummarizeResult> {
+  const startedAt = Date.now();
+  const fallbackTopics = topics.map((topic) => ({
+    ...topic,
+    summaryKo: topic.summaryKo ?? "요약 준비 중",
+    summaryEn: topic.summaryEn ?? "Summary pending",
+    canonicalKey: normalizeCanonicalKey(topic.nameEn),
+  }));
+
   if (topics.length === 0) {
-    return [];
+    return {
+      topics: [],
+      stats: {
+        requestCount: 0,
+        fallbackCount: 0,
+        modelUsed: [],
+        durationMs: 0,
+        promptCharsTotal: 0,
+        batches: 0,
+        errors: [],
+      },
+    };
   }
 
-  const startedAt = Date.now();
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return topics.map((topic) => ({
-      ...topic,
-      summaryKo: topic.summaryKo ?? "요약 준비 중",
-      summaryEn: topic.summaryEn ?? "Summary pending",
-      canonicalKey: normalizeCanonicalKey(topic.nameEn),
-    }));
+  if (!apiKey?.trim()) {
+    return {
+      topics: fallbackTopics,
+      stats: {
+        requestCount: 0,
+        fallbackCount: 1,
+        modelUsed: [],
+        durationMs: Date.now() - startedAt,
+        promptCharsTotal: 0,
+        batches: 0,
+        errors: ["no-api-key"],
+      },
+    };
   }
 
   const models = await resolveCandidateModels(apiKey);
@@ -453,26 +520,39 @@ export async function summarizeTopicsWithGemini(topics: Topic[], options: Summar
   const output: Topic[] = [];
   let requestCount = 0;
   let fallbackCount = 0;
+  let promptCharsTotal = 0;
+  const usedModels = new Set<string>();
+  const allErrors: string[] = [];
 
   for (const batch of batches) {
     const prompt = buildPrompt(options.regionId, batch);
-    const errors: string[] = [];
+    promptCharsTotal += prompt.length;
+    const batchErrors: string[] = [];
     let summaries: GeminiSummaryItem[] | null = null;
 
     for (const model of models) {
       requestCount += 1;
+      usedModels.add(model);
       const { text, error } = await requestGemini(apiKey, model, prompt);
       if (error) {
-        errors.push(`${model}: ${error}`);
+        const errorLine = `${model}: ${error}`;
+        batchErrors.push(errorLine);
+        allErrors.push(errorLine);
         continue;
       }
 
       if (!text) {
+        const emptyError = `${model}: empty response`;
+        batchErrors.push(emptyError);
+        allErrors.push(emptyError);
         continue;
       }
 
       const parsed = parseGeminiSummaries(text);
       if (!parsed || parsed.length === 0) {
+        const parseError = `${model}: invalid-json`;
+        batchErrors.push(parseError);
+        allErrors.push(parseError);
         continue;
       }
 
@@ -484,7 +564,7 @@ export async function summarizeTopicsWithGemini(topics: Topic[], options: Summar
       fallbackCount += 1;
       logger.warn(
         `[${options.regionId}] gemini canonicalization fallback for batch size=${batch.length}: ${
-          errors.slice(0, 4).join(" | ") || "no valid response"
+          batchErrors.slice(0, 4).join(" | ") || "no valid response"
         }`,
       );
       output.push(
@@ -501,9 +581,21 @@ export async function summarizeTopicsWithGemini(topics: Topic[], options: Summar
     output.push(...batch.map((topic, index) => applySummaryItem(topic, summaries?.[index])));
   }
 
+  const durationMs = Date.now() - startedAt;
   logger.info(
-    `[${options.regionId}] gemini canonicalization done batches=${batches.length} calls=${requestCount} fallbacks=${fallbackCount} durationMs=${Date.now() - startedAt}`,
+    `[${options.regionId}] gemini canonicalization done batches=${batches.length} calls=${requestCount} fallbacks=${fallbackCount} durationMs=${durationMs}`,
   );
 
-  return output;
+  return {
+    topics: output,
+    stats: {
+      requestCount,
+      fallbackCount,
+      modelUsed: [...usedModels],
+      durationMs,
+      promptCharsTotal,
+      batches: batches.length,
+      errors: allErrors.slice(0, 32),
+    },
+  };
 }

@@ -2,6 +2,7 @@
 
 import type { Topic } from "@global-pulse/shared";
 import { toHeatBand } from "@/lib/utils/heat";
+import { cleanupTopicName } from "@/lib/utils/topic-name";
 import { TopicCard } from "./TopicCard";
 
 interface TopicListProps {
@@ -21,13 +22,22 @@ export function TopicList({ topics, selectedTopicId, onSelect }: TopicListProps)
     <div className="space-y-2">
       {topics.map((topic, index) => {
         const heatBand = toHeatBand(topic.heatScore, maxHeat);
+        const cleaned = cleanupTopicName({
+          id: topic.id,
+          regionId: topic.regionId,
+          nameKo: topic.nameKo,
+          nameEn: topic.nameEn,
+          keywords: topic.keywords,
+          entities: topic.entities ?? null,
+        });
         return (
           <TopicCard
             key={topic.id ?? `${topic.nameEn}-${index}`}
             rank={topic.rank ?? index + 1}
-            name={topic.nameKo}
+            name={cleaned.displayKo}
             heatScore={topic.heatScore}
             heatBand={heatBand}
+            isFallbackName={cleaned.isFallback}
             selected={topic.id === selectedTopicId}
             onClick={() => onSelect?.(topic)}
           />

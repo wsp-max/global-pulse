@@ -59,10 +59,14 @@ function runCommand(command: string, args: string[]): Promise<void> {
 async function main(): Promise<void> {
   const rawArgs = process.argv.slice(2);
   const withGlobal = hasFlag("--with-global") || process.env.GLOBAL_PULSE_ANALYZE_GLOBAL === "1";
+  const hasGeminiToggle = rawArgs.includes("--with-gemini") || rawArgs.includes("--no-gemini");
 
   let analysisArgs = removeBooleanFlag(rawArgs, "--with-global");
   const globalHours = parseFlag("--global-hours");
   analysisArgs = removeFlagWithValue(analysisArgs, "--global-hours");
+  if (!hasGeminiToggle) {
+    analysisArgs = [...analysisArgs, "--with-gemini"];
+  }
 
   const analysisEntry = path.join("packages", "analyzer", "src", "run-analysis.ts");
   await runCommand(resolveRunner("npx"), ["tsx", analysisEntry, ...analysisArgs]);

@@ -1,21 +1,25 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 
 interface HeaderClockProps {
   keyRegions: string[];
-  activeRegions: number;
 }
 
 type FreshnessLevel = "fresh" | "warning" | "critical" | "unknown";
 
 interface RegionsResponseShape {
   lastUpdated?: string;
-  regions?: Array<{ snapshotAt?: string | null }>;
+  regions?: Array<{ snapshotAt?: string | null; activeTopics?: number | null }>;
 }
 
 interface GlobalTopicsResponseShape {
   lastUpdated?: string;
+}
+
+interface DashboardMeta {
+  latestIso: string | null;
+  activeRegions: number | null;
 }
 
 function normalizeBasePath(input?: string): string {
@@ -76,7 +80,7 @@ function freshnessClass(level: FreshnessLevel): string {
   return "border-[var(--border-default)] bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]";
 }
 
-async function fetchLatestTimestamp(basePath: string): Promise<string | null> {
+async function fetchDashboardMeta(basePath: string): Promise<DashboardMeta> {
   try {
     const [regionsRes, globalRes] = await Promise.all([
       fetch(`${basePath}/api/regions`, { cache: "no-store" }),
@@ -84,6 +88,7 @@ async function fetchLatestTimestamp(basePath: string): Promise<string | null> {
     ]);
 
     const timestamps: number[] = [];
+    let activeRegions: number | null = null;
 
     if (regionsRes.ok) {
       const regionsData = (await regionsRes.json()) as RegionsResponseShape;
@@ -92,7 +97,10 @@ async function fetchLatestTimestamp(basePath: string): Promise<string | null> {
         timestamps.push(routeLastUpdated);
       }
 
-      for (const region of regionsData.regions ?? []) {
+      const activeRows = regionsData.regions ?? [];
+      activeRegions = activeRows.filter((row) => Number(row.activeTopics ?? 0) > 0).length;
+
+      for (const region of activeRows) {
         const snapshotTime = toMillis(region.snapshotAt);
         if (snapshotTime !== null) {
           timestamps.push(snapshotTime);
@@ -108,20 +116,20 @@ async function fetchLatestTimestamp(basePath: string): Promise<string | null> {
       }
     }
 
-    if (timestamps.length === 0) {
-      return null;
-    }
-
-    return new Date(Math.max(...timestamps)).toISOString();
+    return {
+      latestIso: timestamps.length > 0 ? new Date(Math.max(...timestamps)).toISOString() : null,
+      activeRegions,
+    };
   } catch {
-    return null;
+    return { latestIso: null, activeRegions: null };
   }
 }
 
-export function HeaderClock({ keyRegions, activeRegions }: HeaderClockProps) {
+export function HeaderClock({ keyRegions }: HeaderClockProps) {
   const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState<number | null>(null);
   const [latestIso, setLatestIso] = useState<string | null>(null);
+  const [activeRegions, setActiveRegions] = useState<number | null>(null);
 
   useEffect(() => {
     const mountTimer = setTimeout(() => {
@@ -148,9 +156,10 @@ export function HeaderClock({ keyRegions, activeRegions }: HeaderClockProps) {
     const basePath = runtimeBasePath();
 
     const load = async () => {
-      const latest = await fetchLatestTimestamp(basePath);
+      const result = await fetchDashboardMeta(basePath);
       if (!cancelled) {
-        setLatestIso(latest);
+        setLatestIso(result.latestIso);
+        setActiveRegions(result.activeRegions);
       }
     };
 
@@ -180,9 +189,7 @@ export function HeaderClock({ keyRegions, activeRegions }: HeaderClockProps) {
   const level = freshnessLevel(freshnessMinutes);
   const freshnessText = freshnessMinutes === null ? "갱신 정보 없음" : `갱신 ${freshnessMinutes}분 전`;
   const freshnessAriaLabel =
-    freshnessMinutes === null
-      ? "마지막 갱신 정보를 확인할 수 없음"
-      : `마지막 갱신 ${freshnessMinutes}분 전`;
+    freshnessMinutes === null ? "마지막 갱신 정보를 확인할 수 없음" : `마지막 갱신 ${freshnessMinutes}분 전`;
 
   return (
     <div className="hidden items-center gap-4 text-xs text-[var(--text-secondary)] lg:flex">
@@ -191,14 +198,10 @@ export function HeaderClock({ keyRegions, activeRegions }: HeaderClockProps) {
           {timezone}: {mounted && currentDate ? formatTime(timezone, currentDate) : "--:--"}
         </span>
       ))}
-      <span>Active Regions: {activeRegions}</span>
-      <span
-        aria-label={freshnessAriaLabel}
-        className={`rounded-full border px-2 py-1 ${freshnessClass(level)}`}
-      >
+      <span>Active Regions: {activeRegions === null || activeRegions === 0 ? "데이터 준비 중" : activeRegions}</span>
+      <span aria-label={freshnessAriaLabel} className={`rounded-full border px-2 py-1 ${freshnessClass(level)}`}>
         {freshnessText}
       </span>
     </div>
   );
 }
-

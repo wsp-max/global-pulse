@@ -57,24 +57,40 @@ export interface Topic {
   regionId: string;
   nameKo: string;
   nameEn: string;
-  summaryKo?: string;
-  summaryEn?: string;
+  summaryKo?: string | null;
+  summaryEn?: string | null;
   sampleTitles?: string[];
   keywords: string[];
   sentiment: number | null;
   heatScore: number;
+  heatScoreDisplay?: number | null;
   postCount: number;
   totalViews: number;
   totalLikes: number;
   totalComments: number;
   sourceIds: string[];
   rawPostIds?: number[];
-  category?: TopicCategory;
-  entities?: TopicEntity[];
-  aliases?: string[];
-  canonicalKey?: string;
+  category?: TopicCategory | null;
+  entities?: TopicEntity[] | null;
+  aliases?: string[] | null;
+  canonicalKey?: string | null;
   embeddingJson?: number[] | null;
   burstZ?: number | null;
+  velocityPerHour?: number | null;
+  acceleration?: number | null;
+  spreadScore?: number | null;
+  propagationTimeline?: Array<{
+    regionId: string;
+    firstPostAt: string;
+    heatAtDiscovery: number;
+    status?: "fading" | "steady" | "accelerating";
+  }> | null;
+  propagationEdges?: Array<{
+    from: string;
+    to: string;
+    lagMinutes: number;
+    confidence: number;
+  }> | null;
   scope?: "community" | "news" | "mixed";
   rank?: number;
   periodStart: string;
@@ -105,30 +121,31 @@ export interface GlobalTopic {
   id?: number;
   nameEn: string;
   nameKo: string;
-  summaryEn?: string;
-  summaryKo?: string;
+  summaryEn?: string | null;
+  summaryKo?: string | null;
   regions: string[];
   regionalSentiments: Record<string, number>;
   regionalHeatScores: Record<string, number>;
   topicIds: number[];
   totalHeatScore: number;
-  firstSeenRegion?: string;
-  firstSeenAt?: string;
+  heatScoreDisplay?: number | null;
+  firstSeenRegion?: string | null;
+  firstSeenAt?: string | null;
   propagationTimeline?: Array<{
     regionId: string;
     firstPostAt: string;
     heatAtDiscovery: number;
     status?: "fading" | "steady" | "accelerating";
-  }>;
+  }> | null;
   propagationEdges?: Array<{
     from: string;
     to: string;
     lagMinutes: number;
     confidence: number;
-  }>;
-  velocityPerHour?: number;
-  acceleration?: number;
-  spreadScore?: number;
+  }> | null;
+  velocityPerHour?: number | null;
+  acceleration?: number | null;
+  spreadScore?: number | null;
   scope?: "community" | "news" | "mixed";
 }
 

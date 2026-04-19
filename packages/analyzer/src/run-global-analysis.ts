@@ -9,6 +9,7 @@ import { detectScopeOverlaps } from "./scope-overlap";
 const logger = getLogger("global-analyzer");
 type AnalysisScope = "community" | "news" | "mixed";
 const SCOPE_VALUES: AnalysisScope[] = ["community", "news", "mixed"];
+const FEATURE_NEWS_PIPELINE = process.env.FEATURE_NEWS_PIPELINE === "true";
 
 interface TopicRow {
   id: number;
@@ -20,6 +21,7 @@ interface TopicRow {
   keywords: string[] | null;
   sentiment: number | null;
   heat_score: number | null;
+  heat_score_display: number | null;
   post_count: number | null;
   total_views: number | null;
   total_likes: number | null;
@@ -60,6 +62,7 @@ interface GlobalTopicInsertRow {
   regional_heat_scores: string;
   topic_ids: number[];
   total_heat_score: number;
+  heat_score_display: number;
   first_seen_region: string | null;
   first_seen_at: string | null;
   velocity_per_hour: number;
@@ -100,9 +103,9 @@ function parseArg(flag: string): string | undefined {
   return process.argv[idx + 1];
 }
 
-function parseScopeArg(value: string | undefined): AnalysisScope {
+function parseScopeArg(value: string | undefined): AnalysisScope | undefined {
   if (!value) {
-    return "community";
+    return undefined;
   }
   if (!SCOPE_VALUES.includes(value as AnalysisScope)) {
     throw new Error(`Invalid --scope value "${value}". Allowed: ${SCOPE_VALUES.join("|")}`);
@@ -138,6 +141,7 @@ function toTopic(row: TopicRow): Topic {
     keywords: row.keywords ?? [],
     sentiment: toNullableNumber(row.sentiment),
     heatScore: toNumber(row.heat_score),
+    heatScoreDisplay: toNullableNumber(row.heat_score_display),
     postCount: toNumber(row.post_count),
     totalViews: toNumber(row.total_views),
     totalLikes: toNumber(row.total_likes),
@@ -151,6 +155,21 @@ function toTopic(row: TopicRow): Topic {
     periodStart: row.period_start,
     periodEnd: row.period_end,
   };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function toHeatBand(score: number, max: number): number {
+  const safeScore = Math.max(0, Number.isFinite(score) ? score : 0);
+  const safeMax = Math.max(1, Number.isFinite(max) ? max : 1);
+  const numerator = Math.log10(1 + safeScore);
+  const denominator = Math.log10(1 + safeMax);
+  if (denominator <= 0) {
+    return 0;
+  }
+  return clamp(Number((numerator / denominator).toFixed(4)), 0, 1);
 }
 
 function allowedSourceIdsByRegion(): Map<string, Set<string>> {
@@ -353,7 +372,7 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
           where rn <= 3
         )
         select
-          t.id,t.region_id,t.name_ko,t.name_en,t.summary_ko,t.summary_en,t.keywords,t.sentiment,t.heat_score,t.post_count,
+          t.id,t.region_id,t.name_ko,t.name_en,t.summary_ko,t.summary_en,t.keywords,t.sentiment,t.heat_score,t.heat_score_display,t.post_count,
           t.total_views,t.total_likes,t.total_comments,t.source_ids,t.raw_post_ids,t.canonical_key,t.embedding_json,t.scope,t.rank,t.period_start,t.period_end
         from topics t
         join selected_region_batches b
@@ -438,6 +457,7 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
         "regional_heat_scores",
         "topic_ids",
         "total_heat_score",
+        "heat_score_display",
         "first_seen_region",
         "first_seen_at",
         "velocity_per_hour",
@@ -508,7 +528,7 @@ function resolveStorage(): GlobalAnalysisStorage | null {
 }
 
 async function runGlobalAnalysis(): Promise<void> {
-  const scope = parseScopeArg(parseArg("--scope"));
+  const scopeArg = parseScopeArg(parseArg("--scope"));
   const hours = Number(parseArg("--hours") ?? 24);
   const limit = Math.min(Number(parseArg("--limit") ?? 25), 100);
   const minRegions = Math.max(Number(parseArg("--min-regions") ?? 2), 2);
@@ -523,132 +543,141 @@ async function runGlobalAnalysis(): Promise<void> {
   if (!storage) {
     return;
   }
+  const scopes: AnalysisScope[] = scopeArg
+    ? [scopeArg]
+    : FEATURE_NEWS_PIPELINE
+      ? ["community", "news", "mixed"]
+      : ["community"];
 
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const periodStartIso = new Date(now.getTime() - windowHours * 60 * 60 * 1000).toISOString();
-  const expiresAt = new Date(now.getTime() + 72 * 60 * 60 * 1000).toISOString();
+  for (const scope of scopes) {
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const periodStartIso = new Date(now.getTime() - windowHours * 60 * 60 * 1000).toISOString();
+    const expiresAt = new Date(now.getTime() + 72 * 60 * 60 * 1000).toISOString();
 
-  log(
-    `Starting global analysis. db=${storage.mode} scope=${scope} window=${windowHours}h minRegions=${minRegions} similarity=${threshold}`,
-  );
+    log(
+      `Starting global analysis. db=${storage.mode} scope=${scope} window=${windowHours}h minRegions=${minRegions} similarity=${threshold}`,
+    );
 
-  const historyPoints = await storage.fetchRecentGlobalTopicHistory(30, scope);
-  await storage.expireActiveGlobalTopics(nowIso, scope);
+    const historyPoints = await storage.fetchRecentGlobalTopicHistory(30, scope);
+    await storage.expireActiveGlobalTopics(nowIso, scope);
 
-  const fetchedTopics = (await storage.fetchTopics(periodStartIso, scope))
-    .map(toTopic)
-    .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
-  if (fetchedTopics.length === 0) {
-    log("No recent topics found. Global topic table has been expired for this run.");
-    return;
+    const fetchedTopics = (await storage.fetchTopics(periodStartIso, scope))
+      .map(toTopic)
+      .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
+    if (fetchedTopics.length === 0) {
+      log(`[${scope}] no recent topics found. Global topic table has been expired for this run.`);
+      continue;
+    }
+
+    const topicById = new Map<number, Topic>(fetchedTopics.map((topic) => [topic.id ?? 0, topic]));
+    const mapped = mapCrossRegionTopics(fetchedTopics, {
+      similarityThreshold: threshold,
+      minRegions,
+    })
+      .map((topic) => sanitizeGlobalTopicByRegions(topic, topicById))
+      .filter((topic): topic is GlobalTopic => Boolean(topic))
+      .slice(0, limit);
+
+    if (mapped.length === 0) {
+      log(`[${scope}] no cross-region topics matched after mapping. Keeping currently active global topics.`);
+      continue;
+    }
+
+    const allTopicIds = [...new Set(mapped.flatMap((topic) => topic.topicIds))];
+    const firstPostRows = await storage.fetchTopicFirstPostMoments(allTopicIds);
+    const firstPostByTopicId = new Map<number, TopicFirstPostRow>(
+      firstPostRows.map((row) => [toNumber(row.topic_id), row]),
+    );
+
+    const enrichedMapped = mapped.map((topic) => {
+      const propagationTimeline = buildPropagationTimelineForTopic(topic, topicById, firstPostByTopicId);
+      const origin = propagationTimeline[0];
+
+      return {
+        ...topic,
+        firstSeenRegion: origin?.regionId ?? topic.firstSeenRegion,
+        firstSeenAt: origin?.firstPostAt ?? topic.firstSeenAt,
+        propagationTimeline,
+      };
+    });
+
+    const metricsApplied = applyPropagationMetrics(enrichedMapped, historyPoints, nowIso);
+    const maxTotalHeat = Math.max(...metricsApplied.map((topic) => topic.totalHeatScore), 1);
+
+    const payload: GlobalTopicInsertRow[] = metricsApplied.map((topic) => ({
+      name_en: topic.nameEn,
+      name_ko: topic.nameKo,
+      scope,
+      summary_en: topic.summaryEn ?? null,
+      summary_ko: topic.summaryKo ?? null,
+      regions: topic.regions,
+      regional_sentiments: JSON.stringify(topic.regionalSentiments),
+      regional_heat_scores: JSON.stringify(topic.regionalHeatScores),
+      topic_ids: topic.topicIds,
+      total_heat_score: topic.totalHeatScore,
+      heat_score_display: toHeatBand(topic.totalHeatScore, maxTotalHeat),
+      first_seen_region: topic.firstSeenRegion ?? null,
+      first_seen_at: topic.firstSeenAt ?? null,
+      velocity_per_hour: Number(topic.velocityPerHour ?? 0),
+      acceleration: Number(topic.acceleration ?? 0),
+      spread_score: Number(topic.spreadScore ?? 0),
+      propagation_timeline: JSON.stringify(topic.propagationTimeline ?? []),
+      propagation_edges: JSON.stringify(topic.propagationEdges ?? []),
+      expires_at: expiresAt,
+    }));
+
+    await storage.insertGlobalTopics(payload);
+
+    const [communityCandidates, newsCandidates] = await Promise.all([
+      storage.fetchTopics(periodStartIso, "community"),
+      storage.fetchTopics(periodStartIso, "news"),
+    ]);
+
+    const normalizedCommunityTopics = communityCandidates
+      .map(toTopic)
+      .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
+    const normalizedNewsTopics = newsCandidates
+      .map(toTopic)
+      .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
+
+    const overlapTopicIds = [
+      ...new Set(
+        [...normalizedCommunityTopics, ...normalizedNewsTopics]
+          .map((topic) => topic.id ?? 0)
+          .filter((id) => id > 0),
+      ),
+    ];
+    const overlapFirstPostRows = await storage.fetchTopicFirstPostMoments(overlapTopicIds);
+    const overlapFirstPostByTopicId = new Map<number, TopicFirstPostRow>(
+      overlapFirstPostRows.map((row) => [toNumber(row.topic_id), row]),
+    );
+
+    const overlaps = detectScopeOverlaps(
+      normalizedCommunityTopics.map((topic) => ({
+        ...topic,
+        firstPostAt: overlapFirstPostByTopicId.get(topic.id ?? 0)?.first_post_at ?? topic.periodStart,
+      })),
+      normalizedNewsTopics.map((topic) => ({
+        ...topic,
+        firstPostAt: overlapFirstPostByTopicId.get(topic.id ?? 0)?.first_post_at ?? topic.periodStart,
+      })),
+    );
+
+    await storage.upsertIssueOverlaps(
+      overlaps.map((item) => ({
+        community_topic_id: item.communityTopicId,
+        news_topic_id: item.newsTopicId,
+        canonical_key: item.canonicalKey,
+        cosine: Number(item.cosine.toFixed(6)),
+        lag_minutes: item.lagMinutes,
+        leader: item.leader,
+        detected_at: nowIso,
+      })),
+    );
+
+    log(`[${scope}] global analysis completed. generated=${metricsApplied.length} overlaps=${overlaps.length}`);
   }
-
-  const topicById = new Map<number, Topic>(fetchedTopics.map((topic) => [topic.id ?? 0, topic]));
-  const mapped = mapCrossRegionTopics(fetchedTopics, {
-    similarityThreshold: threshold,
-    minRegions,
-  })
-    .map((topic) => sanitizeGlobalTopicByRegions(topic, topicById))
-    .filter((topic): topic is GlobalTopic => Boolean(topic))
-    .slice(0, limit);
-
-  if (mapped.length === 0) {
-    log("No cross-region topics matched after mapping. Keeping currently active global topics.");
-    return;
-  }
-
-  const allTopicIds = [...new Set(mapped.flatMap((topic) => topic.topicIds))];
-  const firstPostRows = await storage.fetchTopicFirstPostMoments(allTopicIds);
-  const firstPostByTopicId = new Map<number, TopicFirstPostRow>(
-    firstPostRows.map((row) => [toNumber(row.topic_id), row]),
-  );
-
-  const enrichedMapped = mapped.map((topic) => {
-    const propagationTimeline = buildPropagationTimelineForTopic(topic, topicById, firstPostByTopicId);
-    const origin = propagationTimeline[0];
-
-    return {
-      ...topic,
-      firstSeenRegion: origin?.regionId ?? topic.firstSeenRegion,
-      firstSeenAt: origin?.firstPostAt ?? topic.firstSeenAt,
-      propagationTimeline,
-    };
-  });
-
-  const metricsApplied = applyPropagationMetrics(enrichedMapped, historyPoints, nowIso);
-
-  const payload: GlobalTopicInsertRow[] = metricsApplied.map((topic) => ({
-    name_en: topic.nameEn,
-    name_ko: topic.nameKo,
-    scope,
-    summary_en: topic.summaryEn ?? null,
-    summary_ko: topic.summaryKo ?? null,
-    regions: topic.regions,
-    regional_sentiments: JSON.stringify(topic.regionalSentiments),
-    regional_heat_scores: JSON.stringify(topic.regionalHeatScores),
-    topic_ids: topic.topicIds,
-    total_heat_score: topic.totalHeatScore,
-    first_seen_region: topic.firstSeenRegion ?? null,
-    first_seen_at: topic.firstSeenAt ?? null,
-    velocity_per_hour: Number(topic.velocityPerHour ?? 0),
-    acceleration: Number(topic.acceleration ?? 0),
-    spread_score: Number(topic.spreadScore ?? 0),
-    propagation_timeline: JSON.stringify(topic.propagationTimeline ?? []),
-    propagation_edges: JSON.stringify(topic.propagationEdges ?? []),
-    expires_at: expiresAt,
-  }));
-
-  await storage.insertGlobalTopics(payload);
-
-  const [communityCandidates, newsCandidates] = await Promise.all([
-    storage.fetchTopics(periodStartIso, "community"),
-    storage.fetchTopics(periodStartIso, "news"),
-  ]);
-
-  const normalizedCommunityTopics = communityCandidates
-    .map(toTopic)
-    .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
-  const normalizedNewsTopics = newsCandidates
-    .map(toTopic)
-    .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
-
-  const overlapTopicIds = [
-    ...new Set(
-      [...normalizedCommunityTopics, ...normalizedNewsTopics]
-        .map((topic) => topic.id ?? 0)
-        .filter((id) => id > 0),
-    ),
-  ];
-  const overlapFirstPostRows = await storage.fetchTopicFirstPostMoments(overlapTopicIds);
-  const overlapFirstPostByTopicId = new Map<number, TopicFirstPostRow>(
-    overlapFirstPostRows.map((row) => [toNumber(row.topic_id), row]),
-  );
-
-  const overlaps = detectScopeOverlaps(
-    normalizedCommunityTopics.map((topic) => ({
-      ...topic,
-      firstPostAt: overlapFirstPostByTopicId.get(topic.id ?? 0)?.first_post_at ?? topic.periodStart,
-    })),
-    normalizedNewsTopics.map((topic) => ({
-      ...topic,
-      firstPostAt: overlapFirstPostByTopicId.get(topic.id ?? 0)?.first_post_at ?? topic.periodStart,
-    })),
-  );
-
-  await storage.upsertIssueOverlaps(
-    overlaps.map((item) => ({
-      community_topic_id: item.communityTopicId,
-      news_topic_id: item.newsTopicId,
-      canonical_key: item.canonicalKey,
-      cosine: Number(item.cosine.toFixed(6)),
-      lag_minutes: item.lagMinutes,
-      leader: item.leader,
-      detected_at: nowIso,
-    })),
-  );
-
-  log(`Global analysis completed. generated=${metricsApplied.length} overlaps=${overlaps.length}`);
 }
 
 runGlobalAnalysis().catch((error) => {

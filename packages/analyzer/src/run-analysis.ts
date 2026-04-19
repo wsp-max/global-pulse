@@ -44,6 +44,7 @@ interface TopicInsertRow {
   canonical_key: string | null;
   embedding_json: string | null;
   heat_score: number;
+  heat_score_display: number;
   post_count: number;
   total_views: number;
   total_likes: number;
@@ -95,6 +96,21 @@ interface AnalysisStorage {
 }
 
 const ANALYZER_RAW_POST_LIMIT = Number(process.env.ANALYZER_RAW_POST_LIMIT ?? 1500);
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function toHeatBand(score: number, max: number): number {
+  const safeScore = Math.max(0, Number.isFinite(score) ? score : 0);
+  const safeMax = Math.max(1, Number.isFinite(max) ? max : 1);
+  const numerator = Math.log10(1 + safeScore);
+  const denominator = Math.log10(1 + safeMax);
+  if (denominator <= 0) {
+    return 0;
+  }
+  return clamp(Number((numerator / denominator).toFixed(4)), 0, 1);
+}
 
 function parseArg(flag: string): string | undefined {
   const idx = process.argv.findIndex((arg) => arg === flag);
@@ -351,6 +367,7 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         "canonical_key",
         "embedding_json",
         "heat_score",
+        "heat_score_display",
         "post_count",
         "total_views",
         "total_likes",
@@ -489,14 +506,19 @@ async function runRegionAnalysis(params: {
   }
 
   const summarizedTopics = useGemini
-    ? await summarizeTopicsWithGemini(topicsWithPortalBoost, { regionId }).catch((error) => {
-        log(
-          `[${regionId}:${scope}] gemini summarization failed, falling back to local topics: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
-        return topicsWithPortalBoost;
-      })
+    ? await summarizeTopicsWithGemini(topicsWithPortalBoost, { regionId })
+        .then((result) => {
+          const lastError = result.stats.errors.at(-1);
+          log(
+            `[${regionId}:${scope}] gemini stats calls=${result.stats.requestCount} fallbacks=${result.stats.fallbackCount} batches=${result.stats.batches} promptChars=${result.stats.promptCharsTotal} model=${result.stats.modelUsed.join(",") || "none"} durationMs=${result.stats.durationMs} errors=${result.stats.errors.length}${lastError ? ` lastError=${lastError}` : ""}`,
+          );
+          return result.topics;
+        })
+        .catch((error) => {
+          const message = error instanceof Error ? error.message : String(error);
+          log(`[${regionId}:${scope}] gemini summarization failed, falling back to local topics: ${message}`);
+          return topicsWithPortalBoost;
+        })
     : topicsWithPortalBoost;
   const analyzedTopics = await enrichTopicsWithEmbeddings(summarizedTopics, { regionId }).catch((error) => {
     log(
@@ -508,6 +530,7 @@ async function runRegionAnalysis(params: {
   });
 
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  const maxHeatScoreInBatch = Math.max(...analyzedTopics.map((topic) => topic.heatScore), 1);
 
   const topicRows: TopicInsertRow[] = analyzedTopics.map((topic) => ({
     region_id: topic.regionId,
@@ -523,6 +546,7 @@ async function runRegionAnalysis(params: {
     canonical_key: topic.canonicalKey ?? normalizeCanonicalKey(topic.nameEn),
     embedding_json: topic.embeddingJson ? JSON.stringify(topic.embeddingJson) : null,
     heat_score: topic.heatScore,
+    heat_score_display: toHeatBand(topic.heatScore, maxHeatScoreInBatch),
     post_count: topic.postCount,
     total_views: topic.totalViews,
     total_likes: topic.totalLikes,
@@ -582,7 +606,20 @@ async function runAnalysis(): Promise<void> {
   const regionFilter = parseArg("--region");
   const scopeArg = parseScopeArg(parseArg("--scope"));
   const hours = Number(parseArg("--hours") ?? 6);
-  const useGemini = process.argv.includes("--with-gemini");
+  const flagOn = process.argv.includes("--with-gemini");
+  const flagOff = process.argv.includes("--no-gemini");
+  const envDef = (process.env.ANALYZER_USE_GEMINI ?? "true").toLowerCase() !== "false";
+  const hasKey = Boolean(process.env.GEMINI_API_KEY?.trim());
+  const useGemini = flagOff ? false : flagOn ? true : envDef && hasKey;
+  const geminiReason = flagOff
+    ? "--no-gemini"
+    : flagOn
+      ? "--with-gemini"
+      : !hasKey
+        ? "no-api-key"
+        : !envDef
+          ? "env-disabled"
+          : "env-default";
   const analysisHours = Number.isFinite(hours) && hours > 0 ? Math.min(hours, 168) : 6;
   const scopes: AnalysisScope[] = scopeArg
     ? [scopeArg]
@@ -605,6 +642,7 @@ async function runAnalysis(): Promise<void> {
   const periodEndIso = periodEnd.toISOString();
   const regions = targetRegionIds(regionFilter);
 
+  log(`[analyzer] gemini=${useGemini} reason=${geminiReason}`);
   log(
     `Starting analysis pipeline. db=${storage.mode} regions=${regions.join(",")} scopes=${scopes.join(",")} window=${analysisHours}h start=${periodStartIso} gemini=${useGemini}`,
   );

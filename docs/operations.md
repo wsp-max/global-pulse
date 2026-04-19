@@ -231,6 +231,52 @@ npm run ops:source:report -- --regions kr,jp,tw --minutes 120
   - one-table view for `connected` vs `error/stale/zero` per source
   - includes last error and recommended next action for triage
 
+## Source Health Report (24h + Optional Live Activation)
+```bash
+cd /srv/projects/project2/global-pulse
+npm run ops:source:health -- --format md
+```
+- Optional filters/output:
+```bash
+# region-only and JSON output
+npm run ops:source:health -- --region kr --format json --print
+
+# activate only sources with >=1 success row in the window (requires explicit confirm)
+npm run ops:source:health -- --hours 24 --activate-live --confirm
+```
+- Behavior:
+  - reports per-source `recent_count`, `last_scraped_at`, `last_error`, and connected/degraded state
+  - `--activate-live` flips `sources.is_active` by recent 24h success rows
+
+## Community Feed Verification (HTTP + Item Count Gate)
+```bash
+cd /srv/projects/project2/global-pulse
+npm run ops:community:verify-feeds -- --region kr
+```
+- Optional apply mode:
+```bash
+npm run ops:community:verify-feeds -- --region kr --apply
+```
+- Behavior:
+  - checks community/sns sources with GET probe
+  - requires `itemCount >= 5` to classify as healthy
+  - `--apply` updates `sources.is_active` for verified source set
+
+## Recent Topic Enrichment Backfill (Opt-in)
+```bash
+cd /srv/projects/project2/global-pulse
+npm run ops:topics:backfill -- --dry-run --limit 120
+```
+- Optional focused run:
+```bash
+npm run ops:topics:backfill -- --region kr --scope community --limit 60
+```
+- Notes:
+  - target: `topics.created_at >= 48h` and `summary_ko is null`
+  - updates only `summary_ko/summary_en/category/entities/aliases/canonical_key`
+  - does **not** modify `name_ko/name_en`
+  - requires `GEMINI_API_KEY`
+
 ## Common Failure Cases
 - `/api/health` returns `postgres_not_configured`
   - PostgreSQL pool/env is missing for web runtime.

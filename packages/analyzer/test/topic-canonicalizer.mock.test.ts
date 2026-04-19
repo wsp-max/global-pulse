@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import test from "node:test";
 import type { Topic } from "@global-pulse/shared";
 import { summarizeTopicsWithGemini } from "../src/gemini-summarizer";
@@ -35,12 +35,15 @@ test.afterEach(() => {
 test("summarizeTopicsWithGemini falls back to lexical data when api key is missing", async () => {
   delete process.env.GEMINI_API_KEY;
   const topics = [buildTopic("스트리트 파이터", "Street Fighter")];
-  const summarized = await summarizeTopicsWithGemini(topics, { regionId: "kr" });
+  const result = await summarizeTopicsWithGemini(topics, { regionId: "kr" });
 
-  assert.equal(summarized.length, 1);
-  assert.equal(summarized[0]?.nameKo, "스트리트 파이터");
-  assert.equal(summarized[0]?.nameEn, "Street Fighter");
-  assert.equal(typeof summarized[0]?.canonicalKey, "string");
+  assert.equal(result.topics.length, 1);
+  assert.equal(result.topics[0]?.nameKo, "스트리트 파이터");
+  assert.equal(result.topics[0]?.nameEn, "Street Fighter");
+  assert.equal(typeof result.topics[0]?.canonicalKey, "string");
+  assert.equal(result.stats.requestCount, 0);
+  assert.equal(result.stats.fallbackCount, 1);
+  assert.equal(result.stats.errors[0], "no-api-key");
 });
 
 test("summarizeTopicsWithGemini maps category/entities/aliases from gemini response", async () => {
@@ -54,7 +57,7 @@ test("summarizeTopicsWithGemini maps category/entities/aliases from gemini respo
         {
           name_ko: "스트리트 파이터 대회",
           name_en: "Street Fighter Tournament",
-          summary_ko: "격투 게임 대회 이슈가 확산 중이다.",
+          summary_ko: "격투 게임 대회 이슈가 확산 중입니다.",
           summary_en: "Fighting game tournament buzz is spreading.",
           sentiment: 0.3,
           category: "entertainment",
@@ -64,7 +67,7 @@ test("summarizeTopicsWithGemini maps category/entities/aliases from gemini respo
         {
           name_ko: "캡콤 컵",
           name_en: "Capcom Cup",
-          summary_ko: "캡콤 컵 관련 화제가 증가했다.",
+          summary_ko: "캡콤 컵 관련 언급이 증가합니다.",
           summary_en: "Capcom Cup mentions are increasing.",
           sentiment: 0.1,
           category: "sports",
@@ -109,17 +112,19 @@ test("summarizeTopicsWithGemini maps category/entities/aliases from gemini respo
   };
 
   const topics = [buildTopic("스트리트 파이터", "Street Fighter"), buildTopic("캡콤 컵", "Capcom Cup")];
-  const summarized = await summarizeTopicsWithGemini(topics, { regionId: "kr" });
+  const result = await summarizeTopicsWithGemini(topics, { regionId: "kr" });
 
-  assert.equal(summarized.length, 2);
-  assert.equal(summarized[0]?.category, "entertainment");
-  assert.equal(summarized[0]?.entities?.[0]?.text, "Street Fighter");
-  assert.equal(summarized[0]?.aliases?.[0], "스파 대회");
-  assert.equal(summarized[1]?.category, "sports");
-  assert.equal(typeof summarized[1]?.canonicalKey, "string");
+  assert.equal(result.topics.length, 2);
+  assert.equal(result.topics[0]?.category, "entertainment");
+  assert.equal(result.topics[0]?.entities?.[0]?.text, "Street Fighter");
+  assert.equal(result.topics[0]?.aliases?.[0], "스파 대회");
+  assert.equal(result.topics[1]?.category, "sports");
+  assert.equal(typeof result.topics[1]?.canonicalKey, "string");
+  assert.ok(result.stats.requestCount >= 1);
+  assert.ok(result.stats.modelUsed.length >= 1);
 });
 
-test("summarizeTopicsWithGemini keeps lexical names when gemini returns low-signal clickbait labels", async () => {
+test("summarizeTopicsWithGemini keeps lexical names when gemini returns low-signal labels", async () => {
   process.env.GEMINI_API_KEY = "test-key";
   process.env.ANALYZER_LLM_CANONICAL_BATCH = "1";
 
@@ -135,7 +140,7 @@ test("summarizeTopicsWithGemini keeps lexical names when gemini returns low-sign
                   {
                     text: JSON.stringify([
                       {
-                        name_ko: "오늘의 주요 소식",
+                        name_ko: "오늘 주요 소식",
                         name_en: "Major Related Update",
                         summary_ko: "요약 텍스트",
                         summary_en: "Summary text",
@@ -173,9 +178,10 @@ test("summarizeTopicsWithGemini keeps lexical names when gemini returns low-sign
   };
 
   const topics = [buildTopic("스트리트 파이터 대회", "Street Fighter Tournament")];
-  const summarized = await summarizeTopicsWithGemini(topics, { regionId: "kr" });
+  const result = await summarizeTopicsWithGemini(topics, { regionId: "kr" });
 
-  assert.equal(summarized.length, 1);
-  assert.equal(summarized[0]?.nameKo, "스트리트 파이터 대회");
-  assert.equal(summarized[0]?.nameEn, "Street Fighter Tournament");
+  assert.equal(result.topics.length, 1);
+  assert.equal(result.topics[0]?.nameKo, "스트리트 파이터 대회");
+  assert.equal(result.topics[0]?.nameEn, "Street Fighter Tournament");
+  assert.ok(result.stats.requestCount >= 1);
 });

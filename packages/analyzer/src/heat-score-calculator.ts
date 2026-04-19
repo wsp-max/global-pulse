@@ -43,9 +43,7 @@ export function calculateHeatScore(items: HeatScoreInput[]): number {
     return 0;
   }
 
-  // Soft-cap keeps ranking differences in high-volume ranges instead of flattening to 2000.
-  const normalized = 2000 * (1 - Math.exp(-rawTotal / 900));
-  return clamp(normalized, 0, 2000);
+  return Number(rawTotal.toFixed(4));
 }
 
 function sourceDiversityMultiplier(sourceCount: number): number {
@@ -67,8 +65,8 @@ export function calculateHeatScoreWithSourceDiversity(
   const base = calculateHeatScore(items);
   const diversity = sourceDiversityMultiplier(options.sourceDiversityCount ?? 1);
   if (base <= 0 && options.scope === "news") {
-    return clamp(newsFallbackHeat(items.length) * diversity, 0, 2000);
+    return Number((newsFallbackHeat(items.length) * diversity).toFixed(4));
   }
-  return clamp(base * diversity, 0, 2000);
+  return Number((base * diversity).toFixed(4));
 }
 

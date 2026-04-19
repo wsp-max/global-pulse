@@ -1,6 +1,7 @@
-import type { CSSProperties } from "react";
+﻿import Link from "next/link";
 import { useMemo } from "react";
 import { getRegionById, type GlobalTopic } from "@global-pulse/shared";
+import { cleanupTopicName } from "@/lib/utils/topic-name";
 import type { RegionDashboardRow } from "@/lib/types/api";
 
 interface PropagationStreamProps {
@@ -8,122 +9,104 @@ interface PropagationStreamProps {
   globalTopics: GlobalTopic[];
 }
 
-interface KeywordSignal {
-  key: string;
-  label: string;
-  hits: number;
-  color: string;
-  lane: number;
-  direction: "left" | "right";
-  durationSec: number;
-  delaySec: number;
+interface LaneStop {
+  regionId: string;
+  left: number;
+  firstPostAt: string;
 }
 
 interface PropagationLane {
   key: string;
+  topicId?: number;
   label: string;
+  isFallback: boolean;
   heat: number;
-  regionIds: string[];
   lagText: string;
+  progress: number;
+  originLabel: string;
+  currentLabel: string;
+  stops: LaneStop[];
+  velocity: number;
+  acceleration: number;
 }
 
-const REGION_LONGITUDE: Record<string, number> = {
-  kr: 127.8,
-  jp: 138.3,
-  tw: 121.0,
-  cn: 104.2,
-  us: -98.6,
-  eu: 10.0,
-  me: 45.0,
-  ru: 90.0,
-  br: -51.9,
-  in: 78.9,
-  id: 117.9,
-  mx: -102.5,
-  au: 133.8,
-  vn: 108.3,
-  th: 100.9,
-  ar: -64.2,
-  ca: -106.3,
-  ng: 8.7,
-  za: 24.0,
-};
-
-function hashKeyword(value: string): number {
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 33 + value.charCodeAt(index)) >>> 0;
+function toTimestamp(value: string | undefined): number {
+  if (!value) {
+    return Number.NaN;
   }
-  return hash;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
-function resolveDirection(regionIds: string[]): "left" | "right" {
-  if (regionIds.length < 2) {
-    return "right";
+function toLagText(start: number, end: number): string {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+    return "same window";
   }
-  const first = regionIds[0];
-  const last = regionIds[regionIds.length - 1];
-  const firstLon = REGION_LONGITUDE[first];
-  const lastLon = REGION_LONGITUDE[last];
-  if (firstLon === undefined || lastLon === undefined) {
-    return "right";
+  const lagMinutes = Math.max(1, Math.round((end - start) / 60_000));
+  if (lagMinutes < 60) {
+    return `+${lagMinutes}m`;
   }
-  return lastLon >= firstLon ? "right" : "left";
+  return `+${Math.max(1, Math.round(lagMinutes / 60))}h`;
 }
 
-function getKeywordSignals(globalTopics: GlobalTopic[], regions: RegionDashboardRow[]): KeywordSignal[] {
-  const regionColor = new Map(regions.map((region) => [region.id, region.color]));
-  return globalTopics
-    .filter((topic) => (topic.propagationTimeline ?? []).length >= 2)
-    .slice(0, 32)
-    .map((topic, index) => {
-      const timeline = topic.propagationTimeline ?? [];
-      const regionIds = timeline.map((item) => item.regionId);
-      const leadRegion = regionIds[0];
-      const hash = hashKeyword(topic.nameEn || topic.nameKo || String(index));
-      return {
-        key: `signal-${topic.id ?? topic.nameEn}-${index}`,
-        label: topic.nameKo || topic.nameEn,
-        hits: new Set(regionIds).size,
-        color: regionColor.get(leadRegion) ?? "var(--text-accent)",
-        lane: (hash % 78) + 6,
-        direction: resolveDirection(regionIds),
-        durationSec: 11 + (hash % 6) * 1.1,
-        delaySec: (index % 10) * 0.22,
-      };
-    });
+function buildLane(topic: GlobalTopic, index: number): PropagationLane | null {
+  const timeline = (topic.propagationTimeline ?? []).filter((point) => point.firstPostAt);
+  if (timeline.length < 2) {
+    return null;
+  }
+
+  const first = timeline[0]!;
+  const last = timeline[timeline.length - 1]!;
+  const startTs = toTimestamp(first.firstPostAt);
+  const endTs = toTimestamp(last.firstPostAt);
+  const span = Number.isFinite(startTs) && Number.isFinite(endTs) && endTs > startTs ? endTs - startTs : 1;
+
+  const cleaned = cleanupTopicName({
+    id: topic.id,
+    nameKo: topic.nameKo,
+    nameEn: topic.nameEn,
+    entities: null,
+    keywords: [],
+  });
+
+  const stops: LaneStop[] = timeline.map((point) => {
+    const pointTs = toTimestamp(point.firstPostAt);
+    const leftRaw = Number.isFinite(pointTs) ? ((pointTs - startTs) / span) * 100 : 0;
+    const left = Math.max(0, Math.min(100, Number.isFinite(leftRaw) ? leftRaw : 0));
+    return {
+      regionId: point.regionId,
+      left,
+      firstPostAt: point.firstPostAt,
+    };
+  });
+
+  const originRegion = getRegionById(first.regionId);
+  const currentRegion = getRegionById(last.regionId);
+
+  return {
+    key: `lane-${topic.id ?? topic.nameEn}-${index}`,
+    topicId: typeof topic.id === "number" ? topic.id : undefined,
+    label: cleaned.displayKo,
+    isFallback: cleaned.isFallback,
+    heat: topic.totalHeatScore,
+    lagText: toLagText(startTs, endTs),
+    progress: Math.max(...stops.map((stop) => stop.left)),
+    originLabel: originRegion ? `${originRegion.flagEmoji} ${originRegion.nameKo}` : first.regionId.toUpperCase(),
+    currentLabel: currentRegion ? `${currentRegion.flagEmoji} ${currentRegion.nameKo}` : last.regionId.toUpperCase(),
+    stops,
+    velocity: topic.velocityPerHour ?? 0,
+    acceleration: topic.acceleration ?? 0,
+  };
 }
 
-function getPropagationLanes(globalTopics: GlobalTopic[]): PropagationLane[] {
-  return globalTopics
-    .filter((topic) => (topic.propagationTimeline ?? []).length >= 2)
-    .slice(0, 8)
-    .map((topic) => {
-      const timeline = topic.propagationTimeline ?? [];
-      const regionIds = timeline.map((item) => item.regionId);
-      const firstAt = timeline[0]?.firstPostAt ? new Date(timeline[0].firstPostAt).getTime() : Number.NaN;
-      const lastAt = timeline[timeline.length - 1]?.firstPostAt
-        ? new Date(timeline[timeline.length - 1]!.firstPostAt).getTime()
-        : Number.NaN;
-      const lagHours =
-        Number.isFinite(firstAt) && Number.isFinite(lastAt) && lastAt > firstAt
-          ? Math.max(1, Math.round((lastAt - firstAt) / (60 * 60 * 1000)))
-          : 0;
-
-      return {
-        key: `global-${topic.id ?? topic.nameEn}`,
-        label: topic.nameKo || topic.nameEn,
-        heat: topic.totalHeatScore,
-        regionIds: [...new Set(regionIds)].slice(0, 6),
-        lagText: lagHours > 0 ? `+${lagHours}h` : "same window",
-      };
-    });
+function buildLanes(topics: GlobalTopic[]): PropagationLane[] {
+  return topics.map(buildLane).filter((lane): lane is PropagationLane => Boolean(lane)).slice(0, 8);
 }
 
 export function PropagationStream({ regions, globalTopics }: PropagationStreamProps) {
-  const keywordSignals = useMemo(() => getKeywordSignals(globalTopics, regions), [globalTopics, regions]);
-  const propagationLanes = useMemo(() => getPropagationLanes(globalTopics), [globalTopics]);
-  const hasActualMovement = keywordSignals.length > 0 || propagationLanes.length > 0;
+  void regions;
+  const lanes = useMemo(() => buildLanes(globalTopics), [globalTopics]);
+  const maxVelocity = Math.max(...lanes.map((lane) => lane.velocity), 1);
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[linear-gradient(180deg,rgba(11,24,39,0.88),rgba(10,14,23,0.98))] p-4 shadow-[var(--shadow-card)]">
@@ -132,99 +115,89 @@ export function PropagationStream({ regions, globalTopics }: PropagationStreamPr
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="font-display text-sm tracking-[0.22em] text-[var(--text-accent)]">SIGNAL PROPAGATION</p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              Verified cross-region propagation only (origin to current route).
-            </p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">Origin → destination lanes based on propagation timeline.</p>
           </div>
           <span className="rounded-full border border-[var(--border-default)] bg-[rgba(15,23,42,0.7)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
-            {hasActualMovement ? `Live Signals ${keywordSignals.length}` : "No Active Propagation"}
+            {lanes.length > 0 ? `Active Lanes ${lanes.length}` : "No Active Propagation"}
           </span>
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-          <div className="relative min-h-[180px] overflow-hidden rounded-xl border border-[var(--border-default)] bg-[rgba(15,23,42,0.72)] px-2 py-1">
-            <div className="pointer-events-none absolute inset-0 panel-grid opacity-50" />
-            {keywordSignals.length === 0 ? (
-              <div className="flex h-full items-center justify-center px-3 text-xs text-[var(--text-secondary)]">
-                No shared cross-region keyword movement detected in the current batch.
-              </div>
-            ) : (
-              keywordSignals.map((signal) => {
-                const style = {
-                  top: `${signal.lane}%`,
-                  color: signal.color,
-                  borderColor: `${signal.color}55`,
-                  ["--stream-duration" as string]: `${signal.durationSec}s`,
-                  ["--stream-delay" as string]: `${signal.delaySec}s`,
-                } as CSSProperties;
+        <div className="mt-4 space-y-3">
+          {lanes.length === 0 ? (
+            <div className="rounded-xl border border-[var(--border-default)] bg-[rgba(15,23,42,0.72)] p-4 text-xs text-[var(--text-secondary)]">
+              No shared cross-region propagation detected in the current batch.
+            </div>
+          ) : (
+            lanes.map((lane, laneIndex) => {
+              const laneBody = (
+                <article className="rounded-xl border border-[var(--border-default)] bg-[rgba(15,23,42,0.72)] p-3 transition-colors hover:border-[var(--border-hover)]">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-sm text-[var(--text-primary)]">
+                      {lane.label}
+                      {lane.isFallback && (
+                        <span className="ml-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-300">
+                          이름 정제 중
+                        </span>
+                      )}
+                    </p>
+                    <p className="font-mono text-[11px] text-[var(--text-secondary)]">
+                      Heat {Math.round(lane.heat)} / {lane.lagText}
+                    </p>
+                  </div>
 
-                return (
-                  <span
-                    key={signal.key}
-                    className={`keyword-stream-word ${
-                      signal.direction === "left" ? "keyword-stream-word--left" : "keyword-stream-word--right"
-                    } rounded-full border bg-[rgba(15,23,42,0.75)] px-2 py-0.5 font-mono text-[11px] whitespace-nowrap`}
-                    style={style}
-                  >
-                    {signal.label}
-                    <span className="ml-1 text-[var(--text-accent)]">x{signal.hits}</span>
-                  </span>
-                );
-              })
-            )}
-          </div>
-
-          <div className="space-y-3 rounded-xl border border-[var(--border-default)] bg-[rgba(15,23,42,0.72)] p-3">
-            <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-accent)]">SPREAD TRACK</p>
-            {propagationLanes.length === 0 ? (
-              <p className="text-xs text-[var(--text-secondary)]">Propagation lanes will appear after analysis.</p>
-            ) : (
-              propagationLanes.map((lane, index) => {
-                const dotStyle = {
-                  ["--dot-duration" as string]: `${4.2 + index * 1.1}s`,
-                  ["--dot-delay" as string]: `${index * 0.4}s`,
-                } as CSSProperties;
-
-                return (
-                  <article
-                    key={lane.key}
-                    className="rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.76)] p-2.5"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-xs text-[var(--text-primary)]">{lane.label}</p>
-                      <span className="font-mono text-[11px] text-[var(--text-tertiary)]">
-                        {Math.round(lane.heat)} / {lane.lagText}
+                  <div className="mt-1 text-[11px] text-[var(--text-tertiary)]">
+                    {lane.originLabel} → {lane.currentLabel}
+                    {(lane.acceleration > 0 && lane.velocity >= maxVelocity * 0.9) && (
+                      <span className="ml-2 rounded-full border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-300">
+                        🔥 surging
                       </span>
-                    </div>
+                    )}
+                  </div>
 
-                    <div className="relative mt-2 h-2 overflow-hidden rounded-full border border-[var(--border-default)] bg-[rgba(51,65,85,0.42)]">
-                      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(56,189,248,0.08),rgba(239,68,68,0.34),rgba(52,211,153,0.08))]" />
-                      <span className="propagation-dot" style={dotStyle} />
-                    </div>
+                  <div className="relative mt-2 h-7 rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.82)]">
+                    <div
+                      className="absolute left-0 top-0 h-full rounded-lg bg-[linear-gradient(90deg,rgba(56,189,248,0.2),rgba(56,189,248,0.45))] transition-[width] duration-700"
+                      style={{ width: `${Math.max(4, lane.progress)}%`, transitionDelay: `${laneIndex * 80}ms` }}
+                    />
 
-                    <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1 text-[10px] text-[var(--text-secondary)]">
-                      {lane.regionIds.map((regionId, regionIndex) => {
-                        const region = getRegionById(regionId);
-                        const label = region ? `${region.flagEmoji} ${region.nameKo}` : regionId.toUpperCase();
+                    {lane.stops.map((stop, stopIndex) => {
+                      const region = getRegionById(stop.regionId);
+                      const label = region ? `${region.flagEmoji} ${region.nameKo}` : stop.regionId.toUpperCase();
+                      const timeLabel = new Date(stop.firstPostAt).toLocaleTimeString("ko-KR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      });
 
-                        return (
-                          <span
-                            key={`${lane.key}-${regionId}`}
-                            className="flex items-center gap-1 whitespace-nowrap rounded-full border border-[var(--border-default)] bg-[rgba(30,41,59,0.65)] px-2 py-0.5"
-                          >
-                            {label}
-                            {regionIndex < lane.regionIds.length - 1 && (
-                              <span className="text-[var(--text-tertiary)]">-&gt;</span>
-                            )}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </article>
+                      return (
+                        <div
+                          key={`${lane.key}-${stop.regionId}-${stopIndex}`}
+                          className="absolute top-0 -translate-x-1/2"
+                          style={{ left: `${stop.left}%` }}
+                          title={`${label} ${timeLabel}`}
+                        >
+                          <div className="mt-0.5 h-2 w-2 rounded-full border border-[var(--bg-primary)] bg-[var(--text-accent)]" />
+                          <div className="mt-1 whitespace-nowrap rounded-full border border-[var(--border-default)] bg-[rgba(15,23,42,0.9)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]">
+                            {region?.flagEmoji ?? "🌐"}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </article>
+              );
+
+              if (lane.topicId) {
+                return (
+                  <Link key={lane.key} href={`/topic/${lane.topicId}`}>
+                    {laneBody}
+                  </Link>
                 );
-              })
-            )}
-          </div>
+              }
+
+              return <div key={lane.key}>{laneBody}</div>;
+            })
+          )}
         </div>
       </div>
     </section>

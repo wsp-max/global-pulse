@@ -124,8 +124,13 @@ async function getRegions(request: Request) {
           postgres.query<TopicRow>(
             `
             select
-              id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,
-              post_count,total_views,total_likes,total_comments,source_ids,scope,rank,period_start,period_end
+              id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
+              post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,scope,rank,period_start,period_end,
+              null::float as velocity_per_hour,
+              null::float as acceleration,
+              null::float as spread_score,
+              null::jsonb as propagation_timeline,
+              null::jsonb as propagation_edges
             from topics
             where region_id = $1
               and source_ids && $2::text[]

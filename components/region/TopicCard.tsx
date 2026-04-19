@@ -5,11 +5,20 @@ interface TopicCardProps {
   name: string;
   heatScore: number;
   heatBand: number;
+  isFallbackName?: boolean;
   selected?: boolean;
   onClick?: () => void;
 }
 
-export function TopicCard({ rank, name, heatScore, heatBand, selected = false, onClick }: TopicCardProps) {
+export function TopicCard({
+  rank,
+  name,
+  heatScore,
+  heatBand,
+  isFallbackName = false,
+  selected = false,
+  onClick,
+}: TopicCardProps) {
   const relativePercent = Math.max(8, Math.round(heatBand * 100));
 
   return (
@@ -25,6 +34,11 @@ export function TopicCard({ rank, name, heatScore, heatBand, selected = false, o
       <div className="flex items-center justify-between">
         <p className="text-sm">
           #{rank} {name}
+          {isFallbackName && (
+            <span className="ml-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-300">
+              이름 정제 중
+            </span>
+          )}
         </p>
         <HeatBadge score={Math.round(heatScore)} />
       </div>

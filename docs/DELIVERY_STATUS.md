@@ -2643,3 +2643,11 @@
 - 결과: 뉴스 토픽 `heat_score=0` 고착 해소(실데이터에서 non-zero 확인).
 - 탭 노출 확인: `/pulse`에서 `/pulse/news`, `/pulse/compare` 링크 존재.
 - 멀티사이트 확인: `/stock` 200, `/pulse` 200, `/` 404 유지.
+
+## 2026-04-19 Status Update (GP-20260419-115)
+- Runtime wiring recovery completed for analyzer + map propagation rendering path.
+- New ops tools added for live source health, community feed verification, and enrichment backfill.
+- Community source catalog expanded; configured regions now satisfy `community >= news` by source definition counts.
+- Admin runtime status page added: `/pulse/admin/pipeline-status`.
+- Local validation complete: lint pass, tests pass, build pass.
+- Pending runtime step on EC2: run source-health/backfill with production DB env and apply activation with operator approval flag.

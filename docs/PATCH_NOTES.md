@@ -4621,3 +4621,14 @@ pm run ops:snapshot -> completed (egions=6)
 - `GET /` -> 404 (unchanged)
 - `/pulse` HTML contains links to `/pulse/news` and `/pulse/compare`
 - `/pulse/api/topics?region=kr&scope=news&limit=5` returns non-zero `heatScore`
+
+## GP-20260419-115 (Live runtime wiring recovery)
+- Analyzer/Gemini runtime wiring stabilized (`run-analysis`, `gemini-summarizer`, `run-global-analysis` scope loop).
+- Visualization refresh applied (`WorldHeatMap`, `PropagationStream`, reduced-motion fallback in `globals.css`).
+- Added admin runtime dashboard: `/pulse/admin/pipeline-status`.
+- Added operations scripts:
+  - `scripts/source-health-report.ts`
+  - `scripts/verify-community-feeds.ts`
+  - `scripts/backfill-recent-topic-enrichment.ts`
+- Expanded community source coverage and wired new Reddit source IDs in constants/collector/test-scraper.
+- Validation: `npm run lint`, `npm test` (25/25), `npm run build` all pass.

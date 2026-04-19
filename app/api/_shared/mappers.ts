@@ -16,6 +16,11 @@ function toOptionalNumber(value: unknown): number | undefined {
   return parsed;
 }
 
+function toOptionalNumberOrNull(value: unknown): number | null {
+  const parsed = toOptionalNumber(value);
+  return parsed === undefined ? null : parsed;
+}
+
 function toNullableNumber(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   const parsed = toNumber(value, Number.NaN);
@@ -55,6 +60,10 @@ function toTopicCategory(value: unknown): TopicCategory | undefined {
   return TOPIC_CATEGORIES.has(normalized) ? normalized : undefined;
 }
 
+function toTopicCategoryOrNull(value: unknown): TopicCategory | null {
+  return toTopicCategory(value) ?? null;
+}
+
 function toTopicEntities(
   value: Array<{ text: string; type: string }> | null | undefined,
 ): TopicEntity[] | undefined {
@@ -76,6 +85,12 @@ function toTopicEntities(
   return mapped.length > 0 ? mapped : undefined;
 }
 
+function toTopicEntitiesOrNull(
+  value: Array<{ text: string; type: string }> | null | undefined,
+): TopicEntity[] | null {
+  return toTopicEntities(value) ?? null;
+}
+
 export interface TopicRow {
   id: number;
   region_id: string;
@@ -92,6 +107,7 @@ export interface TopicRow {
   canonical_key?: string | null;
   embedding_json?: number[] | null;
   heat_score: number | null;
+  heat_score_display?: number | null;
   post_count: number | null;
   total_views: number | null;
   total_likes: number | null;
@@ -99,6 +115,21 @@ export interface TopicRow {
   source_ids: string[] | null;
   raw_post_ids?: number[] | null;
   burst_z?: number | null;
+  velocity_per_hour?: number | null;
+  acceleration?: number | null;
+  spread_score?: number | null;
+  propagation_timeline?: Array<{
+    regionId: string;
+    firstPostAt: string;
+    heatAtDiscovery: number;
+    status?: "fading" | "steady" | "accelerating";
+  }> | null;
+  propagation_edges?: Array<{
+    from: string;
+    to: string;
+    lagMinutes: number;
+    confidence: number;
+  }> | null;
   scope?: "community" | "news" | "mixed" | null;
   rank: number | null;
   period_start: string;
@@ -117,6 +148,7 @@ export interface GlobalTopicRow {
   regional_heat_scores: Record<string, number> | null;
   topic_ids: number[] | null;
   total_heat_score: number | null;
+  heat_score_display?: number | null;
   first_seen_region: string | null;
   first_seen_at: string | null;
   propagation_timeline?: Array<{
@@ -144,17 +176,18 @@ export function mapTopicRow(row: TopicRow): Topic {
     regionId: row.region_id,
     nameKo: row.name_ko,
     nameEn: row.name_en,
-    summaryKo: row.summary_ko ?? undefined,
-    summaryEn: row.summary_en ?? undefined,
+    summaryKo: row.summary_ko ?? null,
+    summaryEn: row.summary_en ?? null,
     sampleTitles: row.sample_titles ?? undefined,
     keywords: row.keywords ?? [],
     sentiment: toNullableNumber(row.sentiment),
-    category: toTopicCategory(row.category),
-    entities: toTopicEntities(row.entities),
-    aliases: row.aliases ?? undefined,
-    canonicalKey: row.canonical_key ?? undefined,
+    category: toTopicCategoryOrNull(row.category),
+    entities: toTopicEntitiesOrNull(row.entities),
+    aliases: row.aliases ?? null,
+    canonicalKey: row.canonical_key ?? null,
     embeddingJson: row.embedding_json ?? undefined,
     heatScore: toNumber(row.heat_score),
+    heatScoreDisplay: toOptionalNumberOrNull(row.heat_score_display),
     postCount: toNumber(row.post_count),
     totalViews: toNumber(row.total_views),
     totalLikes: toNumber(row.total_likes),
@@ -162,6 +195,11 @@ export function mapTopicRow(row: TopicRow): Topic {
     sourceIds: row.source_ids ?? [],
     rawPostIds: row.raw_post_ids ?? undefined,
     burstZ: toNullableNumber(row.burst_z),
+    velocityPerHour: toOptionalNumberOrNull(row.velocity_per_hour),
+    acceleration: toOptionalNumberOrNull(row.acceleration),
+    spreadScore: toOptionalNumberOrNull(row.spread_score),
+    propagationTimeline: row.propagation_timeline ?? null,
+    propagationEdges: row.propagation_edges ?? null,
     scope: row.scope ?? undefined,
     rank: toOptionalNumber(row.rank),
     periodStart: row.period_start,
@@ -174,20 +212,21 @@ export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
     id: toOptionalNumber(row.id),
     nameEn: row.name_en,
     nameKo: row.name_ko,
-    summaryEn: row.summary_en ?? undefined,
-    summaryKo: row.summary_ko ?? undefined,
+    summaryEn: row.summary_en ?? null,
+    summaryKo: row.summary_ko ?? null,
     regions: row.regions ?? [],
     regionalSentiments: row.regional_sentiments ?? {},
     regionalHeatScores: row.regional_heat_scores ?? {},
     topicIds: (row.topic_ids ?? []).map((id) => toNumber(id)),
     totalHeatScore: toNumber(row.total_heat_score),
+    heatScoreDisplay: toOptionalNumberOrNull(row.heat_score_display),
     firstSeenRegion: row.first_seen_region ?? undefined,
     firstSeenAt: row.first_seen_at ?? undefined,
-    propagationTimeline: row.propagation_timeline ?? undefined,
-    propagationEdges: row.propagation_edges ?? undefined,
-    velocityPerHour: toOptionalNumber(row.velocity_per_hour),
-    acceleration: toOptionalNumber(row.acceleration),
-    spreadScore: toOptionalNumber(row.spread_score),
+    propagationTimeline: row.propagation_timeline ?? null,
+    propagationEdges: row.propagation_edges ?? null,
+    velocityPerHour: toOptionalNumberOrNull(row.velocity_per_hour),
+    acceleration: toOptionalNumberOrNull(row.acceleration),
+    spreadScore: toOptionalNumberOrNull(row.spread_score),
     scope: row.scope ?? undefined,
   };
 }

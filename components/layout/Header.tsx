@@ -1,5 +1,4 @@
 ﻿import Link from "next/link";
-import { REGIONS } from "@global-pulse/shared";
 import { HeaderClock } from "./HeaderClock";
 
 const BASE_NAV_LINKS = [
@@ -35,7 +34,7 @@ export function Header() {
               Community Sentiment Monitor
             </span>
           </div>
-          <HeaderClock keyRegions={keyRegions} activeRegions={REGIONS.length} />
+          <HeaderClock keyRegions={keyRegions} />
         </div>
 
         <nav className="mt-3 hidden items-center gap-3 text-sm text-[var(--text-secondary)] md:flex">

@@ -1,6 +1,7 @@
-import type { GlobalTopic } from "@global-pulse/shared";
+﻿import type { GlobalTopic } from "@global-pulse/shared";
 import type { RegionDashboardRow } from "@/lib/types/api";
 import { toHeatBand, toHeatPercent } from "@/lib/utils/heat";
+import { cleanupTopicName } from "@/lib/utils/topic-name";
 
 interface PulseSignalBoardProps {
   regions: RegionDashboardRow[];
@@ -17,6 +18,13 @@ function sentimentAccent(value: number): string {
   if (value <= -0.2) return "var(--sentiment-negative)";
   if (value >= 0.2) return "var(--sentiment-positive)";
   return "var(--sentiment-neutral)";
+}
+
+function topicDisplayBand(topic: GlobalTopic, maxHeat: number): number {
+  if (typeof topic.heatScoreDisplay === "number" && Number.isFinite(topic.heatScoreDisplay)) {
+    return Math.max(0, Math.min(1, topic.heatScoreDisplay));
+  }
+  return toHeatBand(topic.totalHeatScore, maxHeat);
 }
 
 export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProps) {
@@ -104,8 +112,8 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
             <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-accent)]">REGION MOMENTUM</p>
             <div className="mt-3 space-y-3">
               {hottestRegions.map((region) => {
-                const band = toHeatBand(region.totalHeatScore, maxHeat);
                 const width = toHeatPercent(region.totalHeatScore, maxHeat, 12);
+                const band = toHeatBand(region.totalHeatScore, maxHeat);
 
                 return (
                   <div key={region.id}>
@@ -137,7 +145,15 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
               <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-accent)]">CROSS SIGNALS</p>
               {leadGlobal ? (
                 <div className="mt-2 rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.8)] p-2.5">
-                  <p className="text-xs text-[var(--text-primary)]">{leadGlobal.nameKo || leadGlobal.nameEn}</p>
+                  <p className="text-xs text-[var(--text-primary)]">
+                    {cleanupTopicName({
+                      id: leadGlobal.id,
+                      nameKo: leadGlobal.nameKo,
+                      nameEn: leadGlobal.nameEn,
+                      keywords: [],
+                      entities: null,
+                    }).displayKo}
+                  </p>
                   <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
                     {leadGlobalRegionText || "region mapping pending"} / Heat {Math.round(leadGlobal.totalHeatScore)}
                   </p>
@@ -169,18 +185,34 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
                 <p className="mt-2 text-[11px] text-[var(--text-secondary)]">No accelerating topic in this batch.</p>
               ) : (
                 <div className="mt-2 space-y-2">
-                  {accelerating.map((topic) => (
-                    <div
-                      key={`accel-${topic.id ?? topic.nameEn}`}
-                      className="rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.8)] p-2"
-                    >
-                      <p className="truncate text-xs text-[var(--text-primary)]">{topic.nameKo || topic.nameEn}</p>
-                      <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
-                        velocity {Number(topic.velocityPerHour ?? 0).toFixed(1)} / accel{" "}
-                        {Number(topic.acceleration ?? 0).toFixed(1)}
-                      </p>
-                    </div>
-                  ))}
+                  {accelerating.map((topic) => {
+                    const cleaned = cleanupTopicName({
+                      id: topic.id,
+                      nameKo: topic.nameKo,
+                      nameEn: topic.nameEn,
+                      keywords: [],
+                      entities: null,
+                    });
+                    const band = topicDisplayBand(topic, Math.max(1, globalTopics[0]?.totalHeatScore ?? 1));
+                    return (
+                      <div
+                        key={`accel-${topic.id ?? topic.nameEn}`}
+                        className="rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.8)] p-2"
+                      >
+                        <p className="truncate text-xs text-[var(--text-primary)]">
+                          {cleaned.displayKo}
+                          {cleaned.isFallback && (
+                            <span className="ml-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-300">
+                              이름 정제 중
+                            </span>
+                          )}
+                        </p>
+                        <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                          velocity {Number(topic.velocityPerHour ?? 0).toFixed(1)} / accel {Number(topic.acceleration ?? 0).toFixed(1)} / heat-band {Math.round(band * 100)}%
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

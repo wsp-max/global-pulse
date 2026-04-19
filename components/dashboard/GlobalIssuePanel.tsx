@@ -1,5 +1,6 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { getRegionById, type GlobalTopic } from "@global-pulse/shared";
+import { cleanupTopicName } from "@/lib/utils/topic-name";
 
 interface GlobalIssuePanelProps {
   topics: GlobalTopic[];
@@ -27,6 +28,13 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
       ) : (
         <div className="mt-3 space-y-3">
           {rows.map((topic) => {
+            const cleaned = cleanupTopicName({
+              id: topic.id,
+              nameKo: topic.nameKo,
+              nameEn: topic.nameEn,
+              keywords: [],
+              entities: null,
+            });
             const sentimentEntries = Object.entries(topic.regionalSentiments);
             const primaryRegion =
               (topic.firstSeenRegion && getRegionById(topic.firstSeenRegion)) ||
@@ -34,7 +42,14 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
 
             const card = (
               <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 transition-colors hover:border-[var(--border-hover)]">
-                <p className="text-sm font-medium text-[var(--text-primary)]">{topic.nameKo || topic.nameEn}</p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {cleaned.displayKo}
+                  {cleaned.isFallback && (
+                    <span className="ml-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-300">
+                      이름 정제 중
+                    </span>
+                  )}
+                </p>
                 <p className="mt-1 text-xs text-[var(--text-secondary)]">
                   {topic.regions
                     .map((regionId) => {

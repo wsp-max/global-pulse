@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo } from "react";
 import {
@@ -15,6 +15,7 @@ import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGlobalTopics } from "@/lib/hooks/useGlobalTopics";
 import { useRegions } from "@/lib/hooks/useRegions";
 import type { DashboardScope, GlobalTopicsApiResponse, RegionsApiResponse } from "@/lib/types/api";
+import { cleanupTopicName } from "@/lib/utils/topic-name";
 
 interface DashboardClientProps {
   initialRegions?: RegionsApiResponse;
@@ -50,7 +51,16 @@ export function DashboardClient({
   const tickerItems = sortedRegions
     .flatMap((region) =>
       region.topTopics.slice(0, 1).map((topic) => {
-        return `${region.flagEmoji} ${region.nameKo}: "${topic.nameKo}" 🔥${Math.round(topic.heatScore)}`;
+        const cleaned = cleanupTopicName({
+          id: topic.id,
+          regionId: topic.regionId,
+          nameKo: topic.nameKo,
+          nameEn: topic.nameEn,
+          keywords: topic.keywords,
+          entities: topic.entities ?? null,
+        });
+        const badge = cleaned.isFallback ? " [이름 정제 중]" : "";
+        return `${region.flagEmoji} ${region.nameKo}: "${cleaned.displayKo}" 🔥${Math.round(topic.heatScore)}${badge}`;
       }),
     )
     .slice(0, 10);
@@ -76,7 +86,7 @@ export function DashboardClient({
       {!regionsError && !isRegionsLoading && sortedRegions.length === 0 && (
         <EmptyState
           title="표시할 리전 데이터가 없습니다."
-          description="수집기와 분석기 실행 후 데이터가 자동 반영됩니다."
+          description="수집기와 분석기가 실행되면 데이터가 자동 반영됩니다."
         />
       )}
 

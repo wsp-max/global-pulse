@@ -79,7 +79,7 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
       `
       select
         id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
-        topic_ids,total_heat_score,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
+        topic_ids,total_heat_score,heat_score_display,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
         propagation_timeline,propagation_edges,created_at
       from global_topics
       where id = $1
@@ -98,8 +98,14 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
           ? postgres.query<TopicRow>(
               `
               select
-                id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,post_count,
-                total_views,total_likes,total_comments,source_ids,rank,period_start,period_end,created_at
+                id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,post_count,
+                total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,rank,period_start,period_end,
+                null::float as velocity_per_hour,
+                null::float as acceleration,
+                null::float as spread_score,
+                null::jsonb as propagation_timeline,
+                null::jsonb as propagation_edges,
+                created_at
               from topics
               where id = any($1::bigint[])
               `,
@@ -110,7 +116,7 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
           `
           select
             id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
-            topic_ids,total_heat_score,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
+            topic_ids,total_heat_score,heat_score_display,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
             propagation_timeline,propagation_edges,created_at
           from global_topics
           where id <> $1
@@ -178,8 +184,14 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
     const regionalResult = await postgres.query<TopicRow>(
       `
       select
-        id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,post_count,
-        total_views,total_likes,total_comments,source_ids,rank,period_start,period_end,created_at
+        id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,post_count,
+        total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,rank,period_start,period_end,
+        null::float as velocity_per_hour,
+        null::float as acceleration,
+        null::float as spread_score,
+        null::jsonb as propagation_timeline,
+        null::jsonb as propagation_edges,
+        created_at
       from topics
       where id = $1
       limit 1
@@ -210,8 +222,14 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
       postgres.query<TopicRow>(
         `
         select
-          id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,post_count,
-          total_views,total_likes,total_comments,source_ids,rank,period_start,period_end,created_at
+          id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,post_count,
+          total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,rank,period_start,period_end,
+          null::float as velocity_per_hour,
+          null::float as acceleration,
+          null::float as spread_score,
+          null::jsonb as propagation_timeline,
+          null::jsonb as propagation_edges,
+          created_at
         from topics
         where region_id = $1 and id <> $2
         order by heat_score desc
@@ -223,7 +241,7 @@ async function getTopicDetail(context: TopicDetailRouteContext) {
         `
         select
           id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
-          topic_ids,total_heat_score,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
+          topic_ids,total_heat_score,heat_score_display,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
           propagation_timeline,propagation_edges,created_at
         from global_topics
         where topic_ids is not null and $1 = any(topic_ids)
