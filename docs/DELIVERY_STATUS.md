@@ -2701,3 +2701,14 @@
 - pnpm test: pass
 - pnpm build: pass
 - ops:gemini:verify: exit 2 locally (missing GEMINI_API_KEY in local shell)
+
+## 2026-04-20 Deploy/Verify Update (fbc2233)
+- Deployed latest `master` to EC2 (`/srv/projects/project2/global-pulse`) and confirmed running commit `fbc2233`.
+- Applied pending migration `0009_phase_g_consolidated.sql` after BOM fix.
+- Runtime checks:
+  - 200: `/stock`, `/pulse`, `/pulse/news`, `/pulse/compare`, `/pulse/api/health`, `/pulse/api/search`, `/pulse/api/sources/health`, `/pulse/api/analyzer/health`, `/pulse/admin/health`, `/pulse/admin/tuning`
+- Service checks:
+  - `global-pulse-web.service` active
+  - global-pulse timers present in `systemctl list-timers --all`
+- Gemini verify on EC2:
+  - script runs, but returns quota-limit failure (`HTTP 429`) on current key/plan during multi-sample probe.

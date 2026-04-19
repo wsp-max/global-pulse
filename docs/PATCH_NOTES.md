@@ -4741,3 +4741,28 @@ pm run ops:snapshot -> completed (egions=6)
 - pnpm lint pass
 - pnpm test pass
 - pnpm build pass
+
+## GP-20260420-001 (Migration BOM hotfix)
+### Issue
+- EC2 `npm run db:init` failed on `0009_phase_g_consolidated.sql` with `syntax error at or near "?ALTER"`.
+- Root cause: UTF-8 BOM at migration file start.
+
+### Fix
+- Removed BOM from `db/migrations/0009_phase_g_consolidated.sql`.
+
+### Result
+- `db:init` now applies `0009_phase_g_consolidated.sql` successfully.
+
+## GP-20260420-002 (Search API runtime SQL fix)
+### Issue
+- `/pulse/api/search` returned 500 on EC2 after Phase G deploy.
+- Error: `column "velocity_per_hour" does not exist` from `topics` query path.
+
+### Fix
+- Updated `app/api/search/route.ts` to align with topic mapper contract:
+  - use `null::float` aliases for `velocity_per_hour`, `acceleration`, `spread_score`
+  - use `null::jsonb` aliases for `propagation_timeline`, `propagation_edges`
+
+### Validation
+- Local: `pnpm lint` pass, `pnpm test` pass
+- Runtime: `/pulse/api/search?q=AI%20±‘¡¶` now returns 200
