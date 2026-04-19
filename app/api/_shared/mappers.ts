@@ -1,4 +1,5 @@
 import type { GlobalTopic, Topic, TopicCategory, TopicEntity, TopicEntityType } from "@global-pulse/shared";
+import { cleanupTopicName } from "@/lib/utils/topic-name";
 
 function toNumber(value: unknown, fallback = 0): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -171,11 +172,20 @@ export interface GlobalTopicRow {
 }
 
 export function mapTopicRow(row: TopicRow): Topic {
-  return {
-    id: toOptionalNumber(row.id),
+  const cleaned = cleanupTopicName({
+    id: row.id,
     regionId: row.region_id,
     nameKo: row.name_ko,
     nameEn: row.name_en,
+    keywords: row.keywords ?? [],
+    entities: row.entities ?? [],
+  });
+
+  return {
+    id: toOptionalNumber(row.id),
+    regionId: row.region_id,
+    nameKo: cleaned.displayKo,
+    nameEn: cleaned.displayEn,
     summaryKo: row.summary_ko ?? null,
     summaryEn: row.summary_en ?? null,
     sampleTitles: row.sample_titles ?? undefined,
@@ -208,10 +218,18 @@ export function mapTopicRow(row: TopicRow): Topic {
 }
 
 export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
+  const cleaned = cleanupTopicName({
+    id: row.id,
+    nameKo: row.name_ko,
+    nameEn: row.name_en,
+    keywords: [],
+    entities: [],
+  });
+
   return {
     id: toOptionalNumber(row.id),
-    nameEn: row.name_en,
-    nameKo: row.name_ko,
+    nameEn: cleaned.displayEn,
+    nameKo: cleaned.displayKo,
     summaryEn: row.summary_en ?? null,
     summaryKo: row.summary_ko ?? null,
     regions: row.regions ?? [],

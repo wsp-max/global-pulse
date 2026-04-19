@@ -1,4 +1,4 @@
-import { getRegionById } from "@global-pulse/shared";
+﻿import { getRegionById } from "@global-pulse/shared";
 
 interface TopicNameEntity {
   text: string;
