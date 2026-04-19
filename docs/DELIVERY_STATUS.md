@@ -2554,3 +2554,22 @@
 1. Deploy this commit to EC2 and re-check `/pulse` navigation labels and freshness badge rendering.
 2. Run post-deploy smoke: `/stock` 200, `/pulse` 200, `/pulse/api/health` 200.
 3. Optional: widen sentiment lexicon coverage for JP/TW/CN where zero concentration is still high.
+
+## Post-deploy Verification (2026-04-19, GP-20260419-108)
+### Completed
+- Deployed `aabb595` to EC2 pulse service and restarted `global-pulse-web`.
+- Confirmed 3-site coexistence remains intact (`/stock` unaffected).
+- Executed analyzer/global-analyzer once with production env sourced from `/etc/global-pulse/global-pulse.env`.
+
+### Verified
+- Availability: `/stock` 200, `/pulse` 200, `/pulse/api/health` 200, `/` 404.
+- Home SSR includes actual topic text (`오늘자 지수`) in HTML payload.
+- Header freshness badge text and ARIA now render 정상 한국어.
+- `/api/global-topics?limit=20` dedupe collision 없음.
+- `/api/topics?region=kr`에서 `nameEn != nameKo` 항목 존재.
+- `/pulse` HTML에서 외부 world-atlas CDN 참조 없음.
+- period/sort 쿼리 변경 시 `/api/topics` 결과 순서 변화 확인.
+
+### Remaining
+1. Optional quality pass: US/EU/ME/RU nameEn quality tuning (still 일부 fallback 라벨 존재).
+2. Optional quality pass: region-specific sentiment lexicon 확장으로 null 비중 추가 감소.

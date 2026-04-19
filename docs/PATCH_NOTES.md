@@ -4361,3 +4361,38 @@ pm run ops:snapshot -> completed (egions=6)
   - `/api/global-topics?limit=10` duplicate signal check -> none
   - `/api/topics?region=kr` `nameEn != nameKo` rows detected
   - period/sort query returns differentiated topic order
+
+## GP-20260419-108 (Post-deploy verification: `/pulse` runtime acceptance pass)
+### Runtime validation (EC2)
+- Deploy target: `/srv/projects/project2/global-pulse`
+- Commit deployed: `aabb595`
+- Build/runtime:
+  - `npm ci --include=dev` -> pass
+  - `NEXT_BASE_PATH=/pulse NEXT_PUBLIC_BASE_PATH=/pulse npm run build` -> pass
+  - `systemctl is-active global-pulse-web.service` -> `active`
+
+### Endpoint smoke
+- `http://3.36.83.199/stock` -> 200 (unchanged)
+- `http://3.36.83.199/pulse` -> 200
+- `http://3.36.83.199/pulse/api/health` -> 200
+- `http://3.36.83.199/` -> 404 (unchanged)
+
+### Acceptance-oriented checks
+- Home SSR includes real topic text from regions API (confirmed: `오늘자 지수` present in HTML).
+- Header:
+  - no `24:` prefix in SSR payload
+  - freshness badge/ARIA Korean text present.
+- Global topics:
+  - `/api/global-topics?limit=20` dedupe collision check -> none.
+- Region topics:
+  - `/api/topics?region=kr` includes `nameEn != nameKo` rows (`5/9` after batch refresh).
+- Map asset:
+  - no external `world-atlas` CDN reference in `/pulse` HTML.
+- Filter path:
+  - `/api/topics` query variants (`period/sort`) return valid arrays with changed ordering.
+
+### Batch refresh after deploy
+- Ran analyzer with runtime env loaded from `/etc/global-pulse/global-pulse.env`:
+  - `npm run analyze -- --hours 24`
+  - `npm run analyze:global -- --hours 72 --limit 40 --similarity 0.24 --min-regions 2`
+- Result: refreshed topic/global-topic rows and sentiment now mixed with `null/non-zero` instead of forced all-zero output.
