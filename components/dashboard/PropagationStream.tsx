@@ -1,4 +1,4 @@
-﻿import type { CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { useMemo } from "react";
 import { getRegionById, type GlobalTopic } from "@global-pulse/shared";
 import type { RegionDashboardRow } from "@/lib/types/api";
@@ -24,6 +24,7 @@ interface PropagationLane {
   label: string;
   heat: number;
   regionIds: string[];
+  lagText: string;
 }
 
 const REGION_LONGITUDE: Record<string, number> = {
@@ -37,10 +38,6 @@ const REGION_LONGITUDE: Record<string, number> = {
   ru: 90.0,
 };
 
-function normalizeKeyword(raw: string): string {
-  return raw.replace(/\s+/g, " ").trim();
-}
-
 function hashKeyword(value: string): number {
   let hash = 0;
   for (let index = 0; index < value.length; index += 1) {
@@ -49,162 +46,71 @@ function hashKeyword(value: string): number {
   return hash;
 }
 
-function isMeaningfulKeyword(keyword: string): boolean {
-  const normalized = normalizeKeyword(keyword);
-  if (!normalized) return false;
-  if (normalized.length < 3) return false;
-  if (/^[0-9]+$/.test(normalized)) return false;
-  return true;
-}
-
-function resolveSignalDirection(originRegionId: string, regionIds: Set<string>): "left" | "right" {
-  const originLon = REGION_LONGITUDE[originRegionId];
-  if (originLon === undefined) {
+function resolveDirection(regionIds: string[]): "left" | "right" {
+  if (regionIds.length < 2) {
     return "right";
   }
-
-  const targetLons = [...regionIds]
-    .filter((regionId) => regionId !== originRegionId)
-    .map((regionId) => REGION_LONGITUDE[regionId])
-    .filter((value): value is number => Number.isFinite(value));
-
-  if (targetLons.length === 0) {
+  const first = regionIds[0];
+  const last = regionIds[regionIds.length - 1];
+  const firstLon = REGION_LONGITUDE[first];
+  const lastLon = REGION_LONGITUDE[last];
+  if (firstLon === undefined || lastLon === undefined) {
     return "right";
   }
-
-  const avgTargetLon = targetLons.reduce((sum, value) => sum + value, 0) / targetLons.length;
-  return avgTargetLon >= originLon ? "right" : "left";
+  return lastLon >= firstLon ? "right" : "left";
 }
 
-function getKeywordSignals(regions: RegionDashboardRow[], globalTopics: GlobalTopic[]): KeywordSignal[] {
-  const regionColorMap = new Map(regions.map((region) => [region.id, region.color]));
-  const regionHeatMap = new Map(regions.map((region) => [region.id, region.totalHeatScore]));
-  const activeMovementRegions = new Set(
-    globalTopics
-      .filter((topic) => topic.regions.length >= 2)
-      .flatMap((topic) => topic.regions),
-  );
-  const signals = new Map<
-    string,
-    {
-      regionIds: Set<string>;
-      heat: number;
-      regionColor: string;
-      originRegionId: string;
-    }
-  >();
-
-  for (const topic of globalTopics.slice(0, 24)) {
-    if (topic.regions.length < 2) {
-      continue;
-    }
-
-    const label = normalizeKeyword(topic.nameKo || topic.nameEn);
-    if (!isMeaningfulKeyword(label)) {
-      continue;
-    }
-
-    const leadRegionId = topic.firstSeenRegion ?? topic.regions[0];
-    const leadColor = regionColorMap.get(leadRegionId) ?? "var(--text-accent)";
-    const existing = signals.get(label);
-    if (existing) {
-      topic.regions.forEach((regionId) => existing.regionIds.add(regionId));
-      existing.heat += topic.totalHeatScore;
-      if (topic.firstSeenRegion) {
-        existing.originRegionId = topic.firstSeenRegion;
-      }
-    } else {
-      signals.set(label, {
-        regionIds: new Set(topic.regions),
-        heat: topic.totalHeatScore,
-        regionColor: leadColor,
-        originRegionId: leadRegionId,
-      });
-    }
-  }
-
-  for (const region of regions) {
-    if (!activeMovementRegions.has(region.id)) {
-      continue;
-    }
-    for (const keyword of region.topKeywords.slice(0, 14)) {
-      const normalizedKeyword = normalizeKeyword(keyword);
-      if (!isMeaningfulKeyword(normalizedKeyword)) {
-        continue;
-      }
-
-      const existing = signals.get(normalizedKeyword);
-      if (existing) {
-        existing.regionIds.add(region.id);
-        existing.heat += Math.max(region.totalHeatScore * 0.08, 30);
-
-        const currentOriginHeat = regionHeatMap.get(existing.originRegionId) ?? 0;
-        if (region.totalHeatScore > currentOriginHeat) {
-          existing.originRegionId = region.id;
-          existing.regionColor = region.color;
-        }
-      } else {
-        signals.set(normalizedKeyword, {
-          regionIds: new Set([region.id]),
-          heat: Math.max(region.totalHeatScore * 0.08, 30),
-          regionColor: region.color,
-          originRegionId: region.id,
-        });
-      }
-    }
-  }
-
-  return [...signals.entries()]
-    .filter(([, meta]) => meta.regionIds.size >= 2)
-    .sort((a, b) => {
-      if (b[1].regionIds.size !== a[1].regionIds.size) {
-        return b[1].regionIds.size - a[1].regionIds.size;
-      }
-      if (b[1].heat !== a[1].heat) {
-        return b[1].heat - a[1].heat;
-      }
-      return a[0].localeCompare(b[0]);
-    })
-    .slice(0, 40)
-    .map(([label, meta], index) => {
-      const hash = hashKeyword(label);
-      const stableLane = (hash % 78) + 6;
+function getKeywordSignals(globalTopics: GlobalTopic[], regions: RegionDashboardRow[]): KeywordSignal[] {
+  const regionColor = new Map(regions.map((region) => [region.id, region.color]));
+  return globalTopics
+    .filter((topic) => (topic.propagationTimeline ?? []).length >= 2)
+    .slice(0, 32)
+    .map((topic, index) => {
+      const timeline = topic.propagationTimeline ?? [];
+      const regionIds = timeline.map((item) => item.regionId);
+      const leadRegion = regionIds[0];
+      const hash = hashKeyword(topic.nameEn || topic.nameKo || String(index));
       return {
-      key: label,
-      label,
-      hits: meta.regionIds.size,
-      color: meta.regionColor,
-      lane: stableLane,
-      direction: resolveSignalDirection(meta.originRegionId, meta.regionIds),
-      durationSec: 11 + (hash % 6) * 1.1,
-      delaySec: (index % 10) * 0.22,
-    };
+        key: `signal-${topic.id ?? topic.nameEn}-${index}`,
+        label: topic.nameKo || topic.nameEn,
+        hits: new Set(regionIds).size,
+        color: regionColor.get(leadRegion) ?? "var(--text-accent)",
+        lane: (hash % 78) + 6,
+        direction: resolveDirection(regionIds),
+        durationSec: 11 + (hash % 6) * 1.1,
+        delaySec: (index % 10) * 0.22,
+      };
     });
 }
 
 function getPropagationLanes(globalTopics: GlobalTopic[]): PropagationLane[] {
   return globalTopics
-    .filter((topic) => topic.regions.length >= 2)
+    .filter((topic) => (topic.propagationTimeline ?? []).length >= 2)
     .slice(0, 8)
     .map((topic) => {
-      const origin = topic.firstSeenRegion ?? topic.regions[0];
-      const tail = topic.regions
-        .filter((regionId) => regionId !== origin)
-        .sort((a, b) => (topic.regionalHeatScores[b] ?? 0) - (topic.regionalHeatScores[a] ?? 0));
-      const ordered = [origin, ...tail];
+      const timeline = topic.propagationTimeline ?? [];
+      const regionIds = timeline.map((item) => item.regionId);
+      const firstAt = timeline[0]?.firstPostAt ? new Date(timeline[0].firstPostAt).getTime() : Number.NaN;
+      const lastAt = timeline[timeline.length - 1]?.firstPostAt
+        ? new Date(timeline[timeline.length - 1]!.firstPostAt).getTime()
+        : Number.NaN;
+      const lagHours =
+        Number.isFinite(firstAt) && Number.isFinite(lastAt) && lastAt > firstAt
+          ? Math.max(1, Math.round((lastAt - firstAt) / (60 * 60 * 1000)))
+          : 0;
 
       return {
         key: `global-${topic.id ?? topic.nameEn}`,
         label: topic.nameKo || topic.nameEn,
         heat: topic.totalHeatScore,
-        regionIds: [...ordered].slice(0, 5),
+        regionIds: [...new Set(regionIds)].slice(0, 6),
+        lagText: lagHours > 0 ? `+${lagHours}h` : "same window",
       };
-    })
-    .filter((lane) => lane.regionIds.length >= 2);
+    });
 }
 
 export function PropagationStream({ regions, globalTopics }: PropagationStreamProps) {
-  const keywordSignals = useMemo(() => getKeywordSignals(regions, globalTopics), [regions, globalTopics]);
+  const keywordSignals = useMemo(() => getKeywordSignals(globalTopics, regions), [globalTopics, regions]);
   const propagationLanes = useMemo(() => getPropagationLanes(globalTopics), [globalTopics]);
   const hasActualMovement = keywordSignals.length > 0 || propagationLanes.length > 0;
 
@@ -216,7 +122,7 @@ export function PropagationStream({ regions, globalTopics }: PropagationStreamPr
           <div>
             <p className="font-display text-sm tracking-[0.22em] text-[var(--text-accent)]">SIGNAL PROPAGATION</p>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              Keyword motion and cross-region spread in one live stream.
+              Verified cross-region propagation only (origin to current route).
             </p>
           </div>
           <span className="rounded-full border border-[var(--border-default)] bg-[rgba(15,23,42,0.7)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
@@ -244,7 +150,9 @@ export function PropagationStream({ regions, globalTopics }: PropagationStreamPr
                 return (
                   <span
                     key={signal.key}
-                    className={`keyword-stream-word ${signal.direction === "left" ? "keyword-stream-word--left" : "keyword-stream-word--right"} rounded-full border bg-[rgba(15,23,42,0.75)] px-2 py-0.5 font-mono text-[11px] whitespace-nowrap`}
+                    className={`keyword-stream-word ${
+                      signal.direction === "left" ? "keyword-stream-word--left" : "keyword-stream-word--right"
+                    } rounded-full border bg-[rgba(15,23,42,0.75)] px-2 py-0.5 font-mono text-[11px] whitespace-nowrap`}
                     style={style}
                   >
                     {signal.label}
@@ -258,7 +166,7 @@ export function PropagationStream({ regions, globalTopics }: PropagationStreamPr
           <div className="space-y-3 rounded-xl border border-[var(--border-default)] bg-[rgba(15,23,42,0.72)] p-3">
             <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-accent)]">SPREAD TRACK</p>
             {propagationLanes.length === 0 ? (
-              <p className="text-xs text-[var(--text-secondary)]">Propagation lanes will appear after data collection.</p>
+              <p className="text-xs text-[var(--text-secondary)]">Propagation lanes will appear after analysis.</p>
             ) : (
               propagationLanes.map((lane, index) => {
                 const dotStyle = {
@@ -267,10 +175,15 @@ export function PropagationStream({ regions, globalTopics }: PropagationStreamPr
                 } as CSSProperties;
 
                 return (
-                  <article key={lane.key} className="rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.76)] p-2.5">
+                  <article
+                    key={lane.key}
+                    className="rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.76)] p-2.5"
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-xs text-[var(--text-primary)]">{lane.label}</p>
-                      <span className="font-mono text-[11px] text-[var(--text-tertiary)]">{Math.round(lane.heat)}</span>
+                      <span className="font-mono text-[11px] text-[var(--text-tertiary)]">
+                        {Math.round(lane.heat)} / {lane.lagText}
+                      </span>
                     </div>
 
                     <div className="relative mt-2 h-2 overflow-hidden rounded-full border border-[var(--border-default)] bg-[rgba(51,65,85,0.42)]">

@@ -34,6 +34,14 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
 
   const maxHeat = Math.max(...regions.map((region) => region.totalHeatScore), 1);
   const hottestRegions = [...regions].sort((a, b) => b.totalHeatScore - a.totalHeatScore).slice(0, 6);
+  const leadGlobal = globalTopics[0] ?? null;
+  const leadGlobalRegionText =
+    leadGlobal?.regions.slice(0, 6).map((regionId) => regionId.toUpperCase()).join(" -> ") ?? "";
+
+  const accelerating = [...globalTopics]
+    .filter((topic) => (topic.acceleration ?? 0) > 0)
+    .sort((a, b) => (b.acceleration ?? 0) - (a.acceleration ?? 0))
+    .slice(0, 3);
 
   const keywordCounts = new Map<string, number>();
   for (const region of regions) {
@@ -47,11 +55,7 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
   }
   const keywordRows = [...keywordCounts.entries()]
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 20);
-
-  const leadGlobal = globalTopics[0] ?? null;
-  const leadGlobalRegionText =
-    leadGlobal?.regions.slice(0, 6).map((regionId) => regionId.toUpperCase()).join(" -> ") ?? "";
+    .slice(0, 16);
 
   return (
     <section className="panel-grid relative h-full overflow-hidden rounded-xl border border-[var(--border-default)] bg-[linear-gradient(180deg,rgba(7,23,45,0.86),rgba(10,14,23,0.98))] p-4">
@@ -61,9 +65,7 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-display text-sm tracking-[0.2em] text-[var(--text-accent)]">SIGNAL BOARD</p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              지금 이 순간 글로벌 리전 동조 신호를 요약합니다.
-            </p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">Global synchronized signal snapshot.</p>
           </div>
           <div
             className="rounded-full border px-2 py-1 text-[11px] font-semibold"
@@ -130,32 +132,56 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
             </div>
           </div>
 
-          <div className="rounded-xl border border-[var(--border-default)] bg-[rgba(15,23,42,0.72)] p-3">
-            <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-accent)]">CROSS SIGNALS</p>
-            {leadGlobal ? (
-              <div className="mt-2 rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.8)] p-2.5">
-                <p className="text-xs text-[var(--text-primary)]">{leadGlobal.nameKo || leadGlobal.nameEn}</p>
-                <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
-                  {leadGlobalRegionText || "region mapping pending"} / Heat {Math.round(leadGlobal.totalHeatScore)}
-                </p>
-              </div>
-            ) : (
-              <p className="mt-2 text-[11px] text-[var(--text-secondary)]">글로벌 이슈 데이터 준비 중</p>
-            )}
-
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {keywordRows.length === 0 ? (
-                <span className="text-[11px] text-[var(--text-secondary)]">키워드 신호를 수집 중입니다.</span>
+          <div className="space-y-3">
+            <div className="rounded-xl border border-[var(--border-default)] bg-[rgba(15,23,42,0.72)] p-3">
+              <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-accent)]">CROSS SIGNALS</p>
+              {leadGlobal ? (
+                <div className="mt-2 rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.8)] p-2.5">
+                  <p className="text-xs text-[var(--text-primary)]">{leadGlobal.nameKo || leadGlobal.nameEn}</p>
+                  <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                    {leadGlobalRegionText || "region mapping pending"} / Heat {Math.round(leadGlobal.totalHeatScore)}
+                  </p>
+                </div>
               ) : (
-                keywordRows.map(([keyword, hits]) => (
-                  <span
-                    key={keyword}
-                    className="rounded-full border border-[var(--border-default)] bg-[rgba(30,41,59,0.7)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
-                  >
-                    {keyword}
-                    <span className="ml-1 text-[var(--text-accent)]">x{hits}</span>
-                  </span>
-                ))
+                <p className="mt-2 text-[11px] text-[var(--text-secondary)]">Global signal data is not ready yet.</p>
+              )}
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {keywordRows.length === 0 ? (
+                  <span className="text-[11px] text-[var(--text-secondary)]">Collecting keyword signals...</span>
+                ) : (
+                  keywordRows.map(([keyword, hits]) => (
+                    <span
+                      key={keyword}
+                      className="rounded-full border border-[var(--border-default)] bg-[rgba(30,41,59,0.7)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
+                    >
+                      {keyword}
+                      <span className="ml-1 text-[var(--text-accent)]">x{hits}</span>
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[var(--border-default)] bg-[rgba(15,23,42,0.72)] p-3">
+              <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-accent)]">ACCELERATING NOW</p>
+              {accelerating.length === 0 ? (
+                <p className="mt-2 text-[11px] text-[var(--text-secondary)]">No accelerating topic in this batch.</p>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  {accelerating.map((topic) => (
+                    <div
+                      key={`accel-${topic.id ?? topic.nameEn}`}
+                      className="rounded-lg border border-[var(--border-default)] bg-[rgba(10,14,23,0.8)] p-2"
+                    >
+                      <p className="truncate text-xs text-[var(--text-primary)]">{topic.nameKo || topic.nameEn}</p>
+                      <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                        velocity {Number(topic.velocityPerHour ?? 0).toFixed(1)} / accel{" "}
+                        {Number(topic.acceleration ?? 0).toFixed(1)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>

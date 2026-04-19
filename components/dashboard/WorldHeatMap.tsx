@@ -10,6 +10,14 @@ interface WorldHeatMapProps {
   globalTopics?: GlobalTopic[];
 }
 
+interface FlowEdge {
+  from: string;
+  to: string;
+  lagMinutes: number;
+  confidence: number;
+  heatScore: number;
+}
+
 const GEO_URL = "/pulse/geo/countries-110m.json";
 
 const REGION_COORDINATES: Record<string, [number, number]> = {
@@ -28,7 +36,7 @@ const HEAT_LEGEND = [
   { label: "warm < 300", color: "var(--heat-warm)" },
   { label: "hot < 600", color: "var(--heat-hot)" },
   { label: "fire < 1000", color: "var(--heat-fire)" },
-  { label: "explosive ≥ 1000", color: "var(--heat-explosive)" },
+  { label: "explosive >= 1000", color: "var(--heat-explosive)" },
 ];
 
 function getHeatColor(score: number): string {
@@ -39,72 +47,43 @@ function getHeatColor(score: number): string {
   return "var(--heat-explosive)";
 }
 
-function getFlowPairs(globalTopics: GlobalTopic[]): Array<[string, string]> {
-  const directedScore = new Map<string, number>();
-  const directedCount = new Map<string, number>();
+function toLagHours(lagMinutes: number): number {
+  return Math.max(1, Math.round(lagMinutes / 60));
+}
 
-  for (const topic of globalTopics.slice(0, 24)) {
-    if (topic.regions.length < 2) {
-      continue;
-    }
+function getFlowEdges(globalTopics: GlobalTopic[]): FlowEdge[] {
+  const edges = new Map<string, FlowEdge>();
+  for (const topic of globalTopics.slice(0, 40)) {
+    for (const edge of topic.propagationEdges ?? []) {
+      if (!REGION_COORDINATES[edge.from] || !REGION_COORDINATES[edge.to]) {
+        continue;
+      }
 
-    const origin =
-      topic.firstSeenRegion && REGION_COORDINATES[topic.firstSeenRegion]
-        ? topic.firstSeenRegion
-        : topic.regions.find((regionId) => REGION_COORDINATES[regionId]);
-    if (!origin) {
-      continue;
-    }
+      const key = `${edge.from}:${edge.to}`;
+      const current = edges.get(key);
+      const merged: FlowEdge = {
+        from: edge.from,
+        to: edge.to,
+        lagMinutes: edge.lagMinutes,
+        confidence: edge.confidence,
+        heatScore: topic.totalHeatScore,
+      };
 
-    const destinations = topic.regions
-      .filter((regionId) => regionId !== origin)
-      .filter((regionId) => REGION_COORDINATES[regionId]);
-    if (destinations.length === 0) {
-      continue;
-    }
-
-    for (const to of destinations) {
-      const edgeKey = `${origin}__${to}`;
-      directedScore.set(edgeKey, (directedScore.get(edgeKey) ?? 0) + topic.totalHeatScore);
-      directedCount.set(edgeKey, (directedCount.get(edgeKey) ?? 0) + 1);
+      if (!current || merged.heatScore * merged.confidence > current.heatScore * current.confidence) {
+        edges.set(key, merged);
+      }
     }
   }
 
-  const bestByUndirected = new Map<
-    string,
-    {
-      from: string;
-      to: string;
-      score: number;
-    }
-  >();
-
-  for (const [edgeKey, score] of directedScore.entries()) {
-    const [from, to] = edgeKey.split("__");
-    if (!from || !to) {
-      continue;
-    }
-
-    const directionalVotes = directedCount.get(edgeKey) ?? 0;
-    const stableScore = score + directionalVotes * 80;
-    const undirectedKey = [from, to].sort().join("__");
-    const current = bestByUndirected.get(undirectedKey);
-
-    if (!current || stableScore > current.score) {
-      bestByUndirected.set(undirectedKey, { from, to, score: stableScore });
-    }
-  }
-
-  return [...bestByUndirected.values()]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 16)
-    .map((edge) => [edge.from, edge.to]);
+  return [...edges.values()]
+    .sort((left, right) => right.heatScore * right.confidence - left.heatScore * left.confidence)
+    .slice(0, 16);
 }
 
 export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) {
   const maxHeat = Math.max(...regions.map((region) => region.totalHeatScore), 1);
-  const flowPairs = getFlowPairs(globalTopics);
-  const activeFlowRegionIds = new Set(flowPairs.flat());
+  const flowEdges = getFlowEdges(globalTopics);
+  const activeFlowRegionIds = new Set(flowEdges.flatMap((edge) => [edge.from, edge.to]));
 
   return (
     <div className="panel-grid relative overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4">
@@ -130,20 +109,21 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
                 }
               </Geographies>
 
-              {flowPairs.map(([from, to], index) => {
-                const fromCoord = REGION_COORDINATES[from];
-                const toCoord = REGION_COORDINATES[to];
+              {flowEdges.map((edge, index) => {
+                const fromCoord = REGION_COORDINATES[edge.from];
+                const toCoord = REGION_COORDINATES[edge.to];
                 if (!fromCoord || !toCoord) {
                   return null;
                 }
 
                 const lineStyle = {
                   ["--map-flow-duration" as string]: `${4 + index * 1.2}s`,
+                  opacity: Math.max(0.2, Math.min(1, edge.confidence)),
                 } as CSSProperties;
 
                 return (
                   <Line
-                    key={`${from}-${to}-${index}`}
+                    key={`${edge.from}-${edge.to}-${index}`}
                     from={fromCoord}
                     to={toCoord}
                     stroke="rgba(56,189,248,0.85)"
@@ -155,8 +135,27 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
                 );
               })}
 
-              {flowPairs.map(([, to], index) => {
-                const coordinates = REGION_COORDINATES[to];
+              {flowEdges.map((edge, index) => {
+                const fromCoord = REGION_COORDINATES[edge.from];
+                const toCoord = REGION_COORDINATES[edge.to];
+                if (!fromCoord || !toCoord) {
+                  return null;
+                }
+                const midpoint: [number, number] = [
+                  Number(((fromCoord[0] + toCoord[0]) / 2).toFixed(3)),
+                  Number(((fromCoord[1] + toCoord[1]) / 2).toFixed(3)),
+                ];
+                return (
+                  <Marker key={`edge-label-${edge.from}-${edge.to}-${index}`} coordinates={midpoint}>
+                    <text textAnchor="middle" y={-2} className="fill-cyan-300 text-[9px] font-semibold">
+                      +{toLagHours(edge.lagMinutes)}h
+                    </text>
+                  </Marker>
+                );
+              })}
+
+              {flowEdges.map((edge, index) => {
+                const coordinates = REGION_COORDINATES[edge.to];
                 if (!coordinates) {
                   return null;
                 }
@@ -164,10 +163,11 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
                 const dotStyle = {
                   ["--map-flow-dot-delay" as string]: `${index * 0.35}s`,
                   ["--map-flow-dot-duration" as string]: `${3.2 + index * 0.9}s`,
+                  opacity: Math.max(0.25, Math.min(1, edge.confidence)),
                 } as CSSProperties;
 
                 return (
-                  <Marker key={`flow-dot-${to}-${index}`} coordinates={coordinates}>
+                  <Marker key={`flow-dot-${edge.to}-${index}`} coordinates={coordinates}>
                     <circle r={1.4} className="map-flow-dot" style={dotStyle} />
                   </Marker>
                 );
@@ -199,7 +199,7 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
               })}
             </ComposableMap>
 
-            {flowPairs.length === 0 && (
+            {flowEdges.length === 0 && (
               <div className="pointer-events-none absolute inset-x-0 bottom-2 text-center text-[10px] text-[var(--text-tertiary)]">
                 No confirmed cross-region propagation in the current batch.
               </div>
@@ -224,11 +224,14 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
 
           <details className="ml-auto text-[10px] text-[var(--text-secondary)]">
             <summary className="cursor-pointer select-none rounded-full border border-[var(--border-default)] px-2 py-1 hover:bg-[var(--bg-tertiary)]">
-              Heat Score 란?
+              Heat Score ?
             </summary>
             <p className="mt-2 max-w-sm rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)] p-2 leading-relaxed">
-              Heat Score는 게시글 볼륨과 반응량을 묶어 계산한 지표입니다. 일반적으로
-              (posts + comments*0.5 + views/1000) * source_diversity 형태로 해석할 수 있습니다.
+              Heat Score는 게시글 볼륨과 반응량을 종합해 계산된 지표이며, 보통
+              <br />
+              (posts + comments*0.5 + views/1000) * source_diversity
+              <br />
+              형태로 해석할 수 있습니다.
             </p>
           </details>
         </div>
