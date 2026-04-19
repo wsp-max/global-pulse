@@ -1,23 +1,28 @@
-﻿import Link from "next/link";
+﻿"use client";
+
+import Link from "next/link";
+import { useLanguage } from "@/lib/i18n/use-language";
 import { HeaderClock } from "./HeaderClock";
 
-const BASE_NAV_LINKS = [
-  { href: "/", label: "대시보드" },
-  { href: "/global-issues", label: "글로벌 이슈" },
-  { href: "/timeline", label: "타임라인" },
-  { href: "/search", label: "검색" },
-];
-
 export function Header() {
+  const { lang, setLanguage, t } = useLanguage("ko");
   const keyRegions = ["Asia/Seoul", "Asia/Tokyo", "America/New_York"];
-  const dualMapEnabled = process.env.FEATURE_DUAL_MAP_UI === "true";
+  const dualMapEnabled = process.env.NEXT_PUBLIC_FEATURE_DUAL_MAP_UI === "true";
   const navLinks = dualMapEnabled
     ? [
-        ...BASE_NAV_LINKS,
-        { href: "/news", label: "뉴스 트랙" },
-        { href: "/compare", label: "커뮤 vs 뉴스" },
+        { href: "/", label: t("nav.dashboard") },
+        { href: "/global-issues", label: t("nav.globalIssues") },
+        { href: "/timeline", label: t("nav.timeline") },
+        { href: "/search", label: t("nav.search") },
+        { href: "/news", label: t("nav.news") },
+        { href: "/compare", label: t("nav.compare") },
       ]
-    : BASE_NAV_LINKS;
+    : [
+        { href: "/", label: t("nav.dashboard") },
+        { href: "/global-issues", label: t("nav.globalIssues") },
+        { href: "/timeline", label: t("nav.timeline") },
+        { href: "/search", label: t("nav.search") },
+      ];
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border-default)] bg-[rgba(17,24,39,0.92)] backdrop-blur">
@@ -30,11 +35,30 @@ export function Header() {
             >
               GLOBAL PULSE
             </Link>
-            <span className="hidden text-xs text-[var(--text-tertiary)] sm:inline">
-              Community Sentiment Monitor
-            </span>
+            <span className="hidden text-xs text-[var(--text-tertiary)] sm:inline">{t("app.subtitle")}</span>
           </div>
-          <HeaderClock keyRegions={keyRegions} />
+
+          <div className="flex items-center gap-2">
+            <HeaderClock keyRegions={keyRegions} />
+            <div className="hidden items-center gap-1 rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] p-1 text-[10px] md:inline-flex">
+              <button
+                type="button"
+                onClick={() => setLanguage("ko")}
+                className={`rounded-full px-2 py-0.5 ${lang === "ko" ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}`}
+                aria-label="Korean"
+              >
+                🇰🇷 {t("lang.ko")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage("en")}
+                className={`rounded-full px-2 py-0.5 ${lang === "en" ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}`}
+                aria-label="English"
+              >
+                🇬🇧 {t("lang.en")}
+              </button>
+            </div>
+          </div>
         </div>
 
         <nav className="mt-3 hidden items-center gap-3 text-sm text-[var(--text-secondary)] md:flex">

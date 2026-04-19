@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, Globe2, Home, Newspaper, Search, GitCompareArrows } from "lucide-react";
 import type { ComponentType } from "react";
+import { useLanguage } from "@/lib/i18n/use-language";
 
 interface NavItem {
   href: string;
@@ -12,52 +13,54 @@ interface NavItem {
   match: (pathname: string) => boolean;
 }
 
-const BASE_NAV_ITEMS: NavItem[] = [
-  {
-    href: "/",
-    label: "대시보드",
-    icon: Home,
-    match: (pathname) => pathname === "/",
-  },
-  {
-    href: "/global-issues",
-    label: "글로벌",
-    icon: Globe2,
-    match: (pathname) => pathname.startsWith("/global-issues"),
-  },
-  {
-    href: "/timeline",
-    label: "타임라인",
-    icon: BarChart3,
-    match: (pathname) => pathname.startsWith("/timeline"),
-  },
-  {
-    href: "/search",
-    label: "검색",
-    icon: Search,
-    match: (pathname) => pathname.startsWith("/search"),
-  },
-];
-
-const DUAL_MAP_NAV_ITEMS: NavItem[] = [
-  {
-    href: "/news",
-    label: "뉴스",
-    icon: Newspaper,
-    match: (pathname) => pathname.startsWith("/news"),
-  },
-  {
-    href: "/compare",
-    label: "비교",
-    icon: GitCompareArrows,
-    match: (pathname) => pathname.startsWith("/compare"),
-  },
-];
-
 export function MobileBottomNav() {
   const pathname = usePathname() || "/";
   const dualMapEnabled = process.env.NEXT_PUBLIC_FEATURE_DUAL_MAP_UI === "true";
-  const navItems = dualMapEnabled ? [...BASE_NAV_ITEMS, ...DUAL_MAP_NAV_ITEMS] : BASE_NAV_ITEMS;
+  const { t } = useLanguage("ko");
+
+  const baseNavItems: NavItem[] = [
+    {
+      href: "/",
+      label: t("nav.dashboard"),
+      icon: Home,
+      match: (currentPathname) => currentPathname === "/",
+    },
+    {
+      href: "/global-issues",
+      label: t("nav.global"),
+      icon: Globe2,
+      match: (currentPathname) => currentPathname.startsWith("/global-issues"),
+    },
+    {
+      href: "/timeline",
+      label: t("nav.timeline"),
+      icon: BarChart3,
+      match: (currentPathname) => currentPathname.startsWith("/timeline"),
+    },
+    {
+      href: "/search",
+      label: t("nav.search"),
+      icon: Search,
+      match: (currentPathname) => currentPathname.startsWith("/search"),
+    },
+  ];
+
+  const dualMapNavItems: NavItem[] = [
+    {
+      href: "/news",
+      label: t("nav.news"),
+      icon: Newspaper,
+      match: (currentPathname) => currentPathname.startsWith("/news"),
+    },
+    {
+      href: "/compare",
+      label: t("nav.compare"),
+      icon: GitCompareArrows,
+      match: (currentPathname) => currentPathname.startsWith("/compare"),
+    },
+  ];
+
+  const navItems = dualMapEnabled ? [...baseNavItems, ...dualMapNavItems] : baseNavItems;
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--border-default)] bg-[rgba(10,14,23,0.95)] pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 backdrop-blur md:hidden">

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import {
   JetBrains_Mono,
   Noto_Sans_JP,
@@ -38,14 +39,18 @@ export const metadata: Metadata = {
     "Real-time global community and social sentiment monitoring dashboard.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const langCookie = cookieStore.get("gp_lang")?.value;
+  const htmlLang = langCookie === "en" ? "en" : "ko";
+
   return (
     <html
-      lang="ko"
+      lang={htmlLang}
       className={`${displayFont.variable} ${monoFont.variable} ${bodyFontKr.variable} ${bodyFontJp.variable}`}
     >
       <body className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] antialiased">

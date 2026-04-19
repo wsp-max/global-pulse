@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import type { DashboardScope } from "@/lib/types/api";
+import { useLanguage } from "@/lib/i18n/use-language";
 
 export interface DashboardFilters {
   category: string;
@@ -17,6 +18,8 @@ interface FilterBarProps {
 }
 
 export function FilterBar({ value, onChange }: FilterBarProps) {
+  const { t } = useLanguage("ko");
+
   const update = <K extends keyof DashboardFilters>(key: K, next: DashboardFilters[K]) => {
     onChange({
       ...value,
@@ -30,30 +33,30 @@ export function FilterBar({ value, onChange }: FilterBarProps) {
         <input
           value={value.q}
           onChange={(event) => update("q", event.target.value)}
-          placeholder="토픽/엔티티 검색"
+          placeholder={t("filter.searchPlaceholder")}
           className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-xs text-[var(--text-primary)] md:col-span-2"
-          aria-label="토픽 검색"
+          aria-label={t("filter.searchPlaceholder")}
         />
 
         <select
           value={value.category}
           onChange={(event) => update("category", event.target.value)}
           className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-xs text-[var(--text-primary)]"
-          aria-label="카테고리"
+          aria-label={t("filter.categoryAll")}
         >
-          <option value="all">카테고리 전체</option>
-          <option value="politics">정치</option>
-          <option value="economy">경제</option>
-          <option value="tech">기술</option>
-          <option value="society">사회</option>
-          <option value="entertainment">엔터</option>
+          <option value="all">{t("filter.categoryAll")}</option>
+          <option value="politics">{t("filter.category.politics")}</option>
+          <option value="economy">{t("filter.category.economy")}</option>
+          <option value="tech">{t("filter.category.tech")}</option>
+          <option value="society">{t("filter.category.society")}</option>
+          <option value="entertainment">{t("filter.category.entertainment")}</option>
         </select>
 
         <select
           value={value.period}
           onChange={(event) => update("period", event.target.value as DashboardFilters["period"])}
           className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-xs text-[var(--text-primary)]"
-          aria-label="기간"
+          aria-label="Period"
         >
           <option value="1h">1h</option>
           <option value="6h">6h</option>
@@ -65,28 +68,28 @@ export function FilterBar({ value, onChange }: FilterBarProps) {
           value={value.sentiment}
           onChange={(event) => update("sentiment", event.target.value as DashboardFilters["sentiment"])}
           className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-xs text-[var(--text-primary)]"
-          aria-label="감성"
+          aria-label={t("filter.sentiment.all")}
         >
-          <option value="all">감성 전체</option>
-          <option value="pos">긍정</option>
-          <option value="neg">부정</option>
-          <option value="controversial">논쟁</option>
+          <option value="all">{t("filter.sentiment.all")}</option>
+          <option value="pos">{t("filter.sentiment.pos")}</option>
+          <option value="neg">{t("filter.sentiment.neg")}</option>
+          <option value="controversial">{t("filter.sentiment.controversial")}</option>
         </select>
 
         <select
           value={value.scope}
           onChange={(event) => update("scope", event.target.value as DashboardFilters["scope"])}
           className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-xs text-[var(--text-primary)]"
-          aria-label="스코프"
+          aria-label="Scope"
         >
-          <option value="community">community</option>
-          <option value="news">news</option>
-          <option value="mixed">mixed</option>
+          <option value="community">{t("filter.scope.community")}</option>
+          <option value="news">{t("filter.scope.news")}</option>
+          <option value="mixed">{t("filter.scope.mixed")}</option>
         </select>
       </div>
 
       <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-        <span>minZ {value.minZ.toFixed(1)}</span>
+        <span>{t("filter.minZ")} {value.minZ.toFixed(1)}</span>
         <input
           type="range"
           min={0}
@@ -95,7 +98,7 @@ export function FilterBar({ value, onChange }: FilterBarProps) {
           value={value.minZ}
           onChange={(event) => update("minZ", Number(event.target.value))}
           className="w-full"
-          aria-label="최소 Z 스코어"
+          aria-label={t("filter.minZ")}
         />
       </div>
     </section>

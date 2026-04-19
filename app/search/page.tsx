@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
 import useSWR from "swr";
 import { useMemo, useState } from "react";
 import type { GlobalTopic, Topic } from "@global-pulse/shared";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
+import { useLanguage } from "@/lib/i18n/use-language";
 
 interface SearchResponse {
   topics: Topic[];
@@ -30,6 +31,7 @@ const fetcher = async (url: string): Promise<SearchResponse> => {
 export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
+  const { t } = useLanguage("ko");
 
   const endpoint = useMemo(() => {
     if (!submittedQuery.trim()) {
@@ -43,10 +45,8 @@ export default function SearchPage() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-6 lg:px-6">
       <header className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-        <h1 className="text-lg font-semibold">Search Topics</h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
-          Search regional topics and global issues from collected data.
-        </p>
+        <h1 className="text-lg font-semibold">{t("search.title")}</h1>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">{t("search.description")}</p>
       </header>
 
       <form
@@ -60,26 +60,24 @@ export default function SearchPage() {
           type="text"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Type keyword..."
+          placeholder={t("search.placeholder")}
           className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--border-hover)]"
         />
         <button
           type="submit"
           className="rounded-md border border-[var(--border-default)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
         >
-          Search
+          {t("search.button")}
         </button>
       </form>
 
-      {!submittedQuery.trim() && (
-        <EmptyState title="검색어를 입력하세요." description="키워드로 리전 토픽과 글로벌 이슈를 동시에 조회할 수 있습니다." />
-      )}
+      {!submittedQuery.trim() && <EmptyState title={t("search.empty")} description={t("search.description")} />}
 
       {isLoading && <LoadingSkeleton className="h-24" lines={4} />}
 
       {error && (
         <EmptyState
-          title="검색 요청에 실패했습니다."
+          title={t("search.failed")}
           description={error instanceof Error ? error.message : "Search failed"}
         />
       )}
@@ -88,7 +86,7 @@ export default function SearchPage() {
         <section className="space-y-4">
           <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-              Regional Topics ({data.topics.length})
+              {t("search.regional")} ({data.topics.length})
             </h2>
             <ul className="mt-3 space-y-2 text-sm">
               {data.topics.map((topic) => (
@@ -103,14 +101,14 @@ export default function SearchPage() {
                 </li>
               ))}
               {data.topics.length === 0 && (
-                <li className="text-xs text-[var(--text-secondary)]">No regional topics found.</li>
+                <li className="text-xs text-[var(--text-secondary)]">{t("search.noRegional")}</li>
               )}
             </ul>
           </div>
 
           <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-              Global Topics ({data.globalTopics.length})
+              {t("search.global")} ({data.globalTopics.length})
             </h2>
             <ul className="mt-3 space-y-2 text-sm">
               {data.globalTopics.map((topic) => (
@@ -125,7 +123,7 @@ export default function SearchPage() {
                 </li>
               ))}
               {data.globalTopics.length === 0 && (
-                <li className="text-xs text-[var(--text-secondary)]">No global topics found.</li>
+                <li className="text-xs text-[var(--text-secondary)]">{t("search.noGlobal")}</li>
               )}
             </ul>
           </div>
@@ -134,4 +132,3 @@ export default function SearchPage() {
     </main>
   );
 }
-

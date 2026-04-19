@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGlobalTopics } from "@/lib/hooks/useGlobalTopics";
 import { useRegions } from "@/lib/hooks/useRegions";
+import { useLanguage } from "@/lib/i18n/use-language";
 import type { DashboardScope, GlobalTopicsApiResponse, RegionsApiResponse } from "@/lib/types/api";
 import { cleanupTopicName } from "@/lib/utils/topic-name";
 
@@ -184,6 +185,7 @@ export function DashboardClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { t } = useLanguage("ko");
 
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
@@ -378,8 +380,8 @@ export function DashboardClient({
           aria-label="비교 드로어 열기"
           onClick={() => setIsCompareOpen(true)}
           className="rounded-md border border-[var(--border-default)] bg-[var(--bg-secondary)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
-        > 
-          비교 드로어 ({validPinnedTopicIds.length}/3)
+        >
+          {t("dashboard.compareDrawer")} ({validPinnedTopicIds.length}/3)
         </button>
       </div>
 
@@ -387,8 +389,8 @@ export function DashboardClient({
 
       {regionsError && (
         <EmptyState
-          title="대시보드 데이터를 불러오지 못했습니다."
-          description="잠시 후 자동으로 다시 시도합니다. 문제가 계속되면 서버 상태를 확인해 주세요."
+          title={t("dashboard.loadError")}
+          description={t("dashboard.loadErrorDesc")}
         />
       )}
 
@@ -401,8 +403,8 @@ export function DashboardClient({
 
       {!regionsError && !isRegionsLoading && filteredRegions.length === 0 && (
         <EmptyState
-          title="표시할 리전 데이터가 없습니다."
-          description="필터를 완화하거나 수집기와 분석기 상태를 확인해 주세요."
+          title={t("dashboard.noRegions")}
+          description={t("dashboard.noRegionsDesc")}
         />
       )}
 
