@@ -136,6 +136,13 @@ export interface TopicRow {
   mini_trend?: number[] | null;
   source_diversity?: number | null;
   dominant_source_share?: number | null;
+  representative_excerpts?: Array<{
+    title: string;
+    snippetFirstSentence: string;
+    url: string | null;
+    sourceId: string;
+    publishedAt: string | null;
+  }> | null;
   velocity_per_hour?: number | null;
   acceleration?: number | null;
   spread_score?: number | null;
@@ -239,6 +246,7 @@ export function mapTopicRow(row: TopicRow): Topic {
     miniTrend: row.mini_trend ?? null,
     sourceDiversity: toOptionalNumberOrNull(row.source_diversity),
     dominantSourceShare: toOptionalNumberOrNull(row.dominant_source_share),
+    representativeExcerpts: row.representative_excerpts ?? null,
     velocityPerHour: toOptionalNumberOrNull(row.velocity_per_hour),
     acceleration: toOptionalNumberOrNull(row.acceleration),
     spreadScore: toOptionalNumberOrNull(row.spread_score),
@@ -288,5 +296,6 @@ export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
     scope: row.scope ?? undefined,
   };
 }
+
 
 

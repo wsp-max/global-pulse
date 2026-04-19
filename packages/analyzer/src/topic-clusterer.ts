@@ -1,5 +1,6 @@
 ﻿import { SOURCES, type Topic } from "@global-pulse/shared";
 import { analyzeSentiment } from "./sentiment-analyzer";
+import { selectRepresentativeExcerpts } from "./representative-post-selector";
 import { calculateHeatScoreWithSourceDiversity } from "./heat-score-calculator";
 import {
   buildTitlePhrases,
@@ -854,6 +855,7 @@ export async function clusterTopics(
           Math.max(1, relatedPosts.length)
         ).toFixed(4),
       ),
+      representativeExcerpts: selectRepresentativeExcerpts(relatedPosts),
       periodStart: options.periodStart,
       periodEnd: options.periodEnd,
     });
@@ -951,4 +953,5 @@ export async function clusterTopics(
     rank: index + 1,
   }));
 }
+
 

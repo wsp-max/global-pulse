@@ -1,4 +1,4 @@
-import { SOURCES } from "@global-pulse/shared";
+﻿import { SOURCES } from "@global-pulse/shared";
 import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
 import { getLogger } from "@global-pulse/shared/server-logger";
 import type { Pool } from "pg";

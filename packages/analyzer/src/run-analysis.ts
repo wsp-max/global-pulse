@@ -60,6 +60,7 @@ interface TopicInsertRow {
   lifecycle_stage: "emerging" | "peaking" | "fading" | null;
   source_diversity: number | null;
   dominant_source_share: number | null;
+  representative_excerpts: string | null;
   scope: AnalysisScope;
   rank: number | null;
   period_start: string;
@@ -504,6 +505,7 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         "lifecycle_stage",
         "source_diversity",
         "dominant_source_share",
+        "representative_excerpts",
         "scope",
         "rank",
         "period_start",
@@ -760,6 +762,7 @@ async function runRegionAnalysis(params: {
     lifecycle_stage: topic.lifecycleStage ?? null,
     source_diversity: topic.sourceDiversity ?? null,
     dominant_source_share: topic.dominantSourceShare ?? null,
+    representative_excerpts: topic.representativeExcerpts ? JSON.stringify(topic.representativeExcerpts) : null,
     scope,
     rank: topic.rank ?? null,
     period_start: topic.periodStart,
@@ -873,6 +876,9 @@ runAnalysis().catch((error) => {
   logger.error(`Analysis failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });
+
+
+
 
 
 

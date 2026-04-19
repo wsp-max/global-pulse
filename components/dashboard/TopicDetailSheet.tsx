@@ -233,7 +233,26 @@ export function TopicDetailSheet({ topicId, onClose }: TopicDetailSheetProps) {
             </div>
 
             <div className="mt-4 rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-3 text-sm text-[var(--text-secondary)]">
-              대표 언급 3건: 원문 수집 대기
+              <p className="text-xs text-[var(--text-tertiary)]">대표 언급 3건</p>
+              <div className="mt-2 space-y-2">
+                {(data?.topic?.representativeExcerpts ?? []).slice(0, 3).map((excerpt, index) => (
+                  <div key={`${excerpt.sourceId}-${index}`} className="rounded-lg border border-[var(--border-default)] bg-[rgba(17,24,39,0.5)] p-2">
+                    <p className="text-xs text-[var(--text-primary)]">{excerpt.title}</p>
+                    <p className="mt-1 text-[11px] text-[var(--text-secondary)]">{excerpt.snippetFirstSentence || "원문 일부 수집 대기"}</p>
+                    {excerpt.url ? (
+                      <a
+                        href={excerpt.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-flex text-[11px] text-[var(--text-accent)] hover:underline"
+                      >
+                        원문 보기
+                      </a>
+                    ) : null}
+                  </div>
+                ))}
+                {(data?.topic?.representativeExcerpts ?? []).length === 0 ? <p className="text-xs">원문 수집 대기</p> : null}
+              </div>
             </div>
           </>
         )}
@@ -241,4 +260,5 @@ export function TopicDetailSheet({ topicId, onClose }: TopicDetailSheetProps) {
     </div>
   );
 }
+
 

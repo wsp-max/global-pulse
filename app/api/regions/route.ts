@@ -133,7 +133,7 @@ async function getRegions(request: Request) {
             `
             select
               id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
-              post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,source_diversity,dominant_source_share,scope,rank,period_start,period_end,
+              post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,source_diversity,dominant_source_share,representative_excerpts,scope,rank,period_start,period_end,
               null::float as velocity_per_hour,
               null::float as acceleration,
               null::float as spread_score,
@@ -214,7 +214,7 @@ async function getRegions(request: Request) {
             with history as (
               select
                 id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
-                post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,source_diversity,dominant_source_share,scope,rank,period_start,period_end,
+                post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,lifecycle_stage,source_diversity,dominant_source_share,representative_excerpts,scope,rank,period_start,period_end,
                 null::float as velocity_per_hour,
                 null::float as acceleration,
                 null::float as spread_score,
@@ -343,6 +343,7 @@ async function getRegions(request: Request) {
     lastUpdated: new Date().toISOString(),
   });
 }
+
 
 
 
