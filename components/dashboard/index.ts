@@ -12,5 +12,6 @@ export { TopicDetailSheet } from "./TopicDetailSheet";
 export { FilterBar } from "./FilterBar";
 export { CompareDrawer } from "./CompareDrawer";
 export { PropagationMatrix } from "./PropagationMatrix";
+export { HealthStrip } from "./HealthStrip";
 
 

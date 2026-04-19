@@ -5,6 +5,7 @@ import {
   Noto_Sans_KR,
   Space_Mono,
 } from "next/font/google";
+import { HealthStrip } from "@/components/dashboard/HealthStrip";
 import { Header } from "@/components/layout/Header";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
@@ -49,6 +50,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] antialiased">
         <Header />
+        <HealthStrip />
         <ErrorBoundary>
           <div className="min-h-screen pb-20 md:pb-0">{children}</div>
         </ErrorBoundary>
