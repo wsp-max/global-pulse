@@ -3,6 +3,7 @@ import { analyzeSentiment } from "./sentiment-analyzer";
 import { calculateHeatScore } from "./heat-score-calculator";
 import {
   buildTitlePhrases,
+  sanitizePostTitle,
   tokenizeForAnalysis,
   type AnalysisPostInput,
   type KeywordScore,
@@ -451,7 +452,8 @@ function buildRepresentativeTopicName(params: {
 
   for (const post of relatedPosts) {
     const weight = getEngagementWeight(post);
-    const titleTokens = tokenizeForAnalysis(post.title, regionId);
+    const sanitizedTitle = sanitizePostTitle(post.title, post.sourceId);
+    const titleTokens = tokenizeForAnalysis(sanitizedTitle, regionId, post.sourceId);
     const phrases = buildTitlePhrases(titleTokens, regionId);
 
     for (const token of titleTokens.slice(0, 8)) {
@@ -553,10 +555,15 @@ export async function clusterTopics(
   const normalizedPostMap = new Map<string, { post: AnalysisPostInput; normalizedText: string }>();
 
   for (const post of posts) {
-    const tokenizedText = tokenizeForAnalysis(`${post.title} ${post.bodyPreview ?? ""}`, regionId).join(" ");
+    const sanitizedTitle = sanitizePostTitle(post.title, post.sourceId);
+    const tokenizedText = tokenizeForAnalysis(
+      `${sanitizedTitle} ${post.bodyPreview ?? ""}`,
+      regionId,
+      post.sourceId,
+    ).join(" ");
     normalizedPostMap.set(post.id, {
       post,
-      normalizedText: `${normalizeText(`${post.title} ${post.bodyPreview ?? ""}`)} ${tokenizedText}`.trim(),
+      normalizedText: `${normalizeText(`${sanitizedTitle} ${post.bodyPreview ?? ""}`)} ${tokenizedText}`.trim(),
     });
   }
 

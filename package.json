@@ -9,6 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "node scripts/run-analyzer-tests.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "health": "tsx scripts/health-check.ts",

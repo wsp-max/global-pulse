@@ -54,15 +54,6 @@ const BASE_STOPWORDS = new Set([
   "post",
   "official",
   "breaking",
-  "rt",
-  "users",
-  "user",
-  "debate",
-  "sparks",
-  "across",
-  "multiple",
-  "community",
-  "communities",
   "latest",
   "watch",
   "report",
@@ -71,47 +62,15 @@ const BASE_STOPWORDS = new Set([
   "new",
   "more",
   "today",
-  "official",
   "music",
   "mv",
-  "video",
   "trailer",
   "episode",
   "director",
-  "directed",
-  "featuring",
-  "feat",
-  "officially",
-  "credits",
-  "credit",
-  "executive",
   "producer",
-  "starring",
-  "provided",
-  "audio",
-  "lyric",
-  "lyrics",
-  "visualizer",
-  "performance",
-  "stage",
-  "ver",
-  "version",
-  "full",
-  "clip",
-  "album",
-  "single",
-  "title",
-  "track",
-  "preview",
-  "teaser",
-  "coming",
-  "comes",
-  "out",
-  "kst",
-  "produced",
   "production",
-  "released",
   "release",
+  "released",
   "stream",
   "subscribe",
   "channel",
@@ -133,215 +92,131 @@ const BASE_STOPWORDS = new Set([
   "lmao",
   "omg",
   "wow",
-  "pls",
-  "please",
-  "im",
-  "ive",
-  "dont",
-  "cant",
-  "didnt",
-  "isnt",
-  "arent",
-  "wont",
+  "credit",
   "credits",
-  "director",
-  "practice",
+  "full",
+  "clip",
+  "album",
+  "single",
+  "title",
+  "track",
+  "preview",
   "teaser",
-  "teasers",
-  "season",
-  "part",
-  "complete",
+  "coming",
+  "out",
+  "version",
+  "ver",
 ]);
 
 const REGION_STOPWORDS: Record<string, Set<string>> = {
   kr: new Set([
     "오늘",
     "어제",
+    "내일",
     "지금",
-    "관련",
     "이슈",
-    "논란",
     "반응",
-    "현황",
-    "뉴스",
     "영상",
     "사진",
-    "속보",
-    "공식",
     "정리",
     "요약",
-    "근황",
-    "진짜",
-    "그냥",
-    "이번",
-    "진행",
-    "그리고",
-    "하는",
-    "있는",
-    "없는",
+    "공식",
     "공개",
     "발매",
-    "예고",
-    "티저",
-    "공식영상",
+    "진행",
     "베스트",
-    "인기",
     "조회수",
     "추천",
-    "비추",
     "댓글",
-    "짤",
-    "썸네일",
-    "ㅋㅋ",
-    "ㅎㅎ",
-    "ㅠㅠ",
-    "ㅜㅜ",
+    "실시간",
   ]),
   jp: new Set([
-    "これ",
-    "それ",
-    "ため",
-    "よう",
-    "こと",
-    "さん",
-    "ます",
-    "です",
-    "する",
-    "した",
-    "して",
-    "ない",
-    "ある",
-    "いる",
-    "最新",
+    "今日",
+    "昨日",
+    "明日",
     "速報",
-    "まとめ",
+    "話題",
+    "反応",
+    "動画",
+    "画像",
+    "写真",
     "公式",
     "公開",
-    "配信",
     "発売",
-    "人気",
-    "話題",
-    "画像",
-    "動画",
-    "コメント",
-    "笑",
-    "www",
+    "感想",
+    "まとめ",
   ]),
   cn: new Set([
-    "这个",
-    "那个",
-    "我们",
-    "你们",
-    "他们",
     "今天",
     "昨天",
-    "现在",
-    "已经",
-    "还是",
-    "不是",
-    "可以",
-    "一个",
-    "一下",
-    "视频",
-    "网友",
-    "评论",
+    "明天",
     "热搜",
+    "话题",
+    "视频",
+    "图片",
     "官方",
     "发布",
-    "更新",
-    "视频号",
-    "图片",
-    "话题",
-    "评论区",
+    "直播",
+    "网友",
+    "评论",
+    "整理",
+    "总结",
     "热议",
-    "网友们",
-    "哈哈",
   ]),
 };
 
-const EXTRA_REGION_STOPWORDS: Record<string, Set<string>> = {
-  kr: new Set([
-    "\uC624\uB298",
-    "\uC5B4\uC81C",
-    "\uB0B4\uC77C",
-    "\uC9C0\uAE08",
-    "\uBC29\uAE08",
-    "\uC774\uC288",
-    "\uBC18\uC751",
-    "\uC601\uC0C1",
-    "\uC0AC\uC9C4",
-    "\uC815\uB9AC",
-    "\uC694\uC57D",
-    "\uACF5\uC2DD",
-    "\uACF5\uAC1C",
-    "\uBC1C\uB9E4",
-    "\uC9C4\uD589",
-    "\uBCA0\uC2A4\uD2B8",
-    "\uC870\uD68C\uC218",
-    "\uCD94\uCC9C",
-    "\uB313\uAE00",
-    "\uBC29\uC1A1",
-    "\uC0DD\uBC29\uC1A1",
-  ]),
-  jp: new Set([
-    "\u4ECA\u65E5",
-    "\u6628\u65E5",
-    "\u660E\u65E5",
-    "\u901F\u5831",
-    "\u8A71\u984C",
-    "\u53CD\u5FDC",
-    "\u52D5\u753B",
-    "\u753B\u50CF",
-    "\u5199\u771F",
-    "\u516C\u5F0F",
-    "\u516C\u958B",
-    "\u767A\u58F2",
-    "\u611F\u60F3",
-    "\u307E\u3068\u3081",
-    "\u6700\u65B0",
-    "\u63B2\u793A\u677F",
-  ]),
-  cn: new Set([
-    "\u4ECA\u5929",
-    "\u6628\u5929",
-    "\u660E\u5929",
-    "\u70ED\u641C",
-    "\u8BDD\u9898",
-    "\u89C6\u9891",
-    "\u56FE\u7247",
-    "\u5B98\u65B9",
-    "\u53D1\u5E03",
-    "\u76F4\u64AD",
-    "\u7F51\u53CB",
-    "\u8BC4\u8BBA",
-    "\u6574\u7406",
-    "\u603B\u7ED3",
-  ]),
-};
+const CLICKBAIT_LABELS = [
+  "충격",
+  "섬뜩",
+  "미쳤다",
+  "미친",
+  "만행",
+  "레전드",
+  "논란",
+  "속보",
+  "단독",
+  "입수",
+  "공개",
+  "폭로",
+  "衝撃",
+  "速報",
+  "緊急",
+  "悲報",
+  "炎上",
+  "話題",
+  "徹底",
+  "震惊",
+  "重磅",
+  "独家",
+  "最新",
+  "热议",
+];
 
-const HANGUL_ONLY_REGEX = /^[\p{Script=Hangul}]+$/u;
-const LATIN_TOKEN_REGEX = /^[a-z][a-z0-9._-]*$/;
+const LABEL_SEPARATOR = String.raw`[\s:：\-|·!！？,，。.…~]+`;
+const WRAPPED_LABEL = String.raw`(?:\[[^\]]*\]|\([^)]+\)|【[^】]+】)?`;
+const CLICKBAIT_PATTERN = new RegExp(
+  String.raw`^\s*(?:${WRAPPED_LABEL}\s*)?(?:${CLICKBAIT_LABELS.map((label) => escapeRegex(label)).join("|")})${LABEL_SEPARATOR}`,
+  "iu",
+);
+
 const DIGIT_ONLY_REGEX = /^\d+$/;
 const YEAR_LIKE_REGEX = /^(?:19|20)\d{2}$/;
 const DATE_LIKE_REGEX = /^(?:19|20)\d{2}[-/.](?:0?[1-9]|1[0-2])[-/.](?:0?[1-9]|[12]\d|3[01])$/;
-const NOISE_TOKEN_REGEX = /^(?:img|jpg|jpeg|png|gif|webp|v\d+|fyp|lol+|lmao|haha+|www+|ㅋ+|ㅎ+|ㅠ+|ㅜ+|official)$/u;
+const LATIN_TOKEN_REGEX = /^[a-z][a-z0-9._-]*$/;
+const HANGUL_ONLY_REGEX = /^[\p{Script=Hangul}]+$/u;
+const NOISE_TOKEN_REGEX = /^(?:img|jpg|jpeg|png|gif|webp|fyp|lol+|lmao|haha+|www+)$/u;
+
 const KOREAN_SUFFIXES = [
-  "에서는",
-  "으로는",
-  "으로도",
-  "에게서",
-  "으로",
   "에서",
+  "으로",
   "에게",
-  "한테",
   "까지",
   "부터",
   "보다",
   "처럼",
-  "이랑",
   "하고",
-  "와",
-  "과",
+  "이나",
+  "나",
   "은",
   "는",
   "이",
@@ -349,18 +224,83 @@ const KOREAN_SUFFIXES = [
   "을",
   "를",
   "에",
+  "의",
+  "로",
+  "와",
+  "과",
   "도",
   "만",
-  "로",
-  "의",
 ];
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function stripLeadingClickbaitLabels(input: string): string {
+  let current = input;
+  let guard = 0;
+
+  while (guard < 6) {
+    const next = current.replace(CLICKBAIT_PATTERN, "");
+    if (next === current) {
+      break;
+    }
+    current = next.trimStart();
+    guard += 1;
+  }
+
+  return current;
+}
+
+export function sanitizePostTitle(title: string, sourceId: string): string {
+  const source = sourceId.toLowerCase();
+  let sanitized = title.normalize("NFKC");
+
+  sanitized = sanitized
+    .replace(/【[^】]*】/g, " ")
+    .replace(/\[[^\]]*]/g, " ")
+    .replace(/\((?:\s*)?(?:공식|official)(?:\s*)?\)/giu, " ")
+    .replace(/\|\s*공식\b/giu, " ")
+    .replace(/-\s*YouTube\b/giu, " ")
+    .replace(/#shorts\b/giu, " ");
+
+  if (source.startsWith("youtube_")) {
+    sanitized = sanitized
+      .replace(/\|\s*shorts?\b/giu, " ")
+      .replace(/-\s*topic\b/giu, " ");
+  }
+
+  sanitized = sanitized
+    .replace(/^[\p{Extended_Pictographic}\s~!?.:,;|/\-·•…]+/gu, "")
+    .replace(/[\p{Extended_Pictographic}\s~!?.:,;|/\-·•…]+$/gu, "")
+    .trim();
+
+  sanitized = stripLeadingClickbaitLabels(sanitized);
+
+  sanitized = sanitized
+    .replace(/^[\p{Extended_Pictographic}\s~!?.:,;|/\-·•…]+/gu, "")
+    .replace(/[\p{Extended_Pictographic}\s~!?.:,;|/\-·•…]+$/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return sanitized;
+}
 
 function normalizeInputText(text: string): string {
   return text
+    .normalize("NFKC")
     .toLowerCase()
     .replace(/https?:\/\/\S+/g, " ")
     .replace(/&[a-z0-9#]+;/g, " ")
     .replace(/[\u200b-\u200d\ufeff]/g, " ");
+}
+
+function splitIntoScriptSegments(rawToken: string): string[] {
+  return (
+    rawToken.match(
+      /[\p{Script=Hangul}]+|[\p{Script=Han}]+|[\p{Script=Hiragana}]+|[\p{Script=Katakana}]+|[a-z0-9][a-z0-9._-]*/giu,
+    ) ?? []
+  );
 }
 
 function normalizeCandidateToken(token: string): string {
@@ -381,44 +321,8 @@ function normalizeCandidateToken(token: string): string {
   return normalized;
 }
 
-function splitIntoScriptSegments(rawToken: string): string[] {
-  return (
-    rawToken.match(
-      /[\p{Script=Hangul}]+|[\p{Script=Han}]+|[\p{Script=Hiragana}]+|[\p{Script=Katakana}]+|[a-z0-9][a-z0-9._-]*/giu,
-    ) ?? []
-  );
-}
-
 function isStopword(token: string, regionId: string): boolean {
-  return (
-    BASE_STOPWORDS.has(token) ||
-    Boolean(REGION_STOPWORDS[regionId]?.has(token)) ||
-    Boolean(EXTRA_REGION_STOPWORDS[regionId]?.has(token))
-  );
-}
-
-function regionScriptMultiplier(token: string, regionId: string): number {
-  const hasHangul = /[\p{Script=Hangul}]/u.test(token);
-  const hasJapanese = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u.test(token);
-  const hasHan = /[\p{Script=Han}]/u.test(token);
-  const hasLatin = /[a-z]/u.test(token);
-
-  if (regionId === "kr") {
-    if (hasHangul) return 1.45;
-    if (hasLatin) return 0.65;
-  }
-
-  if (regionId === "jp") {
-    if (hasJapanese) return 1.45;
-    if (hasLatin) return 0.7;
-  }
-
-  if (regionId === "cn") {
-    if (hasHan) return 1.45;
-    if (hasLatin) return 0.7;
-  }
-
-  return 1;
+  return BASE_STOPWORDS.has(token) || Boolean(REGION_STOPWORDS[regionId]?.has(token));
 }
 
 function shouldKeepToken(token: string, regionId: string): boolean {
@@ -430,11 +334,7 @@ function shouldKeepToken(token: string, regionId: string): boolean {
     return false;
   }
 
-  if (YEAR_LIKE_REGEX.test(token)) {
-    return false;
-  }
-
-  if (DATE_LIKE_REGEX.test(token)) {
+  if (YEAR_LIKE_REGEX.test(token) || DATE_LIKE_REGEX.test(token)) {
     return false;
   }
 
@@ -458,11 +358,36 @@ function shouldKeepToken(token: string, regionId: string): boolean {
   return true;
 }
 
-export function tokenizeForAnalysis(text: string, regionId: string): string[] {
-  const normalized = normalizeInputText(text);
+function regionScriptMultiplier(token: string, regionId: string): number {
+  const hasHangul = /[\p{Script=Hangul}]/u.test(token);
+  const hasJapanese = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u.test(token);
+  const hasHan = /[\p{Script=Han}]/u.test(token);
+  const hasLatin = /[a-z]/u.test(token);
+
+  if (regionId === "kr") {
+    if (hasHangul) return 1.4;
+    if (hasLatin) return 0.7;
+  }
+
+  if (regionId === "jp") {
+    if (hasJapanese) return 1.4;
+    if (hasLatin) return 0.72;
+  }
+
+  if (regionId === "cn") {
+    if (hasHan) return 1.4;
+    if (hasLatin) return 0.72;
+  }
+
+  return 1;
+}
+
+export function tokenizeForAnalysis(text: string, regionId: string, sourceId?: string): string[] {
+  const prepared = sourceId ? sanitizePostTitle(text, sourceId) : text;
+  const normalized = normalizeInputText(prepared);
   const rawTokens = normalized
     .replace(/[#@]/g, " ")
-    .split(/[\s,.;:!?()[\]{}"“”'’`~!$%^&*+=<>|\\/]+/g);
+    .split(/[\s,.;:!?()[\]{}"'`~…|\\/<>+=*_]+/g);
 
   const tokens: string[] = [];
   for (const rawToken of rawTokens) {
@@ -544,8 +469,9 @@ export async function extractKeywords(
   const docFrequency = new Map<string, number>();
 
   for (const post of posts) {
-    const contentTokens = tokenizeForAnalysis(`${post.title} ${post.bodyPreview ?? ""}`, regionId);
-    const titleTokens = tokenizeForAnalysis(post.title, regionId);
+    const sanitizedTitle = sanitizePostTitle(post.title, post.sourceId);
+    const contentTokens = tokenizeForAnalysis(`${sanitizedTitle} ${post.bodyPreview ?? ""}`, regionId, post.sourceId);
+    const titleTokens = tokenizeForAnalysis(sanitizedTitle, regionId, post.sourceId);
     const phraseTokens = buildTitlePhrases(titleTokens, regionId);
     const terms = [...contentTokens, ...phraseTokens];
 
@@ -557,6 +483,7 @@ export async function extractKeywords(
     for (const term of terms) {
       termCounts.set(term, (termCounts.get(term) ?? 0) + 1);
     }
+
     indexedPosts.push({
       post,
       termCounts,
