@@ -2,16 +2,17 @@
 
 import useSWR from "swr";
 import { fetcher } from "@/lib/api";
-import type { RegionsApiResponse } from "@/lib/types/api";
+import type { DashboardScope, RegionsApiResponse } from "@/lib/types/api";
 
 interface UseRegionsOptions {
   fallbackData?: RegionsApiResponse;
 }
 
-export function useRegions(options: UseRegionsOptions = {}) {
+export function useRegions(scope: DashboardScope = "community", options: UseRegionsOptions = {}) {
   const hasFallback = Boolean(options.fallbackData);
+  const query = `/regions${scope === "community" ? "" : `?scope=${scope}`}`;
 
-  return useSWR<RegionsApiResponse>("/regions", fetcher, {
+  return useSWR<RegionsApiResponse>(query, fetcher, {
     refreshInterval: 60_000,
     fallbackData: options.fallbackData,
     revalidateOnMount: !hasFallback,

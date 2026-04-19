@@ -99,6 +99,7 @@ export interface TopicRow {
   source_ids: string[] | null;
   raw_post_ids?: number[] | null;
   burst_z?: number | null;
+  scope?: "community" | "news" | "mixed" | null;
   rank: number | null;
   period_start: string;
   period_end: string;
@@ -133,6 +134,7 @@ export interface GlobalTopicRow {
   velocity_per_hour?: number | null;
   acceleration?: number | null;
   spread_score?: number | null;
+  scope?: "community" | "news" | "mixed" | null;
   created_at?: string;
 }
 
@@ -160,6 +162,7 @@ export function mapTopicRow(row: TopicRow): Topic {
     sourceIds: row.source_ids ?? [],
     rawPostIds: row.raw_post_ids ?? undefined,
     burstZ: toNullableNumber(row.burst_z),
+    scope: row.scope ?? undefined,
     rank: toOptionalNumber(row.rank),
     periodStart: row.period_start,
     periodEnd: row.period_end,
@@ -185,5 +188,6 @@ export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
     velocityPerHour: toOptionalNumber(row.velocity_per_hour),
     acceleration: toOptionalNumber(row.acceleration),
     spreadScore: toOptionalNumber(row.spread_score),
+    scope: row.scope ?? undefined,
   };
 }

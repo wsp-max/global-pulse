@@ -2584,3 +2584,25 @@
 - 추가 보완: evidence rotation 권한 폴백 적용(backup 경고 감소).
 
 - 추가 보완: evidence prune를 untracked-only로 수정(원격 tracked 삭제 방지).
+
+## 2026-04-19 Update (GP-20260419-01)
+- Completed foundational implementation of news/portal track with scope-aware data plane.
+- Added `news` and `compare` routes behind `FEATURE_DUAL_MAP_UI` (default false).
+- Added API extensions:
+  - `GET /api/topics?scope=`
+  - `GET /api/regions?scope=`
+  - `GET /api/global-topics?scope=`
+  - `GET /api/regions/compare?regionId=`
+  - `GET /api/portal-rankings?regionId=&limit=`
+  - `GET /api/issue-overlaps?minTier=&limit=`
+- Added issue overlap generation pipeline (`community` vs `news`) into `issue_overlaps`.
+- Expanded region definitions (19 total) and map coordinates for propagation visuals.
+- Build/test/lint gates all pass locally.
+
+## 2026-04-19 Update (Gate Verification Continuation)
+- Resolved route gate mismatch for dual-map pages under Next.js 16 streamed responses.
+- Added `proxy.ts` hard 404 gate for `/pulse/news` and `/pulse/compare` when `FEATURE_DUAL_MAP_UI=false`.
+- Confirmed runtime matrix:
+  - OFF: `/pulse` 200, `/pulse/news` 404, `/pulse/compare` 404
+  - ON: `/pulse` 200, `/pulse/news` 200, `/pulse/compare` 200
+- Build/lint/test and feed verification all green in local gate run.

@@ -4,9 +4,36 @@ import { mapTopicRow, type TopicRow } from "../_shared/mappers";
 import { getPostgresPoolOrNull } from "../_shared/postgres-server";
 import { withApiRequestLog } from "../_shared/route-logger";
 
+type Scope = "community" | "news" | "mixed";
+
 interface BatchSelectionRow {
   selected_created_at: string | null;
   is_fresh: boolean;
+}
+
+function parseScope(value: string | null): Scope {
+  if (value === "news" || value === "mixed") {
+    return value;
+  }
+  return "community";
+}
+
+function sourceIdsForRegionByScope(regionId: string, scope: Scope): string[] {
+  return SOURCES.filter((source) => {
+    if (source.regionId !== regionId) {
+      return false;
+    }
+
+    if (scope === "community") {
+      return source.type === "community" || source.type === "sns";
+    }
+
+    if (scope === "news") {
+      return source.type === "news";
+    }
+
+    return true;
+  }).map((source) => source.id);
 }
 
 function deriveTopKeywords(topics: ReturnType<typeof mapTopicRow>[]): string[] {
@@ -27,17 +54,19 @@ function deriveTopKeywords(topics: ReturnType<typeof mapTopicRow>[]): string[] {
 }
 
 export async function GET(request: Request) {
-  return withApiRequestLog(request, "/api/regions", () => getRegions());
+  return withApiRequestLog(request, "/api/regions", () => getRegions(request));
 }
 
-async function getRegions() {
+async function getRegions(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const scope = parseScope(searchParams.get("scope"));
   const regions = getAllRegions();
   const postgres = getPostgresPoolOrNull();
 
   if (postgres) {
     const regionRows = await Promise.all(
       regions.map(async (region) => {
-        const sourceIds = SOURCES.filter((source) => source.regionId === region.id).map((source) => source.id);
+        const sourceIds = sourceIdsForRegionByScope(region.id, scope);
         const [snapshotResult, batchSelectionResult] = await Promise.all([
           postgres.query<{
             total_heat_score: number | string | null;
@@ -59,10 +88,11 @@ async function getRegions() {
               snapshot_at
             from region_snapshots
             where region_id = $1
+              and scope = $2
             order by snapshot_at desc
             limit 1
             `,
-            [region.id],
+            [region.id, scope],
           ),
           postgres.query<BatchSelectionRow>(
             `
@@ -71,8 +101,9 @@ async function getRegions() {
                 max(created_at) filter (
                   where period_end >= now() - interval '24 hours'
                     and source_ids && $2::text[]
+                    and scope = $3
                 ) as latest_fresh_created_at,
-                max(created_at) filter (where source_ids && $2::text[]) as latest_any_created_at
+                max(created_at) filter (where source_ids && $2::text[] and scope = $3) as latest_any_created_at
               from topics
               where region_id = $1
             )
@@ -81,7 +112,7 @@ async function getRegions() {
               latest_fresh_created_at is not null as is_fresh
             from batch_candidates
             `,
-            [region.id, sourceIds],
+            [region.id, sourceIds, scope],
           ),
         ]);
 
@@ -94,10 +125,11 @@ async function getRegions() {
             `
             select
               id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,
-              post_count,total_views,total_likes,total_comments,source_ids,rank,period_start,period_end
+              post_count,total_views,total_likes,total_comments,source_ids,scope,rank,period_start,period_end
             from topics
             where region_id = $1
               and source_ids && $2::text[]
+              and scope = $4
               and (
                 $3::timestamptz is not null
                 and created_at between $3::timestamptz - interval '1 second'
@@ -106,7 +138,7 @@ async function getRegions() {
             order by heat_score desc, rank asc nulls last
             limit 8
             `,
-            [region.id, sourceIds, selectedBatchCreatedAt],
+            [region.id, sourceIds, selectedBatchCreatedAt, scope],
           ),
           postgres.query<{
             total_heat_score: number | string | null;
@@ -120,6 +152,7 @@ async function getRegions() {
               from topics
               where region_id = $1
                 and source_ids && $2::text[]
+                and scope = $4
                 and (
                   $3::timestamptz is not null
                   and created_at between $3::timestamptz - interval '1 second'
@@ -134,7 +167,7 @@ async function getRegions() {
             from filtered
             left join lateral unnest(coalesce(source_ids, '{}'::text[])) as src(sid) on true
             `,
-            [region.id, sourceIds, selectedBatchCreatedAt],
+            [region.id, sourceIds, selectedBatchCreatedAt, scope],
           ),
         ]);
 
@@ -142,6 +175,7 @@ async function getRegions() {
         const metrics = metricsResult.rows[0];
         const topTopics = topicsResult.rows.map(mapTopicRow);
         const hasMetrics = Number(metrics?.active_topics ?? 0) > 0;
+
         return {
           ...region,
           totalHeatScore: Number(hasMetrics ? metrics?.total_heat_score ?? 0 : 0),
@@ -153,6 +187,7 @@ async function getRegions() {
           snapshotAt: snapshot?.snapshot_at ?? selectedBatchCreatedAt ?? null,
           dataState,
           stale: dataState === "stale",
+          scope,
           topTopics,
         };
       }),
@@ -160,6 +195,7 @@ async function getRegions() {
 
     return NextResponse.json({
       regions: regionRows,
+      scope,
       configured: true,
       provider: "postgres",
       lastUpdated: new Date().toISOString(),
@@ -175,13 +211,12 @@ async function getRegions() {
       topKeywords: [],
       sourcesActive: 0,
       sourcesTotal: 0,
+      scope,
       topTopics: [],
     })),
+    scope,
     configured: false,
     provider: "none",
     lastUpdated: new Date().toISOString(),
   });
 }
-
-
-

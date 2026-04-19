@@ -36,6 +36,17 @@ const REGION_LONGITUDE: Record<string, number> = {
   eu: 10.0,
   me: 45.0,
   ru: 90.0,
+  br: -51.9,
+  in: 78.9,
+  id: 117.9,
+  mx: -102.5,
+  au: 133.8,
+  vn: 108.3,
+  th: 100.9,
+  ar: -64.2,
+  ca: -106.3,
+  ng: 8.7,
+  za: 24.0,
 };
 
 function hashKeyword(value: string): number {

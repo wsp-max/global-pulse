@@ -5,4 +5,5 @@ export * from "./gemini-summarizer";
 export * from "./cross-region-mapper";
 export * from "./translator";
 export * from "./heat-score-calculator";
+export * from "./scope-overlap";
 

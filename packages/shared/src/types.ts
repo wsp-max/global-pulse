@@ -15,10 +15,25 @@ export interface Source {
   name: string;
   nameEn: string;
   url: string;
-  type: "community" | "sns";
+  type: "community" | "sns" | "news";
   scrapeUrl: string;
   scrapeIntervalMinutes: number;
   isActive?: boolean;
+  newsCategory?:
+    | "wire_service"
+    | "newspaper"
+    | "broadcaster"
+    | "portal"
+    | "business_media"
+    | "tech_media"
+    | "tabloid"
+    | "magazine"
+    | "local_news";
+  trustTier?: 1 | 2 | 3;
+  language?: string;
+  feedKind?: "rss" | "atom" | "json" | "html_ranking";
+  rankingHint?: string;
+  metroHint?: string | null;
 }
 
 export interface RawPost {
@@ -60,6 +75,7 @@ export interface Topic {
   canonicalKey?: string;
   embeddingJson?: number[] | null;
   burstZ?: number | null;
+  scope?: "community" | "news" | "mixed";
   rank?: number;
   periodStart: string;
   periodEnd: string;
@@ -113,6 +129,7 @@ export interface GlobalTopic {
   velocityPerHour?: number;
   acceleration?: number;
   spreadScore?: number;
+  scope?: "community" | "news" | "mixed";
 }
 
 export interface HeatHistory {
@@ -133,6 +150,7 @@ export interface RegionSnapshot {
   sourcesActive: number;
   sourcesTotal: number;
   snapshotAt: string;
+  scope?: "community" | "news" | "mixed";
 }
 
 export interface ScrapedPost {
@@ -146,6 +164,7 @@ export interface ScrapedPost {
   dislikeCount?: number;
   commentCount?: number;
   postedAt?: string;
+  rank?: number;
 }
 
 export interface ScraperResult {

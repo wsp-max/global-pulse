@@ -14,6 +14,9 @@ import { TheqooScraper } from "../packages/collector/src/scrapers/korea/theqoo";
 import { TogetterScraper } from "../packages/collector/src/scrapers/japan/togetter";
 import { YahooJapanScraper } from "../packages/collector/src/scrapers/japan/yahoo-japan";
 import { RedditMideastScraper } from "../packages/collector/src/scrapers/mideast/reddit-mideast";
+import { JsonNewsScraper } from "../packages/collector/src/scrapers/news/json-news-scraper";
+import { RankingNewsScraper } from "../packages/collector/src/scrapers/news/ranking-news-scraper";
+import { RssNewsScraper } from "../packages/collector/src/scrapers/news/rss-news-scraper";
 import { HabrScraper } from "../packages/collector/src/scrapers/russia/habr";
 import { WeiboScraper } from "../packages/collector/src/scrapers/china/weibo";
 import { ZhihuScraper } from "../packages/collector/src/scrapers/china/zhihu";
@@ -33,6 +36,7 @@ import { HackernewsScraper } from "../packages/collector/src/scrapers/us/hackern
 import { RedditScraper } from "../packages/collector/src/scrapers/us/reddit";
 import { ReseteraScraper } from "../packages/collector/src/scrapers/us/resetera";
 import { SlashdotScraper } from "../packages/collector/src/scrapers/us/slashdot";
+import { SOURCES } from "@global-pulse/shared";
 import { getLogger } from "@global-pulse/shared/server-logger";
 
 const logger = getLogger("scripts:test-scraper");
@@ -129,7 +133,20 @@ async function run(): Promise<void> {
     dcard: new DcardScraper(),
   } as const;
 
-  const scraper = map[sourceId as keyof typeof map];
+  let scraper = map[sourceId as keyof typeof map];
+
+  if (!scraper) {
+    const source = SOURCES.find((item) => item.id === sourceId);
+    if (source?.type === "news") {
+      if (source.feedKind === "json") {
+        scraper = new JsonNewsScraper(source.id);
+      } else if (source.feedKind === "html_ranking") {
+        scraper = new RankingNewsScraper(source.id);
+      } else {
+        scraper = new RssNewsScraper(source.id);
+      }
+    }
+  }
 
   if (!scraper) {
     logger.error({ sourceId }, "unknown_source");

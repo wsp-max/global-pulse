@@ -1,4 +1,4 @@
-import { DISABLED_SOURCE_ID_SET, SOURCES, type ScraperResult } from "@global-pulse/shared";
+import { DISABLED_SOURCE_ID_SET, SOURCES, type ScraperResult, type Source } from "@global-pulse/shared";
 import { TiebaScraper } from "./scrapers/china/tieba";
 import { WeiboScraper } from "./scrapers/china/weibo";
 import { ZhihuScraper } from "./scrapers/china/zhihu";
@@ -20,6 +20,9 @@ import { HatenaScraper } from "./scrapers/japan/hatena";
 import { TogetterScraper } from "./scrapers/japan/togetter";
 import { YahooJapanScraper } from "./scrapers/japan/yahoo-japan";
 import { RedditMideastScraper } from "./scrapers/mideast/reddit-mideast";
+import { JsonNewsScraper } from "./scrapers/news/json-news-scraper";
+import { RankingNewsScraper } from "./scrapers/news/ranking-news-scraper";
+import { RssNewsScraper } from "./scrapers/news/rss-news-scraper";
 import { BilibiliScraper } from "./scrapers/sns/bilibili";
 import { MastodonScraper } from "./scrapers/sns/mastodon";
 import { YoutubeScraper } from "./scrapers/sns/youtube";
@@ -53,6 +56,23 @@ function isBrowserLikelySource(sourceId: string): boolean {
     return true;
   }
   return sourceId.includes("threads") || sourceId.includes("tiktok");
+}
+
+function createNewsScraper(source: Source): {
+  sourceId: string;
+  scrape: () => Promise<ScraperResult>;
+} | null {
+  if (source.type !== "news") {
+    return null;
+  }
+
+  if (source.feedKind === "json") {
+    return new JsonNewsScraper(source.id);
+  }
+  if (source.feedKind === "html_ranking") {
+    return new RankingNewsScraper(source.id);
+  }
+  return new RssNewsScraper(source.id);
 }
 
 function getScraperTimeoutMs(sourceId: string): number {
@@ -105,14 +125,16 @@ async function run(): Promise<void> {
     : [];
 
   const typeFilter =
-    typeFilterRaw === "community" || typeFilterRaw === "sns" ? typeFilterRaw : undefined;
+    typeFilterRaw === "community" || typeFilterRaw === "sns" || typeFilterRaw === "news"
+      ? typeFilterRaw
+      : undefined;
 
   if (typeFilterRaw && !typeFilter) {
-    Logger.error(`Invalid --type value "${typeFilterRaw}". Allowed: community | sns`);
+    Logger.error(`Invalid --type value "${typeFilterRaw}". Allowed: community | sns | news`);
     process.exit(1);
   }
 
-  const candidateScrapers = [
+  const communityAndSnsScrapers = [
     new DcInsideScraper(),
     new FmkoreaScraper(),
     new ClienScraper(),
@@ -189,6 +211,10 @@ async function run(): Promise<void> {
     new MastodonScraper("mastodon_ru"),
     new DcardScraper(),
   ];
+  const newsScrapers = SOURCES.filter((source) => source.type === "news")
+    .map((source) => createNewsScraper(source))
+    .filter((scraper): scraper is NonNullable<ReturnType<typeof createNewsScraper>> => Boolean(scraper));
+  const candidateScrapers = [...communityAndSnsScrapers, ...newsScrapers];
 
   if (sourceFilter.length > 0) {
     const sourceIdSet = new Set<string>(SOURCES.map((source) => source.id));

@@ -4449,3 +4449,54 @@ pm run ops:snapshot -> completed (egions=6)
 
 ### Changed Files
 - `scripts/rotate-runtime-evidence.sh`
+
+## GP-20260419-01 (News+Portal Track / Dual Dashboard Foundation)
+### Scope
+- Added PostgreSQL schema + API + collector/analyzer plumbing for `scope=community|news|mixed`.
+- Added new APIs and feature-gated routes for news and compare dashboards.
+- Kept default behavior at `scope=community` and `FEATURE_* = false`.
+
+### Added
+- Migration: `db/migrations/0005_news_sources_and_scope.sql`
+- News source catalog: `packages/shared/src/sources/news-sources.ts`
+- News collectors: `packages/collector/src/scrapers/news/*`
+- Feed probe script: `scripts/verify-news-feeds.ts`
+- Scope overlap analyzer: `packages/analyzer/src/scope-overlap.ts`
+- APIs:
+  - `app/api/regions/compare/route.ts`
+  - `app/api/portal-rankings/route.ts`
+  - `app/api/issue-overlaps/route.ts`
+- UI routes/components:
+  - `app/news/page.tsx`
+  - `app/compare/page.tsx`
+  - `components/dashboard/DualCompareClient.tsx`
+
+### Updated
+- Scope support in existing APIs: topics / regions / global-topics
+- Scope-aware hooks: `useRegions`, `useGlobalTopics`, `useTopics`, `useRegion`
+- Global analyzer overlap upsert into `issue_overlaps`
+- Region expansion to 19 regions and map coordinate expansion
+
+### Validation
+- `corepack pnpm test` -> pass
+- `corepack pnpm lint` -> pass
+- `corepack pnpm build` -> pass
+
+## GP-20260419-109 (Feature gate hardening: `news/compare` hard 404 when disabled)
+### Why
+- Next.js 16 streamed `notFound()` rendered 404 UI but returned HTTP 200 for `/pulse/news`, `/pulse/compare` when `FEATURE_DUAL_MAP_UI=false`.
+
+### What changed
+- Added route-level hard gate via [`proxy.ts`](/C:/Users/wsp/Desktop/Web/Human_flow/global-pulse/proxy.ts).
+- Migrated from deprecated `middleware.ts` convention to `proxy.ts` (Next 16 deprecation 대응).
+- Gate logic now resolves both basePath-aware and basePath-less paths and returns explicit JSON 404 with `x-robots-tag: noindex`.
+- Added `.tmp-verify/` ignore rule to reduce verification artifact noise.
+
+### Verification
+- `corepack pnpm test` -> pass (24/24)
+- `corepack pnpm lint` -> pass
+- `corepack pnpm build` -> pass
+- runtime smoke (built with `NEXT_BASE_PATH=/pulse`):
+  - `FEATURE_DUAL_MAP_UI=false` -> `/pulse` 200, `/pulse/news` 404, `/pulse/compare` 404
+  - `FEATURE_DUAL_MAP_UI=true` -> `/pulse` 200, `/pulse/news` 200, `/pulse/compare` 200
+- `corepack pnpm ops:news:verify-feeds` -> pass (`total=73`, `reachable=51`, `shouldActivate=44`)

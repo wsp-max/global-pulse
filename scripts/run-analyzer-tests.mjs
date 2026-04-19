@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -23,11 +23,13 @@ function collectTestFiles(rootDir) {
   return files.sort((left, right) => left.localeCompare(right));
 }
 
-const testRoot = resolve("packages/analyzer/test");
-const testFiles = collectTestFiles(testRoot);
+const testRoots = [resolve("packages/analyzer/test"), resolve("packages/collector/test")];
+const testFiles = testRoots
+  .filter((testRoot) => existsSync(testRoot))
+  .flatMap((testRoot) => collectTestFiles(testRoot));
 
 if (testFiles.length === 0) {
-  console.log("No analyzer tests found. Skipping.");
+  console.log("No tests found. Skipping.");
   process.exit(0);
 }
 

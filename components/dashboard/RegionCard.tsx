@@ -1,17 +1,26 @@
 import Link from "next/link";
+import { SOURCES } from "@global-pulse/shared";
 import { HeatBadge } from "@/components/shared/HeatBadge";
-import type { RegionDashboardRow } from "@/lib/types/api";
+import type { DashboardScope, RegionDashboardRow } from "@/lib/types/api";
 import { toHeatPercent } from "@/lib/utils/heat";
 
 interface RegionCardProps {
   region: RegionDashboardRow;
+  scope?: DashboardScope;
 }
 
-export function RegionCard({ region }: RegionCardProps) {
+const PORTAL_SOURCE_ID_SET = new Set(
+  SOURCES.filter((source) => source.type === "news" && source.newsCategory === "portal").map((source) => source.id),
+);
+
+export function RegionCard({ region, scope = "community" }: RegionCardProps) {
   const heatScore = Math.round(region.totalHeatScore);
   const sentimentPercent = Math.round(((region.avgSentiment + 1) / 2) * 100);
   const heatPercent = toHeatPercent(region.totalHeatScore, 2000, 10);
   const topKeywords = region.topKeywords.slice(0, 5);
+  const hasPortalTrending =
+    scope === "news" &&
+    region.topTopics.some((topic) => topic.sourceIds.some((sourceId) => PORTAL_SOURCE_ID_SET.has(sourceId)));
 
   return (
     <Link
@@ -23,6 +32,11 @@ export function RegionCard({ region }: RegionCardProps) {
         <div className="font-medium">
           <span className="mr-2">{region.flagEmoji}</span>
           {region.nameKo}
+          {hasPortalTrending && (
+            <span className="ml-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-[10px] text-amber-300">
+              📈 trending
+            </span>
+          )}
         </div>
         <HeatBadge score={heatScore} />
       </div>

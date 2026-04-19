@@ -9,6 +9,9 @@ import { enrichTopicsWithEmbeddings } from "./topic-embeddings";
 import { clusterTopics } from "./topic-clusterer";
 
 const logger = getLogger("analyzer");
+type AnalysisScope = "community" | "news" | "mixed";
+const ANALYZER_SCOPE_VALUES: AnalysisScope[] = ["community", "news", "mixed"];
+const FEATURE_NEWS_PIPELINE = process.env.FEATURE_NEWS_PIPELINE === "true";
 
 function log(message: string): void {
   logger.info(message);
@@ -48,6 +51,7 @@ interface TopicInsertRow {
   source_ids: string[];
   raw_post_ids: number[];
   burst_z: number | null;
+  scope: AnalysisScope;
   rank: number | null;
   period_start: string;
   period_end: string;
@@ -71,12 +75,20 @@ interface SnapshotInsertRow {
   top_keywords: string[];
   sources_active: number;
   sources_total: number;
+  scope: AnalysisScope;
   snapshot_at: string;
+}
+
+interface PortalRankingSignalRow {
+  rank: number | null;
+  headline: string;
+  view_count: number | string | null;
 }
 
 interface AnalysisStorage {
   mode: "postgres";
   fetchRawPosts(sourceIds: string[], periodStartIso: string): Promise<RawPostRow[]>;
+  fetchPortalRankingSignals(regionId: string, fromIso: string): Promise<PortalRankingSignalRow[]>;
   insertTopics(rows: TopicInsertRow[]): Promise<void>;
   insertHeatHistory(rows: HeatHistoryInsertRow[]): Promise<void>;
   insertRegionSnapshot(row: SnapshotInsertRow): Promise<void>;
@@ -120,6 +132,100 @@ function normalizeBurstTerm(value: string): string {
 
 function normalizeCanonicalKey(value: string): string {
   return value.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function normalizeTextForSimilarity(value: string): string[] {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/u)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2)
+    .slice(0, 64);
+}
+
+function cosineSimilarity(aTokens: string[], bTokens: string[]): number {
+  if (aTokens.length === 0 || bTokens.length === 0) {
+    return 0;
+  }
+
+  const aMap = new Map<string, number>();
+  const bMap = new Map<string, number>();
+  for (const token of aTokens) {
+    aMap.set(token, (aMap.get(token) ?? 0) + 1);
+  }
+  for (const token of bTokens) {
+    bMap.set(token, (bMap.get(token) ?? 0) + 1);
+  }
+
+  let dot = 0;
+  for (const [token, aValue] of aMap.entries()) {
+    const bValue = bMap.get(token) ?? 0;
+    dot += aValue * bValue;
+  }
+
+  const aNorm = Math.sqrt([...aMap.values()].reduce((sum, value) => sum + value * value, 0));
+  const bNorm = Math.sqrt([...bMap.values()].reduce((sum, value) => sum + value * value, 0));
+  if (aNorm === 0 || bNorm === 0) {
+    return 0;
+  }
+  return dot / (aNorm * bNorm);
+}
+
+function applyPortalBoost(
+  topics: Awaited<ReturnType<typeof clusterTopics>>,
+  signals: PortalRankingSignalRow[],
+): Awaited<ReturnType<typeof clusterTopics>> {
+  if (topics.length === 0 || signals.length === 0) {
+    return topics;
+  }
+
+  const signalVectors = signals
+    .map((signal) => ({
+      rank: Math.max(1, Math.min(100, toNumber(signal.rank, 100))),
+      tokens: normalizeTextForSimilarity(signal.headline),
+    }))
+    .filter((signal) => signal.tokens.length > 0);
+
+  if (signalVectors.length === 0) {
+    return topics;
+  }
+
+  const boosted = topics.map((topic) => {
+    const topicTokens = normalizeTextForSimilarity([topic.nameKo, topic.nameEn, ...topic.keywords].join(" "));
+    let matchedPortalRankWeight = 0;
+
+    for (const signal of signalVectors) {
+      const similarity = cosineSimilarity(topicTokens, signal.tokens);
+      if (similarity < 0.8) {
+        continue;
+      }
+      matchedPortalRankWeight += Math.max(0, (21 - signal.rank) / 20);
+    }
+
+    if (matchedPortalRankWeight <= 0) {
+      return topic;
+    }
+
+    const portalBoost = Math.min(1 + 0.08 * matchedPortalRankWeight, 1.6);
+    return {
+      ...topic,
+      heatScore: Number((topic.heatScore * portalBoost).toFixed(4)),
+    };
+  });
+
+  return [...boosted].sort((left, right) => right.heatScore - left.heatScore).map((topic, index) => ({
+    ...topic,
+    rank: index + 1,
+  }));
+}
+
+function parseScopeArg(value: string | undefined): AnalysisScope | undefined {
+  if (!value) {
+    return undefined;
+  }
+  return ANALYZER_SCOPE_VALUES.includes(value as AnalysisScope) ? (value as AnalysisScope) : undefined;
 }
 
 function applyBurstBoost(
@@ -215,6 +321,20 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
       );
       return rows;
     },
+    async fetchPortalRankingSignals(regionId, fromIso) {
+      const { rows } = await pool.query<PortalRankingSignalRow>(
+        `
+        select rank, headline, view_count
+        from portal_ranking_signals
+        where region_id = $1
+          and captured_at >= $2
+        order by captured_at desc, rank asc
+        limit 300
+        `,
+        [regionId, fromIso],
+      );
+      return rows;
+    },
     async insertTopics(rows) {
       if (rows.length === 0) return;
       const columns: Array<keyof TopicInsertRow & string> = [
@@ -238,6 +358,7 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
         "source_ids",
         "raw_post_ids",
         "burst_z",
+        "scope",
         "rank",
         "period_start",
         "period_end",
@@ -263,9 +384,9 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
       await pool.query(
         `
         insert into region_snapshots (
-          region_id,total_heat_score,active_topics,avg_sentiment,top_keywords,sources_active,sources_total,snapshot_at
+          region_id,total_heat_score,active_topics,avg_sentiment,top_keywords,sources_active,sources_total,scope,snapshot_at
         )
-        values ($1,$2,$3,$4,$5,$6,$7,$8)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
         `,
         [
           row.region_id,
@@ -275,6 +396,7 @@ function createPostgresStorage(pool: Pool): AnalysisStorage {
           row.top_keywords,
           row.sources_active,
           row.sources_total,
+          row.scope,
           row.snapshot_at,
         ],
       );
@@ -292,8 +414,19 @@ function resolveStorage(): AnalysisStorage | null {
   return createPostgresStorage(pool);
 }
 
-function sourceIdsForRegion(regionId: string): string[] {
-  return SOURCES.filter((source) => source.regionId === regionId).map((source) => source.id);
+function sourceIdsForRegion(regionId: string, scope: AnalysisScope): string[] {
+  return SOURCES.filter((source) => {
+    if (source.regionId !== regionId) {
+      return false;
+    }
+    if (scope === "community") {
+      return source.type === "community" || source.type === "sns";
+    }
+    if (scope === "news") {
+      return source.type === "news";
+    }
+    return true;
+  }).map((source) => source.id);
 }
 
 function targetRegionIds(regionFilter?: string): string[] {
@@ -306,22 +439,23 @@ function targetRegionIds(regionFilter?: string): string[] {
 async function runRegionAnalysis(params: {
   storage: AnalysisStorage;
   regionId: string;
+  scope: AnalysisScope;
   periodStartIso: string;
   periodEndIso: string;
   useGemini: boolean;
 }): Promise<void> {
-  const { storage, regionId, periodStartIso, periodEndIso, useGemini } = params;
-  const sourceIds = sourceIdsForRegion(regionId);
+  const { storage, regionId, scope, periodStartIso, periodEndIso, useGemini } = params;
+  const sourceIds = sourceIdsForRegion(regionId, scope);
 
   if (sourceIds.length === 0) {
-    log(`[${regionId}] skipped: no source definitions.`);
+    log(`[${regionId}:${scope}] skipped: no source definitions.`);
     return;
   }
 
   const rows = await storage.fetchRawPosts(sourceIds, periodStartIso);
   const posts = rows.map(toAnalysisPost);
   if (posts.length === 0) {
-    log(`[${regionId}] no posts collected in the period.`);
+    log(`[${regionId}:${scope}] no posts collected in the period.`);
     return;
   }
 
@@ -337,25 +471,35 @@ async function runRegionAnalysis(params: {
     keywords.map((keyword) => keyword.keyword),
     periodEndIso,
   );
+  const topicsWithPortalBoost =
+    scope === "news"
+      ? applyPortalBoost(
+          topics,
+          await storage.fetchPortalRankingSignals(
+            regionId,
+            new Date(new Date(periodEndIso).getTime() - 6 * 60 * 60 * 1000).toISOString(),
+          ),
+        )
+      : topics;
 
-  if (topics.length === 0) {
-    log(`[${regionId}] no topics generated.`);
+  if (topicsWithPortalBoost.length === 0) {
+    log(`[${regionId}:${scope}] no topics generated.`);
     return;
   }
 
   const summarizedTopics = useGemini
-    ? await summarizeTopicsWithGemini(topics, { regionId }).catch((error) => {
+    ? await summarizeTopicsWithGemini(topicsWithPortalBoost, { regionId }).catch((error) => {
         log(
-          `[${regionId}] gemini summarization failed, falling back to local topics: ${
+          `[${regionId}:${scope}] gemini summarization failed, falling back to local topics: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );
-        return topics;
+        return topicsWithPortalBoost;
       })
-    : topics;
+    : topicsWithPortalBoost;
   const analyzedTopics = await enrichTopicsWithEmbeddings(summarizedTopics, { regionId }).catch((error) => {
     log(
-      `[${regionId}] embedding enrichment failed, skipping embeddings: ${
+      `[${regionId}:${scope}] embedding enrichment failed, skipping embeddings: ${
         error instanceof Error ? error.message : String(error)
       }`,
     );
@@ -385,6 +529,7 @@ async function runRegionAnalysis(params: {
     source_ids: topic.sourceIds,
     raw_post_ids: topic.rawPostIds ?? [],
     burst_z: topic.burstZ ?? null,
+    scope,
     rank: topic.rank ?? null,
     period_start: topic.periodStart,
     period_end: topic.periodEnd,
@@ -421,11 +566,12 @@ async function runRegionAnalysis(params: {
     top_keywords: keywords.slice(0, 10).map((keyword) => keyword.keyword),
     sources_active: new Set(posts.map((post) => post.sourceId)).size,
     sources_total: sourceIds.length,
+    scope,
     snapshot_at: periodEndIso,
   });
 
   log(
-    `[${regionId}] posts=${posts.length}, keywords=${keywords.length}, topics=${analyzedTopics.length}, totalHeat=${totalHeatScore.toFixed(
+    `[${regionId}:${scope}] posts=${posts.length}, keywords=${keywords.length}, topics=${analyzedTopics.length}, totalHeat=${totalHeatScore.toFixed(
       1,
     )}`,
   );
@@ -433,9 +579,19 @@ async function runRegionAnalysis(params: {
 
 async function runAnalysis(): Promise<void> {
   const regionFilter = parseArg("--region");
+  const scopeArg = parseScopeArg(parseArg("--scope"));
   const hours = Number(parseArg("--hours") ?? 6);
   const useGemini = process.argv.includes("--with-gemini");
   const analysisHours = Number.isFinite(hours) && hours > 0 ? Math.min(hours, 168) : 6;
+  const scopes: AnalysisScope[] = scopeArg
+    ? [scopeArg]
+    : FEATURE_NEWS_PIPELINE
+      ? ["community", "news", "mixed"]
+      : ["community"];
+
+  if (parseArg("--scope") && !scopeArg) {
+    throw new Error(`Invalid --scope value "${parseArg("--scope")}". Allowed: ${ANALYZER_SCOPE_VALUES.join("|")}`);
+  }
 
   const storage = resolveStorage();
   if (!storage) {
@@ -449,17 +605,20 @@ async function runAnalysis(): Promise<void> {
   const regions = targetRegionIds(regionFilter);
 
   log(
-    `Starting analysis pipeline. db=${storage.mode} regions=${regions.join(",")} window=${analysisHours}h start=${periodStartIso} gemini=${useGemini}`,
+    `Starting analysis pipeline. db=${storage.mode} regions=${regions.join(",")} scopes=${scopes.join(",")} window=${analysisHours}h start=${periodStartIso} gemini=${useGemini}`,
   );
 
-  for (const regionId of regions) {
-    await runRegionAnalysis({
-      storage,
-      regionId,
-      periodStartIso,
-      periodEndIso,
-      useGemini,
-    });
+  for (const scope of scopes) {
+    for (const regionId of regions) {
+      await runRegionAnalysis({
+        storage,
+        regionId,
+        scope,
+        periodStartIso,
+        periodEndIso,
+        useGemini,
+      });
+    }
   }
 
   log("Analysis complete.");

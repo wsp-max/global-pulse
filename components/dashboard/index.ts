@@ -6,5 +6,6 @@ export { LivePulseIndicator } from "./LivePulseIndicator";
 export { PulseSignalBoard } from "./PulseSignalBoard";
 export { PropagationStream } from "./PropagationStream";
 export { DashboardClient } from "./DashboardClient";
+export { DualCompareClient } from "./DualCompareClient";
 
 

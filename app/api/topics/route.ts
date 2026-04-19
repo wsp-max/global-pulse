@@ -10,6 +10,29 @@ const PERIOD_HOURS: Record<string, number> = {
   "24h": 24,
   "7d": 168,
 };
+type Scope = "community" | "news" | "mixed";
+
+function parseScope(value: string | null): Scope {
+  if (value === "news" || value === "mixed") {
+    return value;
+  }
+  return "community";
+}
+
+function sourceIdsForRegionByScope(regionId: string, scope: Scope): string[] {
+  return SOURCES.filter((source) => {
+    if (source.regionId !== regionId) {
+      return false;
+    }
+    if (scope === "community") {
+      return source.type === "community" || source.type === "sns";
+    }
+    if (scope === "news") {
+      return source.type === "news";
+    }
+    return true;
+  }).map((source) => source.id);
+}
 
 function periodStartIso(period: string): string {
   const hours = PERIOD_HOURS[period] ?? 24;
@@ -33,30 +56,31 @@ async function getTopics(request: Request) {
   const offset = Number(searchParams.get("offset") ?? 0);
   const sort = searchParams.get("sort") ?? "heat";
   const period = searchParams.get("period") ?? "24h";
+  const scope = parseScope(searchParams.get("scope"));
   const startIso = periodStartIso(period);
   const sortColumn =
     sort === "sentiment" ? "sentiment" : sort === "recent" ? "created_at" : "heat_score";
 
   const postgres = getPostgresPoolOrNull();
   if (postgres) {
-    const sourceIds = SOURCES.filter((source) => source.regionId === region).map((source) => source.id);
+    const sourceIds = sourceIdsForRegionByScope(region, scope);
 
     try {
       const batchSelectionResult = await postgres.query<BatchSelectionRow>(
         `
         with batch_candidates as (
           select
-            max(created_at) filter (where period_end >= $2 and source_ids && $3::text[]) as latest_fresh_created_at,
-            max(created_at) filter (where source_ids && $3::text[]) as latest_any_created_at
-          from topics
-          where region_id = $1
+                max(created_at) filter (where period_end >= $2 and source_ids && $3::text[] and scope = $4) as latest_fresh_created_at,
+                max(created_at) filter (where source_ids && $3::text[] and scope = $4) as latest_any_created_at
+              from topics
+              where region_id = $1
         )
         select
           coalesce(latest_fresh_created_at, latest_any_created_at) as selected_created_at,
           latest_fresh_created_at is not null as is_fresh
         from batch_candidates
         `,
-        [region, startIso, sourceIds],
+        [region, startIso, sourceIds, scope],
       );
 
       const selectedBatchCreatedAt = batchSelectionResult.rows[0]?.selected_created_at ?? null;
@@ -69,10 +93,11 @@ async function getTopics(request: Request) {
           with filtered as (
             select
               id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,
-              post_count,total_views,total_likes,total_comments,source_ids,rank,period_start,period_end,created_at
+              post_count,total_views,total_likes,total_comments,source_ids,scope,rank,period_start,period_end,created_at
             from topics
             where region_id = $1
               and source_ids && $2::text[]
+              and scope = $6
               and (
                 $3::timestamptz is not null
                 and created_at between $3::timestamptz - interval '1 second'
@@ -87,13 +112,13 @@ async function getTopics(request: Request) {
           )
           select
             id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,
-            post_count,total_views,total_likes,total_comments,source_ids,rank,period_start,period_end
+            post_count,total_views,total_likes,total_comments,source_ids,scope,rank,period_start,period_end
           from dedup
           order by ${sortColumn} desc nulls last, period_end desc
           offset $4
           limit $5
           `,
-          [region, sourceIds, selectedBatchCreatedAt, offset, limit],
+          [region, sourceIds, selectedBatchCreatedAt, offset, limit, scope],
         ),
         postgres.query<{ total: string | number }>(
           `
@@ -102,6 +127,7 @@ async function getTopics(request: Request) {
             from topics
             where region_id = $1
               and source_ids && $2::text[]
+              and scope = $4
               and (
                 $3::timestamptz is not null
                 and created_at between $3::timestamptz - interval '1 second'
@@ -117,17 +143,18 @@ async function getTopics(request: Request) {
           select count(*) as total
           from dedup
           `,
-          [region, sourceIds, selectedBatchCreatedAt],
+          [region, sourceIds, selectedBatchCreatedAt, scope],
         ),
         postgres.query(
           `
           select *
           from region_snapshots
           where region_id = $1
+            and scope = $2
           order by snapshot_at desc
           limit 1
           `,
-          [region],
+          [region, scope],
         ),
       ]);
 
@@ -141,6 +168,7 @@ async function getTopics(request: Request) {
           offset,
           sort,
           period,
+          scope,
           periodStart: startIso,
           dataState,
           selectedBatchCreatedAt,
@@ -148,6 +176,7 @@ async function getTopics(request: Request) {
         stale: dataState === "stale",
         configured: true,
         provider: "postgres",
+        scope,
         lastUpdated: new Date().toISOString(),
       });
     } catch (error) {
@@ -168,6 +197,7 @@ async function getTopics(request: Request) {
     region: getRegionById(region),
     snapshot: null,
     meta: { limit, offset, sort, period },
+    scope,
     configured: false,
     provider: "none",
     lastUpdated: new Date().toISOString(),

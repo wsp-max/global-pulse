@@ -4,8 +4,11 @@ import { getLogger } from "@global-pulse/shared/server-logger";
 import type { Pool } from "pg";
 import { mapCrossRegionTopics } from "./cross-region-mapper";
 import { applyPropagationMetrics, type GlobalTopicHistoryPoint } from "./propagation-metrics";
+import { detectScopeOverlaps } from "./scope-overlap";
 
 const logger = getLogger("global-analyzer");
+type AnalysisScope = "community" | "news" | "mixed";
+const SCOPE_VALUES: AnalysisScope[] = ["community", "news", "mixed"];
 
 interface TopicRow {
   id: number;
@@ -23,6 +26,9 @@ interface TopicRow {
   total_comments: number | null;
   source_ids: string[] | null;
   raw_post_ids: number[] | null;
+  canonical_key: string | null;
+  embedding_json: number[] | null;
+  scope: AnalysisScope;
   rank: number | null;
   period_start: string;
   period_end: string;
@@ -37,6 +43,7 @@ interface TopicFirstPostRow {
 interface GlobalTopicHistoryRow {
   name_en: string;
   name_ko: string;
+  scope: AnalysisScope;
   total_heat_score: number | null;
   regional_heat_scores: Record<string, number> | null;
   created_at: string;
@@ -45,6 +52,7 @@ interface GlobalTopicHistoryRow {
 interface GlobalTopicInsertRow {
   name_en: string;
   name_ko: string;
+  scope: AnalysisScope;
   summary_en: string | null;
   summary_ko: string | null;
   regions: string[];
@@ -64,11 +72,22 @@ interface GlobalTopicInsertRow {
 
 interface GlobalAnalysisStorage {
   mode: "postgres";
-  fetchTopics(periodStartIso: string): Promise<TopicRow[]>;
+  fetchTopics(periodStartIso: string, scope: AnalysisScope): Promise<TopicRow[]>;
   fetchTopicFirstPostMoments(topicIds: number[]): Promise<TopicFirstPostRow[]>;
-  fetchRecentGlobalTopicHistory(historyHours: number): Promise<GlobalTopicHistoryPoint[]>;
-  expireActiveGlobalTopics(nowIso: string): Promise<void>;
+  fetchRecentGlobalTopicHistory(historyHours: number, scope: AnalysisScope): Promise<GlobalTopicHistoryPoint[]>;
+  expireActiveGlobalTopics(nowIso: string, scope: AnalysisScope): Promise<void>;
   insertGlobalTopics(rows: GlobalTopicInsertRow[]): Promise<void>;
+  upsertIssueOverlaps(
+    rows: Array<{
+      community_topic_id: number;
+      news_topic_id: number;
+      canonical_key: string | null;
+      cosine: number;
+      lag_minutes: number;
+      leader: "community" | "news" | "tie";
+      detected_at: string;
+    }>,
+  ): Promise<void>;
 }
 
 function log(message: string): void {
@@ -79,6 +98,16 @@ function parseArg(flag: string): string | undefined {
   const idx = process.argv.findIndex((arg) => arg === flag);
   if (idx === -1) return undefined;
   return process.argv[idx + 1];
+}
+
+function parseScopeArg(value: string | undefined): AnalysisScope {
+  if (!value) {
+    return "community";
+  }
+  if (!SCOPE_VALUES.includes(value as AnalysisScope)) {
+    throw new Error(`Invalid --scope value "${value}". Allowed: ${SCOPE_VALUES.join("|")}`);
+  }
+  return value as AnalysisScope;
 }
 
 function toNumber(value: unknown, fallback = 0): number {
@@ -115,6 +144,9 @@ function toTopic(row: TopicRow): Topic {
     totalComments: toNumber(row.total_comments),
     sourceIds: row.source_ids ?? [],
     rawPostIds: row.raw_post_ids ?? [],
+    canonicalKey: row.canonical_key ?? undefined,
+    embeddingJson: row.embedding_json ?? undefined,
+    scope: row.scope,
     rank: row.rank === null || row.rank === undefined ? undefined : toNumber(row.rank),
     periodStart: row.period_start,
     periodEnd: row.period_end,
@@ -299,13 +331,14 @@ function buildBatchInsert<T extends object>(
 function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
   return {
     mode: "postgres",
-    async fetchTopics(periodStartIso) {
+    async fetchTopics(periodStartIso, scope) {
       const { rows } = await pool.query<TopicRow>(
         `
         with distinct_region_batches as (
           select distinct region_id, created_at
           from topics
           where period_end >= $1
+            and scope = $2
         ),
         latest_region_batches as (
           select
@@ -321,15 +354,16 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
         )
         select
           t.id,t.region_id,t.name_ko,t.name_en,t.summary_ko,t.summary_en,t.keywords,t.sentiment,t.heat_score,t.post_count,
-          t.total_views,t.total_likes,t.total_comments,t.source_ids,t.raw_post_ids,t.rank,t.period_start,t.period_end
+          t.total_views,t.total_likes,t.total_comments,t.source_ids,t.raw_post_ids,t.canonical_key,t.embedding_json,t.scope,t.rank,t.period_start,t.period_end
         from topics t
         join selected_region_batches b
           on t.region_id = b.region_id
          and t.created_at = b.created_at
+        where t.scope = $2
         order by t.heat_score desc nulls last
         limit 4500
         `,
-        [periodStartIso],
+        [periodStartIso, scope],
       );
       return rows;
     },
@@ -353,21 +387,23 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
       );
       return rows;
     },
-    async fetchRecentGlobalTopicHistory(historyHours) {
+    async fetchRecentGlobalTopicHistory(historyHours, scope) {
       const safeHours = Math.max(1, Math.min(historyHours, 168));
       const { rows } = await pool.query<GlobalTopicHistoryRow>(
         `
         select
           name_en,
           name_ko,
+          scope,
           total_heat_score,
           regional_heat_scores,
           created_at
         from global_topics
         where created_at >= now() - make_interval(hours => $1)
+          and scope = $2
         order by created_at asc
         `,
-        [safeHours],
+        [safeHours, scope],
       );
 
       return rows.map((row) => ({
@@ -378,14 +414,15 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
         createdAt: row.created_at,
       }));
     },
-    async expireActiveGlobalTopics(nowIso) {
+    async expireActiveGlobalTopics(nowIso, scope) {
       await pool.query(
         `
         update global_topics
         set expires_at = $1
-        where expires_at is null or expires_at > $1
+        where scope = $2
+          and (expires_at is null or expires_at > $1)
         `,
-        [nowIso],
+        [nowIso, scope],
       );
     },
     async insertGlobalTopics(rows) {
@@ -393,6 +430,7 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
       const columns: Array<keyof GlobalTopicInsertRow & string> = [
         "name_en",
         "name_ko",
+        "scope",
         "summary_en",
         "summary_ko",
         "regions",
@@ -412,6 +450,50 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
       const batch = buildBatchInsert("global_topics", columns, rows);
       await pool.query(batch.sql, batch.values);
     },
+    async upsertIssueOverlaps(rows) {
+      if (rows.length === 0) {
+        return;
+      }
+
+      const values: unknown[] = [];
+      const tuples: string[] = [];
+      const columns = [
+        "community_topic_id",
+        "news_topic_id",
+        "canonical_key",
+        "cosine",
+        "lag_minutes",
+        "leader",
+        "detected_at",
+      ] as const;
+
+      for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+        const row = rows[rowIndex];
+        const placeholders: string[] = [];
+        for (let columnIndex = 0; columnIndex < columns.length; columnIndex += 1) {
+          const valueIndex = rowIndex * columns.length + columnIndex + 1;
+          placeholders.push(`$${valueIndex}`);
+          values.push(row[columns[columnIndex]]);
+        }
+        tuples.push(`(${placeholders.join(",")})`);
+      }
+
+      await pool.query(
+        `
+        insert into issue_overlaps (${columns.join(",")})
+        values ${tuples.join(",")}
+        on conflict (community_topic_id, news_topic_id)
+        do update
+        set
+          canonical_key = excluded.canonical_key,
+          cosine = excluded.cosine,
+          lag_minutes = excluded.lag_minutes,
+          leader = excluded.leader,
+          detected_at = excluded.detected_at
+        `,
+        values,
+      );
+    },
   };
 }
 
@@ -426,6 +508,7 @@ function resolveStorage(): GlobalAnalysisStorage | null {
 }
 
 async function runGlobalAnalysis(): Promise<void> {
+  const scope = parseScopeArg(parseArg("--scope"));
   const hours = Number(parseArg("--hours") ?? 24);
   const limit = Math.min(Number(parseArg("--limit") ?? 25), 100);
   const minRegions = Math.max(Number(parseArg("--min-regions") ?? 2), 2);
@@ -447,13 +530,13 @@ async function runGlobalAnalysis(): Promise<void> {
   const expiresAt = new Date(now.getTime() + 72 * 60 * 60 * 1000).toISOString();
 
   log(
-    `Starting global analysis. db=${storage.mode} window=${windowHours}h minRegions=${minRegions} similarity=${threshold}`,
+    `Starting global analysis. db=${storage.mode} scope=${scope} window=${windowHours}h minRegions=${minRegions} similarity=${threshold}`,
   );
 
-  const historyPoints = await storage.fetchRecentGlobalTopicHistory(30);
-  await storage.expireActiveGlobalTopics(nowIso);
+  const historyPoints = await storage.fetchRecentGlobalTopicHistory(30, scope);
+  await storage.expireActiveGlobalTopics(nowIso, scope);
 
-  const fetchedTopics = (await storage.fetchTopics(periodStartIso))
+  const fetchedTopics = (await storage.fetchTopics(periodStartIso, scope))
     .map(toTopic)
     .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
   if (fetchedTopics.length === 0) {
@@ -498,6 +581,7 @@ async function runGlobalAnalysis(): Promise<void> {
   const payload: GlobalTopicInsertRow[] = metricsApplied.map((topic) => ({
     name_en: topic.nameEn,
     name_ko: topic.nameKo,
+    scope,
     summary_en: topic.summaryEn ?? null,
     summary_ko: topic.summaryKo ?? null,
     regions: topic.regions,
@@ -517,7 +601,54 @@ async function runGlobalAnalysis(): Promise<void> {
 
   await storage.insertGlobalTopics(payload);
 
-  log(`Global analysis completed. generated=${metricsApplied.length}`);
+  const [communityCandidates, newsCandidates] = await Promise.all([
+    storage.fetchTopics(periodStartIso, "community"),
+    storage.fetchTopics(periodStartIso, "news"),
+  ]);
+
+  const normalizedCommunityTopics = communityCandidates
+    .map(toTopic)
+    .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
+  const normalizedNewsTopics = newsCandidates
+    .map(toTopic)
+    .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
+
+  const overlapTopicIds = [
+    ...new Set(
+      [...normalizedCommunityTopics, ...normalizedNewsTopics]
+        .map((topic) => topic.id ?? 0)
+        .filter((id) => id > 0),
+    ),
+  ];
+  const overlapFirstPostRows = await storage.fetchTopicFirstPostMoments(overlapTopicIds);
+  const overlapFirstPostByTopicId = new Map<number, TopicFirstPostRow>(
+    overlapFirstPostRows.map((row) => [toNumber(row.topic_id), row]),
+  );
+
+  const overlaps = detectScopeOverlaps(
+    normalizedCommunityTopics.map((topic) => ({
+      ...topic,
+      firstPostAt: overlapFirstPostByTopicId.get(topic.id ?? 0)?.first_post_at ?? topic.periodStart,
+    })),
+    normalizedNewsTopics.map((topic) => ({
+      ...topic,
+      firstPostAt: overlapFirstPostByTopicId.get(topic.id ?? 0)?.first_post_at ?? topic.periodStart,
+    })),
+  );
+
+  await storage.upsertIssueOverlaps(
+    overlaps.map((item) => ({
+      community_topic_id: item.communityTopicId,
+      news_topic_id: item.newsTopicId,
+      canonical_key: item.canonicalKey,
+      cosine: Number(item.cosine.toFixed(6)),
+      lag_minutes: item.lagMinutes,
+      leader: item.leader,
+      detected_at: nowIso,
+    })),
+  );
+
+  log(`Global analysis completed. generated=${metricsApplied.length} overlaps=${overlaps.length}`);
 }
 
 runGlobalAnalysis().catch((error) => {

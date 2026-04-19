@@ -5,6 +5,15 @@ import { getPostgresPoolOrNull } from "../_shared/postgres-server";
 import { withApiRequestLog } from "../_shared/route-logger";
 import { mapGlobalTopicRow, type GlobalTopicRow } from "../_shared/mappers";
 
+type Scope = "community" | "news" | "mixed";
+
+function parseScope(value: string | null): Scope {
+  if (value === "news" || value === "mixed") {
+    return value;
+  }
+  return "community";
+}
+
 function normalizeTopicIdentity(value: string | undefined): string {
   return (value ?? "")
     .normalize("NFKC")
@@ -244,6 +253,7 @@ async function getGlobalTopics(request: Request) {
   const limit = Math.min(Number(searchParams.get("limit") ?? 10), 50);
   const minRegions = Math.max(Number(searchParams.get("minRegions") ?? 2), 1);
   const sort = searchParams.get("sort") === "spread" ? "spread" : "heat";
+  const scope = parseScope(searchParams.get("scope"));
   const minAcceleration = Number(searchParams.get("min_acceleration") ?? Number.NaN);
   const statusFilter = searchParams.get("status");
 
@@ -255,12 +265,14 @@ async function getGlobalTopics(request: Request) {
         select
           id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
           topic_ids,total_heat_score,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
-          propagation_timeline,propagation_edges,created_at
+          propagation_timeline,propagation_edges,scope,created_at
         from global_topics
-        where expires_at is null or expires_at > now()
+        where (expires_at is null or expires_at > now())
+          and scope = $1
         order by ${sort === "spread" ? "spread_score" : "total_heat_score"} desc nulls last, total_heat_score desc
         limit 100
         `,
+        [scope],
       );
 
       let mapped = freshRows.map(mapGlobalTopicRow).filter((topic) => topic.regions.length >= minRegions);
@@ -273,11 +285,13 @@ async function getGlobalTopics(request: Request) {
           select
             id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
             topic_ids,total_heat_score,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
-            propagation_timeline,propagation_edges,created_at
+            propagation_timeline,propagation_edges,scope,created_at
           from global_topics
+          where scope = $1
           order by created_at desc, ${sort === "spread" ? "spread_score" : "total_heat_score"} desc nulls last
           limit 100
           `,
+          [scope],
         );
         mapped = staleRows.map(mapGlobalTopicRow).filter((topic) => topic.regions.length >= minRegions);
         dataState = mapped.length > 0 ? "stale" : "empty";
@@ -287,11 +301,13 @@ async function getGlobalTopics(request: Request) {
           select
             id,name_en,name_ko,summary_en,summary_ko,regions,regional_sentiments,regional_heat_scores,
             topic_ids,total_heat_score,first_seen_region,first_seen_at,velocity_per_hour,acceleration,spread_score,
-            propagation_timeline,propagation_edges,created_at
+            propagation_timeline,propagation_edges,scope,created_at
           from global_topics
+          where scope = $1
           order by created_at desc, ${sort === "spread" ? "spread_score" : "total_heat_score"} desc nulls last
           limit 200
           `,
+          [scope],
         );
 
         for (const topic of staleRows.map(mapGlobalTopicRow)) {
@@ -317,10 +333,20 @@ async function getGlobalTopics(request: Request) {
       return NextResponse.json({
         globalTopics: mapped.slice(0, limit),
         total: mapped.length,
-        meta: { limit, minRegions, dataState, supplementedFromHistory, sort, minAcceleration, status: statusFilter },
+        meta: {
+          limit,
+          minRegions,
+          dataState,
+          supplementedFromHistory,
+          sort,
+          scope,
+          minAcceleration,
+          status: statusFilter,
+        },
         stale: dataState === "stale",
         configured: true,
         provider: "postgres",
+        scope,
         lastUpdated: new Date().toISOString(),
       });
     } catch (error) {
@@ -342,6 +368,7 @@ async function getGlobalTopics(request: Request) {
       limit,
       minRegions,
       sort,
+      scope,
       minAcceleration,
       status: statusFilter,
     },

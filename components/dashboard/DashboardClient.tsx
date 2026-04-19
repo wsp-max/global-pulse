@@ -14,26 +14,31 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGlobalTopics } from "@/lib/hooks/useGlobalTopics";
 import { useRegions } from "@/lib/hooks/useRegions";
-import type { GlobalTopicsApiResponse, RegionsApiResponse } from "@/lib/types/api";
+import type { DashboardScope, GlobalTopicsApiResponse, RegionsApiResponse } from "@/lib/types/api";
 
 interface DashboardClientProps {
   initialRegions?: RegionsApiResponse;
   initialGlobalTopics?: GlobalTopicsApiResponse;
+  scope?: DashboardScope;
 }
 
-export function DashboardClient({ initialRegions, initialGlobalTopics }: DashboardClientProps) {
+export function DashboardClient({
+  initialRegions,
+  initialGlobalTopics,
+  scope = "community",
+}: DashboardClientProps) {
   const {
     data: regionsData,
     isLoading: isRegionsLoading,
     error: regionsError,
-  } = useRegions({
+  } = useRegions(scope, {
     fallbackData: initialRegions,
   });
   const {
     data: globalTopicsData,
     isLoading: isGlobalLoading,
     error: globalError,
-  } = useGlobalTopics(20, {
+  } = useGlobalTopics(20, scope, {
     fallbackData: initialGlobalTopics,
   });
 
@@ -89,7 +94,7 @@ export function DashboardClient({ initialRegions, initialGlobalTopics }: Dashboa
 
           <div className="space-y-4">
             {sortedRegions.map((region) => (
-              <RegionCard key={region.id} region={region} />
+              <RegionCard key={region.id} region={region} scope={scope} />
             ))}
           </div>
         </section>

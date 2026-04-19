@@ -1,5 +1,7 @@
 import type { GlobalTopic, Region, Topic } from "@global-pulse/shared";
 
+export type DashboardScope = "community" | "news" | "mixed";
+
 export interface RegionSnapshotApi {
   region_id?: string;
   total_heat_score?: number;
@@ -9,6 +11,7 @@ export interface RegionSnapshotApi {
   sources_active?: number;
   sources_total?: number;
   snapshot_at?: string;
+  scope?: DashboardScope;
 }
 
 export interface TopicsApiResponse {
@@ -16,6 +19,7 @@ export interface TopicsApiResponse {
   total: number;
   region: Region | null;
   snapshot: RegionSnapshotApi | null;
+  scope?: DashboardScope;
   configured?: boolean;
   lastUpdated?: string;
 }
@@ -28,11 +32,13 @@ export interface RegionDashboardRow extends Region {
   sourcesActive: number;
   sourcesTotal: number;
   snapshotAt?: string | null;
+  scope?: DashboardScope;
   topTopics: Topic[];
 }
 
 export interface RegionsApiResponse {
   regions: RegionDashboardRow[];
+  scope?: DashboardScope;
   configured?: boolean;
   lastUpdated?: string;
 }
@@ -40,6 +46,7 @@ export interface RegionsApiResponse {
 export interface GlobalTopicsApiResponse {
   globalTopics: GlobalTopic[];
   total: number;
+  scope?: DashboardScope;
   configured?: boolean;
   lastUpdated?: string;
 }
@@ -74,6 +81,72 @@ export interface TopicDetailApiResponse {
   relatedGlobalTopics: GlobalTopic[];
   timeline: TimelinePoint[];
   keywords: string[];
+  configured?: boolean;
+  lastUpdated?: string;
+}
+
+export interface RegionCompareApiResponse {
+  regionId: string;
+  community: RegionDashboardRow | null;
+  news: RegionDashboardRow | null;
+  overlap: {
+    sharedTopicCount: number;
+    sharedCanonicalKeys: string[];
+    lagSummary: {
+      avgMinutes: number | null;
+      minMinutes: number | null;
+      maxMinutes: number | null;
+    };
+  };
+  configured?: boolean;
+  lastUpdated?: string;
+}
+
+export interface PortalRankingRow {
+  id: number;
+  sourceId: string;
+  regionId: string;
+  rank: number;
+  headline: string;
+  url?: string | null;
+  viewCount?: number | null;
+  capturedAt: string;
+}
+
+export interface PortalRankingsApiResponse {
+  regionId: string;
+  limit: number;
+  rankings: PortalRankingRow[];
+  configured?: boolean;
+  lastUpdated?: string;
+}
+
+export interface IssueOverlapRow {
+  id: number;
+  canonicalKey: string | null;
+  cosine: number | null;
+  lagMinutes: number | null;
+  leader: "community" | "news" | "tie" | null;
+  detectedAt: string;
+  regionId: string;
+  communityTopic: {
+    id: number;
+    nameKo: string;
+    nameEn: string;
+    rank?: number | null;
+  };
+  newsTopic: {
+    id: number;
+    nameKo: string;
+    nameEn: string;
+    rank?: number | null;
+  };
+}
+
+export interface IssueOverlapsApiResponse {
+  minTier: number;
+  limit: number;
+  overlaps: IssueOverlapRow[];
   configured?: boolean;
   lastUpdated?: string;
 }

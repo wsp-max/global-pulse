@@ -44,6 +44,7 @@
     "ops:verify:source": "tsx scripts/verify-source-ingest.ts",
     "ops:source:report": "tsx scripts/source-connectivity-report.ts",
     "ops:source-verify": "tsx scripts/run-source-verify.ts",
+    "ops:news:verify-feeds": "tsx scripts/verify-news-feeds.ts",
     "ops:supabase:audit": "tsx scripts/audit-supabase-fallback.ts",
     "ops:supabase:budget": "tsx scripts/check-supabase-fallback-budget.ts",
     "ops:closure": "bash scripts/complete-closure.sh",

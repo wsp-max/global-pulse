@@ -8,6 +8,7 @@ import type { RegionDashboardRow } from "@/lib/types/api";
 interface WorldHeatMapProps {
   regions: RegionDashboardRow[];
   globalTopics?: GlobalTopic[];
+  variant?: "community" | "news";
 }
 
 interface FlowEdge {
@@ -29,6 +30,17 @@ const REGION_COORDINATES: Record<string, [number, number]> = {
   eu: [10.0, 51.2],
   me: [45.0, 24.0],
   ru: [90.0, 61.0],
+  br: [-51.9, -14.2],
+  in: [78.9, 22.6],
+  id: [117.9, -2.2],
+  mx: [-102.5, 23.6],
+  au: [133.8, -25.3],
+  vn: [108.3, 14.1],
+  th: [100.9, 15.9],
+  ar: [-64.2, -34.6],
+  ca: [-106.3, 56.1],
+  ng: [8.7, 9.1],
+  za: [24.0, -29.0],
 };
 
 const HEAT_LEGEND = [
@@ -80,14 +92,20 @@ function getFlowEdges(globalTopics: GlobalTopic[]): FlowEdge[] {
     .slice(0, 16);
 }
 
-export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) {
+export function WorldHeatMap({ regions, globalTopics = [], variant = "community" }: WorldHeatMapProps) {
   const maxHeat = Math.max(...regions.map((region) => region.totalHeatScore), 1);
   const flowEdges = getFlowEdges(globalTopics);
   const activeFlowRegionIds = new Set(flowEdges.flatMap((edge) => [edge.from, edge.to]));
+  const accentStroke = variant === "news" ? "rgba(251, 146, 60, 0.9)" : "rgba(56, 189, 248, 0.85)";
+  const accentFill = variant === "news" ? "#FCD34D" : "#67E8F9";
+  const radialGlow =
+    variant === "news"
+      ? "bg-[radial-gradient(circle_at_center,rgba(251,146,60,0.18),transparent_50%)]"
+      : "bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.14),transparent_50%)]";
 
   return (
     <div className="panel-grid relative overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.14),transparent_50%)]" />
+      <div className={`absolute inset-0 ${radialGlow}`} />
       <div className="relative">
         <p className="font-display text-lg text-[var(--text-accent)]">WORLD HEAT MAP</p>
         <p className="mt-1 text-xs text-[var(--text-secondary)]">Regional heat and cross-region signal routes.</p>
@@ -126,7 +144,7 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
                     key={`${edge.from}-${edge.to}-${index}`}
                     from={fromCoord}
                     to={toCoord}
-                    stroke="rgba(56,189,248,0.85)"
+                    stroke={accentStroke}
                     strokeWidth={1.35}
                     fill="none"
                     className="map-flow-line"
@@ -147,7 +165,7 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
                 ];
                 return (
                   <Marker key={`edge-label-${edge.from}-${edge.to}-${index}`} coordinates={midpoint}>
-                    <text textAnchor="middle" y={-2} className="fill-cyan-300 text-[9px] font-semibold">
+                    <text textAnchor="middle" y={-2} className="text-[9px] font-semibold" style={{ fill: accentFill }}>
                       +{toLagHours(edge.lagMinutes)}h
                     </text>
                   </Marker>
@@ -168,7 +186,7 @@ export function WorldHeatMap({ regions, globalTopics = [] }: WorldHeatMapProps) 
 
                 return (
                   <Marker key={`flow-dot-${edge.to}-${index}`} coordinates={coordinates}>
-                    <circle r={1.4} className="map-flow-dot" style={dotStyle} />
+                    <circle r={1.4} className="map-flow-dot" style={{ ...dotStyle, fill: accentFill }} />
                   </Marker>
                 );
               })}
