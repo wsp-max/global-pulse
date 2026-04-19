@@ -34,6 +34,7 @@ export interface RegionDashboardRow extends Region {
 export interface RegionsApiResponse {
   regions: RegionDashboardRow[];
   configured?: boolean;
+  lastUpdated?: string;
 }
 
 export interface GlobalTopicsApiResponse {

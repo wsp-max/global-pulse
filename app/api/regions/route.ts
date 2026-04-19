@@ -162,6 +162,7 @@ async function getRegions() {
       regions: regionRows,
       configured: true,
       provider: "postgres",
+      lastUpdated: new Date().toISOString(),
     });
   }
 
@@ -178,6 +179,7 @@ async function getRegions() {
     })),
     configured: false,
     provider: "none",
+    lastUpdated: new Date().toISOString(),
   });
 }
 

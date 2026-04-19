@@ -15,13 +15,13 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   {
     href: "/",
-    label: "\uD648",
+    label: "대시보드",
     icon: Home,
     match: (pathname) => pathname === "/",
   },
   {
     href: "/global-issues",
-    label: "\uAE00\uB85C\uBC8C",
+    label: "글로벌 이슈",
     icon: Globe2,
     match: (pathname) => pathname.startsWith("/global-issues"),
   },

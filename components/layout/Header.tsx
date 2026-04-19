@@ -1,20 +1,12 @@
 import Link from "next/link";
 import { REGIONS } from "@global-pulse/shared";
-
-function formatTime(timezone: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: timezone,
-  }).format(new Date());
-}
+import { HeaderClock } from "./HeaderClock";
 
 const NAV_LINKS = [
-  { href: "/", label: "Dashboard" },
-  { href: "/global-issues", label: "Global Issues" },
-  { href: "/timeline", label: "Timeline" },
-  { href: "/search", label: "Search" },
+  { href: "/", label: "대시보드" },
+  { href: "/global-issues", label: "글로벌 이슈" },
+  { href: "/timeline", label: "타임라인" },
+  { href: "/search", label: "검색" },
 ];
 
 export function Header() {
@@ -35,15 +27,7 @@ export function Header() {
               Community Sentiment Monitor
             </span>
           </div>
-
-          <div className="hidden items-center gap-4 text-xs text-[var(--text-secondary)] lg:flex">
-            {keyRegions.map((timezone) => (
-              <span key={timezone}>
-                {timezone}: {formatTime(timezone)}
-              </span>
-            ))}
-            <span>Active Regions: {REGIONS.length}</span>
-          </div>
+          <HeaderClock keyRegions={keyRegions} activeRegions={REGIONS.length} />
         </div>
 
         <nav className="mt-3 hidden items-center gap-3 text-sm text-[var(--text-secondary)] md:flex">
@@ -61,4 +45,3 @@ export function Header() {
     </header>
   );
 }
-
