@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { SOURCES } from "@global-pulse/shared";
 import { HeatBadge } from "@/components/shared/HeatBadge";
 import type { DashboardScope, RegionDashboardRow } from "@/lib/types/api";
@@ -18,9 +18,15 @@ export function RegionCard({ region, scope = "community" }: RegionCardProps) {
   const sentimentPercent = Math.round(((region.avgSentiment + 1) / 2) * 100);
   const heatPercent = toHeatPercent(region.totalHeatScore, 2000, 10);
   const topKeywords = region.topKeywords.slice(0, 5);
+  const topicLabels = region.topTopics
+    .slice(0, 10)
+    .map((topic) => topic.nameKo || topic.nameEn)
+    .filter(Boolean);
+  const extraTopicCount = Math.max(0, region.topTopics.length - 10);
   const hasPortalTrending =
     scope === "news" &&
     region.topTopics.some((topic) => topic.sourceIds.some((sourceId) => PORTAL_SOURCE_ID_SET.has(sourceId)));
+  const isPartiallyStale = region.dataState === "partially-stale";
 
   return (
     <Link
@@ -42,8 +48,19 @@ export function RegionCard({ region, scope = "community" }: RegionCardProps) {
       </div>
 
       <div className="mt-3 text-xs text-[var(--text-secondary)]">
-        TOP: {topKeywords.length > 0 ? topKeywords.join(" / ") : "데이터 수집 중"}
+        TOP 키워드: {topKeywords.length > 0 ? topKeywords.join(" / ") : "데이터 수집 중"}
       </div>
+
+      <div className="mt-2 text-[11px] leading-relaxed text-[var(--text-tertiary)]">
+        Top Topics: {topicLabels.length > 0 ? topicLabels.join(" / ") : "수집 대기"}
+        {extraTopicCount > 0 ? ` / +${extraTopicCount}` : ""}
+      </div>
+
+      {isPartiallyStale && (
+        <div className="mt-2 inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">
+          partially-stale
+        </div>
+      )}
 
       <div className="mt-2 h-1.5 rounded-full bg-[var(--bg-tertiary)]">
         <div
@@ -54,9 +71,7 @@ export function RegionCard({ region, scope = "community" }: RegionCardProps) {
           }}
         />
       </div>
-      <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">
-        Heat {heatScore} / 상대 강도 {heatPercent}%
-      </p>
+      <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">Heat {heatScore} / 상대 강도 {heatPercent}%</p>
 
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
         <div

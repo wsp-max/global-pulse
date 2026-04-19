@@ -33,6 +33,8 @@ export interface RegionDashboardRow extends Region {
   sourcesTotal: number;
   snapshotAt?: string | null;
   scope?: DashboardScope;
+  dataState?: "fresh" | "stale" | "empty" | "partially-stale";
+  supplementedFromHistory?: number;
   topTopics: Topic[];
 }
 

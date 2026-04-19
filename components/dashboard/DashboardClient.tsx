@@ -39,7 +39,7 @@ export function DashboardClient({
     data: globalTopicsData,
     isLoading: isGlobalLoading,
     error: globalError,
-  } = useGlobalTopics(20, scope, {
+  } = useGlobalTopics(30, scope, {
     fallbackData: initialGlobalTopics,
   });
 

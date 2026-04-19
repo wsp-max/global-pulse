@@ -11,6 +11,8 @@ interface BatchSelectionRow {
   is_fresh: boolean;
 }
 
+type RegionDataState = "fresh" | "stale" | "empty" | "partially-stale";
+
 function parseScope(value: string | null): Scope {
   if (value === "news" || value === "mixed") {
     return value;
@@ -118,7 +120,7 @@ async function getRegions(request: Request) {
 
         const selectedBatchCreatedAt = batchSelectionResult.rows[0]?.selected_created_at ?? null;
         const isFresh = batchSelectionResult.rows[0]?.is_fresh ?? false;
-        const dataState = selectedBatchCreatedAt ? (isFresh ? "fresh" : "stale") : "empty";
+        let dataState: RegionDataState = selectedBatchCreatedAt ? (isFresh ? "fresh" : "stale") : "empty";
 
         const [topicsResult, metricsResult] = await Promise.all([
           postgres.query<TopicRow>(
@@ -141,7 +143,7 @@ async function getRegions(request: Request) {
                 and $3::timestamptz + interval '1 second'
               )
             order by heat_score desc, rank asc nulls last
-            limit 8
+            limit 12
             `,
             [region.id, sourceIds, selectedBatchCreatedAt, scope],
           ),
@@ -178,7 +180,83 @@ async function getRegions(request: Request) {
 
         const snapshot = snapshotResult.rows[0];
         const metrics = metricsResult.rows[0];
-        const topTopics = topicsResult.rows.map(mapTopicRow);
+        const dedupeByLabel = (rows: TopicRow[]): TopicRow[] => {
+          const seen = new Set<string>();
+          const output: TopicRow[] = [];
+          for (const row of rows) {
+            const key = (row.name_en || row.name_ko || "")
+              .normalize("NFKC")
+              .toLowerCase()
+              .replace(/\s+/g, " ")
+              .trim();
+            if (!key || seen.has(key)) {
+              continue;
+            }
+            seen.add(key);
+            output.push(row);
+          }
+          return output;
+        };
+
+        const mergedTopicRows = dedupeByLabel(topicsResult.rows);
+        let supplementedFromHistory = 0;
+
+        if (selectedBatchCreatedAt && mergedTopicRows.length < 12) {
+          const supplementalResult = await postgres.query<TopicRow>(
+            `
+            with history as (
+              select
+                id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
+                post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,scope,rank,period_start,period_end,
+                null::float as velocity_per_hour,
+                null::float as acceleration,
+                null::float as spread_score,
+                null::jsonb as propagation_timeline,
+                null::jsonb as propagation_edges
+              from topics
+              where region_id = $1
+                and source_ids && $2::text[]
+                and scope = $4
+                and created_at < $3::timestamptz - interval '1 second'
+              order by created_at desc, heat_score desc, rank asc nulls last
+              limit 24
+            )
+            select *
+            from history
+            `,
+            [region.id, sourceIds, selectedBatchCreatedAt, scope],
+          );
+
+          const supplementalRows = dedupeByLabel(supplementalResult.rows);
+          for (const row of supplementalRows) {
+            if (mergedTopicRows.length >= 12) {
+              break;
+            }
+            const key = (row.name_en || row.name_ko || "")
+              .normalize("NFKC")
+              .toLowerCase()
+              .replace(/\s+/g, " ")
+              .trim();
+            const exists = mergedTopicRows.some((item) => {
+              const itemKey = (item.name_en || item.name_ko || "")
+                .normalize("NFKC")
+                .toLowerCase()
+                .replace(/\s+/g, " ")
+                .trim();
+              return itemKey === key;
+            });
+            if (!exists) {
+              mergedTopicRows.push(row);
+              supplementedFromHistory += 1;
+            }
+          }
+        }
+
+        if (supplementedFromHistory > 0 && mergedTopicRows.length >= 10) {
+          dataState = "partially-stale";
+        }
+
+        const topTopics = mergedTopicRows.map(mapTopicRow);
         const hasMetrics = Number(metrics?.active_topics ?? 0) > 0;
 
         return {
@@ -191,7 +269,8 @@ async function getRegions(request: Request) {
           sourcesTotal: Number(snapshot?.sources_total ?? sourceIds.length),
           snapshotAt: snapshot?.snapshot_at ?? selectedBatchCreatedAt ?? null,
           dataState,
-          stale: dataState === "stale",
+          supplementedFromHistory,
+          stale: dataState === "stale" || dataState === "partially-stale",
           scope,
           topTopics,
         };

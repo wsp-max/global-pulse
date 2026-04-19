@@ -9,7 +9,7 @@ interface UseGlobalTopicsOptions {
 }
 
 export function useGlobalTopics(
-  limit = 10,
+  limit = 30,
   scope: DashboardScope = "community",
   options: UseGlobalTopicsOptions = {},
 ) {

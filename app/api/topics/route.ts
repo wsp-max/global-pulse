@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 async function getTopics(request: Request) {
   const { searchParams } = new URL(request.url);
   const region = searchParams.get("region") ?? "kr";
-  const limit = Math.min(Number(searchParams.get("limit") ?? 15), 50);
+  const limit = Math.min(Number(searchParams.get("limit") ?? 20), 50);
   const offset = Number(searchParams.get("offset") ?? 0);
   const sort = searchParams.get("sort") ?? "heat";
   const period = searchParams.get("period") ?? "24h";
@@ -85,7 +85,11 @@ async function getTopics(request: Request) {
 
       const selectedBatchCreatedAt = batchSelectionResult.rows[0]?.selected_created_at ?? null;
       const isFresh = batchSelectionResult.rows[0]?.is_fresh ?? false;
-      const dataState = selectedBatchCreatedAt ? (isFresh ? "fresh" : "stale") : "empty";
+      let dataState: "fresh" | "stale" | "empty" | "partially-stale" = selectedBatchCreatedAt
+        ? isFresh
+          ? "fresh"
+          : "stale"
+        : "empty";
 
       const [topicsResult, countResult, snapshotResult] = await Promise.all([
         postgres.query<TopicRow>(
@@ -165,8 +169,78 @@ async function getTopics(request: Request) {
         ),
       ]);
 
+      const topicRows = topicsResult.rows;
+      let supplementedFromHistory = 0;
+
+      if (selectedBatchCreatedAt && topicRows.length < Math.min(10, limit)) {
+        const supplementalResult = await postgres.query<TopicRow>(
+          `
+          with history as (
+            select
+              id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
+              post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,scope,rank,period_start,period_end,
+              null::float as velocity_per_hour,
+              null::float as acceleration,
+              null::float as spread_score,
+              null::jsonb as propagation_timeline,
+              null::jsonb as propagation_edges,
+              created_at
+            from topics
+            where region_id = $1
+              and source_ids && $2::text[]
+              and scope = $4
+              and created_at < $3::timestamptz - interval '1 second'
+          ),
+          dedup as (
+            select distinct on (lower(coalesce(name_en, name_ko)))
+              *
+            from history
+            order by lower(coalesce(name_en, name_ko)), created_at desc, heat_score desc
+          )
+          select
+            id,region_id,name_ko,name_en,summary_ko,summary_en,sample_titles,keywords,sentiment,category,entities,aliases,canonical_key,embedding_json,heat_score,heat_score_display,
+            post_count,total_views,total_likes,total_comments,source_ids,raw_post_ids,burst_z,scope,rank,period_start,period_end,
+            velocity_per_hour,acceleration,spread_score,propagation_timeline,propagation_edges
+          from dedup
+          order by ${sortColumn} desc nulls last, period_end desc
+          limit $5
+          `,
+          [region, sourceIds, selectedBatchCreatedAt, scope, Math.max(0, limit - topicRows.length)],
+        );
+
+        const existingKeys = new Set(
+          topicRows.map((row) =>
+            (row.name_en || row.name_ko || "")
+              .normalize("NFKC")
+              .toLowerCase()
+              .replace(/\s+/g, " ")
+              .trim(),
+          ),
+        );
+
+        for (const row of supplementalResult.rows) {
+          if (topicRows.length >= limit) {
+            break;
+          }
+          const key = (row.name_en || row.name_ko || "")
+            .normalize("NFKC")
+            .toLowerCase()
+            .replace(/\s+/g, " ")
+            .trim();
+          if (key && !existingKeys.has(key)) {
+            existingKeys.add(key);
+            topicRows.push(row);
+            supplementedFromHistory += 1;
+          }
+        }
+      }
+
+      if (supplementedFromHistory > 0 && topicRows.length >= Math.min(10, limit)) {
+        dataState = "partially-stale";
+      }
+
       return NextResponse.json({
-        topics: topicsResult.rows.map(mapTopicRow),
+        topics: topicRows.map(mapTopicRow),
         total: Number(countResult.rows[0]?.total ?? 0),
         region: getRegionById(region),
         snapshot: snapshotResult.rows[0] ?? null,
@@ -178,9 +252,10 @@ async function getTopics(request: Request) {
           scope,
           periodStart: startIso,
           dataState,
+          supplementedFromHistory,
           selectedBatchCreatedAt,
         },
-        stale: dataState === "stale",
+        stale: dataState === "stale" || dataState === "partially-stale",
         configured: true,
         provider: "postgres",
         scope,
