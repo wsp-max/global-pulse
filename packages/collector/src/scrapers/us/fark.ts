@@ -3,7 +3,10 @@ import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
 import { cleanText } from "../../utils/text-cleaner";
 
-const FARK_RSS_URL = "https://www.fark.com/rss/fark.rss";
+const FARK_RSS_URLS = [
+  "https://www.fark.com/rss/fark.rss",
+  "https://news.google.com/rss/search?q=site:fark.com&hl=en-US&gl=US&ceid=US:en",
+];
 
 function parseCount(value: string): number {
   const numeric = value.replace(/[^\d]/gu, "");
@@ -58,25 +61,43 @@ export class FarkScraper extends BaseScraper {
   sourceId = "fark";
 
   async fetchAndParse(): Promise<ScrapedPost[]> {
-    const response = await fetchWithRetry<string>(FARK_RSS_URL, {
-      responseType: "text",
-      headers: {
-        Accept: "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8",
-      },
-    });
+    let feedXml: string | null = null;
+    const errors: string[] = [];
+
+    for (const url of FARK_RSS_URLS) {
+      try {
+        const response = await fetchWithRetry<string>(url, {
+          responseType: "text",
+          headers: {
+            Accept: "application/rss+xml,application/atom+xml,application/xml;q=0.9,text/xml;q=0.8",
+          },
+        });
+        feedXml = response.data;
+        break;
+      } catch (error) {
+        errors.push(`${url}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    if (!feedXml) {
+      throw new Error(`Fark feed fetch failed: ${errors.join(" | ")}`.slice(0, 1200));
+    }
 
     const { load } = await import("cheerio");
-    const $ = load(response.data, { xmlMode: true });
+    const $ = load(feedXml, { xmlMode: true });
     const posts: ScrapedPost[] = [];
     const seenIds = new Set<string>();
+    const itemNodes = $("item").length > 0 ? $("item") : $("entry");
 
-    $("item").each((_, element) => {
+    itemNodes.each((_, element) => {
       if (posts.length >= 50) {
         return false;
       }
 
       const item = $(element);
-      const link = cleanText(item.find("link").first().text());
+      const link =
+        cleanText(item.find("link").first().attr("href")) ||
+        cleanText(item.find("link").first().text());
       if (!link) {
         return;
       }
@@ -96,10 +117,16 @@ export class FarkScraper extends BaseScraper {
       posts.push({
         externalId,
         title: normalizedTitle.title,
-        bodyPreview: cleanText(item.find("description").first().text()).slice(0, 200) || undefined,
+        bodyPreview:
+          (cleanText(item.find("description").first().text()) ||
+            cleanText(item.find("summary").first().text()) ||
+            cleanText(item.find("content").first().text()))
+            .slice(0, 200) || undefined,
         url: link,
         commentCount: normalizedTitle.commentCountFromTitle,
-        postedAt: normalizePublishedAt(cleanText(item.find("pubDate").first().text())),
+        postedAt: normalizePublishedAt(
+          cleanText(item.find("pubDate").first().text()) || cleanText(item.find("updated").first().text()),
+        ),
       });
     });
 

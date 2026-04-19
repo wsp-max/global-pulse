@@ -9,7 +9,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     nameEn: "Yonhap",
     url: "https://www.yna.co.kr",
     type: "news",
-    scrapeUrl: "https://www.yna.co.kr/rss/all.xml",
+    scrapeUrl: "https://www.yna.co.kr/rss/news.xml",
     scrapeIntervalMinutes: 30,
     feedKind: "rss",
     newsCategory: "wire_service",
@@ -31,7 +31,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     trustTier: 2,
     language: "ko",
     rankingHint: "popularDay",
-    isActive: true,
+    isActive: false, // policy: disable-now (robots disallow)
   },
   {
     id: "daum_news_ranking",
@@ -40,7 +40,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     nameEn: "Daum News Ranking",
     url: "https://news.daum.net",
     type: "news",
-    scrapeUrl: "https://news.daum.net/ranking/popular",
+    scrapeUrl: "https://news.daum.net/",
     scrapeIntervalMinutes: 30,
     feedKind: "html_ranking",
     newsCategory: "portal",
@@ -77,7 +77,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "newspaper",
     trustTier: 2,
     language: "ko",
-    isActive: true,
+    isActive: false, // policy: disable-until-fixed (empty feed)
   },
   {
     id: "hankyoreh_rss",
@@ -101,9 +101,9 @@ export const NEWS_SOURCES: readonly Source[] = [
     nameEn: "KBS News RSS",
     url: "https://news.kbs.co.kr",
     type: "news",
-    scrapeUrl: "https://news.kbs.co.kr/rss/rss.xml",
+    scrapeUrl: "https://news.kbs.co.kr/news/pc/main/main.html",
     scrapeIntervalMinutes: 60,
-    feedKind: "rss",
+    feedKind: "html_ranking",
     newsCategory: "broadcaster",
     trustTier: 2,
     language: "ko",
@@ -116,9 +116,9 @@ export const NEWS_SOURCES: readonly Source[] = [
     nameEn: "YTN RSS",
     url: "https://www.ytn.co.kr",
     type: "news",
-    scrapeUrl: "https://www.ytn.co.kr/_comm/ytn_rss.xml",
+    scrapeUrl: "https://www.ytn.co.kr/",
     scrapeIntervalMinutes: 60,
-    feedKind: "rss",
+    feedKind: "html_ranking",
     newsCategory: "broadcaster",
     trustTier: 2,
     language: "ko",
@@ -131,11 +131,11 @@ export const NEWS_SOURCES: readonly Source[] = [
     regionId: "jp",
     name: "共同通信 RSS",
     nameEn: "Kyodo RSS",
-    url: "https://nordot.app",
+    url: "https://english.kyodonews.net",
     type: "news",
-    scrapeUrl: "https://nordot.app/rss",
+    scrapeUrl: "https://english.kyodonews.net/",
     scrapeIntervalMinutes: 30,
-    feedKind: "rss",
+    feedKind: "html_ranking",
     newsCategory: "wire_service",
     trustTier: 1,
     language: "ja",
@@ -193,9 +193,9 @@ export const NEWS_SOURCES: readonly Source[] = [
     nameEn: "Yomiuri RSS",
     url: "https://www.yomiuri.co.jp",
     type: "news",
-    scrapeUrl: "https://www.yomiuri.co.jp/rss/yol/topstories.xml",
+    scrapeUrl: "https://www.yomiuri.co.jp/",
     scrapeIntervalMinutes: 60,
-    feedKind: "rss",
+    feedKind: "html_ranking",
     newsCategory: "newspaper",
     trustTier: 2,
     language: "ja",
@@ -240,9 +240,9 @@ export const NEWS_SOURCES: readonly Source[] = [
     nameEn: "AP News RSS",
     url: "https://apnews.com",
     type: "news",
-    scrapeUrl: "https://apnews.com/hub/ap-top-news?output=xml",
+    scrapeUrl: "https://apnews.com/",
     scrapeIntervalMinutes: 30,
-    feedKind: "rss",
+    feedKind: "html_ranking",
     newsCategory: "wire_service",
     trustTier: 1,
     language: "en",
@@ -261,7 +261,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "wire_service",
     trustTier: 1,
     language: "en",
-    isActive: true,
+    isActive: false, // policy: disable-until-fixed (endpoint 404)
   },
   {
     id: "npr_rss",
@@ -398,7 +398,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "wire_service",
     trustTier: 1,
     language: "en",
-    isActive: true,
+    isActive: false, // policy: disable-until-fixed (endpoint 404)
   },
   {
     id: "euronews_rss",
@@ -484,7 +484,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     nameEn: "Xinhua RSS",
     url: "https://www.news.cn",
     type: "news",
-    scrapeUrl: "http://www.news.cn/rss/world.xml",
+    scrapeUrl: "https://www.xinhuanet.com/english/rss/worldrss.xml",
     scrapeIntervalMinutes: 30,
     feedKind: "rss",
     newsCategory: "wire_service",
@@ -546,9 +546,9 @@ export const NEWS_SOURCES: readonly Source[] = [
     nameEn: "CNA RSS",
     url: "https://www.cna.com.tw",
     type: "news",
-    scrapeUrl: "https://www.cna.com.tw/rss/aall.xml",
+    scrapeUrl: "https://www.cna.com.tw/",
     scrapeIntervalMinutes: 30,
-    feedKind: "rss",
+    feedKind: "html_ranking",
     newsCategory: "wire_service",
     trustTier: 1,
     language: "zh",
@@ -561,9 +561,9 @@ export const NEWS_SOURCES: readonly Source[] = [
     nameEn: "UDN RSS",
     url: "https://udn.com",
     type: "news",
-    scrapeUrl: "https://udn.com/rssfeed/news/2/6638?ch=news",
+    scrapeUrl: "https://udn.com/news/index",
     scrapeIntervalMinutes: 60,
-    feedKind: "rss",
+    feedKind: "html_ranking",
     newsCategory: "newspaper",
     trustTier: 2,
     language: "zh",
@@ -644,7 +644,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "portal",
     trustTier: 2,
     language: "ru",
-    isActive: false, // TODO: robot and locale gating.
+    isActive: true, // policy: keep-active-observe (timeout-prone)
   },
   {
     id: "mail_ru_news",
@@ -691,7 +691,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "wire_service",
     trustTier: 1,
     language: "en",
-    isActive: true,
+    isActive: false, // policy: disable-until-fixed (endpoint 404)
   },
   {
     id: "aljazeera_rss",
@@ -877,7 +877,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "newspaper",
     trustTier: 2,
     language: "id",
-    isActive: true,
+    isActive: false, // policy: disable-until-fixed (endpoint 404)
   },
 
   // MX
@@ -888,9 +888,9 @@ export const NEWS_SOURCES: readonly Source[] = [
     nameEn: "El Universal RSS",
     url: "https://www.eluniversal.com.mx",
     type: "news",
-    scrapeUrl: "https://www.eluniversal.com.mx/rss.xml",
+    scrapeUrl: "https://www.eluniversal.com.mx/",
     scrapeIntervalMinutes: 60,
-    feedKind: "rss",
+    feedKind: "html_ranking",
     newsCategory: "newspaper",
     trustTier: 2,
     language: "es",
@@ -903,9 +903,9 @@ export const NEWS_SOURCES: readonly Source[] = [
     nameEn: "Milenio RSS",
     url: "https://www.milenio.com",
     type: "news",
-    scrapeUrl: "https://www.milenio.com/rss",
+    scrapeUrl: "https://www.milenio.com/",
     scrapeIntervalMinutes: 60,
-    feedKind: "rss",
+    feedKind: "html_ranking",
     newsCategory: "newspaper",
     trustTier: 2,
     language: "es",
@@ -941,7 +941,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "newspaper",
     trustTier: 2,
     language: "en",
-    isActive: true,
+    isActive: false, // policy: disable-now (http 403)
   },
 
   // VN
@@ -990,7 +990,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "newspaper",
     trustTier: 2,
     language: "en",
-    isActive: true,
+    isActive: false, // policy: disable-now (http 403)
   },
   {
     id: "thairath_rss",
@@ -1063,9 +1063,9 @@ export const NEWS_SOURCES: readonly Source[] = [
     nameEn: "Globe and Mail RSS",
     url: "https://www.theglobeandmail.com",
     type: "news",
-    scrapeUrl: "https://www.theglobeandmail.com/arc/outboundfeeds/rss/",
+    scrapeUrl: "https://www.theglobeandmail.com/",
     scrapeIntervalMinutes: 60,
-    feedKind: "rss",
+    feedKind: "html_ranking",
     newsCategory: "newspaper",
     trustTier: 2,
     language: "en",
@@ -1086,7 +1086,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "newspaper",
     trustTier: 2,
     language: "en",
-    isActive: true,
+    isActive: false, // policy: disable-now (http 403)
   },
   {
     id: "thisday_rss",
@@ -1133,6 +1133,6 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "newspaper",
     trustTier: 2,
     language: "en",
-    isActive: true,
+    isActive: false, // policy: disable-now (http 403)
   },
 ] as const;

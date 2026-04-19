@@ -807,6 +807,7 @@ const CORE_SOURCES = [
     type: "community" as const,
     scrapeUrl: "https://www.reddit.com/r/russia/hot.json?limit=30",
     scrapeIntervalMinutes: 60,
+    isActive: false,
   },
   {
     id: "reddit_russian",

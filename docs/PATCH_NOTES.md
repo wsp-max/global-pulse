@@ -4654,3 +4654,28 @@ pm run ops:snapshot -> completed (egions=6)
   - `/stock`, `/pulse`, `/pulse/news`, `/pulse/compare`, `/pulse/admin/pipeline-status` 모두 200.
   - `/pulse` HTML fallback 패턴 `region xx topic n` 매치 수 = 0.
   - `/pulse/api/topics?region=kr&limit=3`에서 `nameKo/nameEn/canonicalKey`가 정제값으로 반환됨.
+
+## GP-20260419-117 (Degraded source policy automation + pre-deploy cleanup)
+### Code changes
+- Added policy automation script:
+  - `scripts/apply-source-policy.ts`
+  - `package.json` script: `ops:source:apply-policy`
+- Updated source defaults for remaining degraded set:
+  - disabled: `naver_news_ranking`, `joongang_rss`, `reuters_rss`, `reuters_uk_rss`, `reuters_mideast_rss`, `nikkei_rss`, `kompas_rss`, `pti_rss`, `punch_rss`, `iol_rss`, `reddit_russia`
+  - observe-active: `cbc_rss`, `yandex_news_trending`
+- Kept recovery changes for degraded collection:
+  - `packages/collector/src/scrapers/us/reddit.ts` (RSS fallback)
+  - `packages/collector/src/scrapers/us/fark.ts` (fallback feed handling)
+
+### Validation
+- `npm run lint` pass
+- `npm run test` pass (25/25)
+- `npm run build` pass
+- `npm run ops:source:apply-policy -- --print --format md` output verified
+- Degraded retest snapshot:
+  - before: `63 total / 40 success / 23 fail`
+  - after: `63 total / 50 success / 13 fail`
+  - reddit-403 recovery: `36/37`
+
+### Workspace hygiene
+- Removed root-level `.tmp*` artifacts before commit.

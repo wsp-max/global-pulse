@@ -1,4 +1,5 @@
 import axios from "axios";
+import { createHash } from "node:crypto";
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
@@ -152,12 +153,64 @@ function buildPublicListingUrls(path: string, limit: number): string[] {
   ];
 }
 
+function buildPublicRssUrls(path: string, limit: number): string[] {
+  const encodedPath = path.startsWith("/") ? path.slice(1) : path;
+  const scopePath = encodedPath.replace(/\/hot$/u, "");
+  return [
+    `https://old.reddit.com/${scopePath}/.rss?limit=${limit}`,
+    `https://www.reddit.com/${scopePath}/.rss?limit=${limit}`,
+  ];
+}
+
 function toDisplayUrl(data: RedditPostData): string | undefined {
   const normalized = cleanText(data.url);
   if (normalized && /^https?:\/\//i.test(normalized)) {
     return normalized;
   }
   return toAbsoluteRedditUrl(data.permalink);
+}
+
+function toIsoDate(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return undefined;
+  }
+  return parsed.toISOString();
+}
+
+function extractExternalIdFromLink(link: string): string | undefined {
+  try {
+    const parsed = new URL(link, REDDIT_BASE_URL);
+    const matched = parsed.pathname.match(/\/comments\/([a-z0-9]+)\//iu);
+    if (matched?.[1]) {
+      return matched[1];
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
+function extractExternalIdFromAtomId(value: string): string | undefined {
+  const normalized = cleanText(value);
+  if (!normalized) {
+    return undefined;
+  }
+  const t3Match = normalized.match(/\bt3_([a-z0-9]+)\b/iu);
+  if (t3Match?.[1]) {
+    return t3Match[1];
+  }
+  if (/^https?:\/\//iu.test(normalized)) {
+    return extractExternalIdFromLink(normalized);
+  }
+  return undefined;
+}
+
+function fallbackExternalId(seed: string): string {
+  return createHash("sha256").update(seed).digest("hex").slice(0, 32);
 }
 
 async function getOauthAccessToken(): Promise<string> {
@@ -237,6 +290,126 @@ async function fetchPublicListing(url: string): Promise<RedditListingResponse> {
   return response.data;
 }
 
+async function fetchPublicRssListing(url: string): Promise<string> {
+  const response = await fetchWithRetry<string>(
+    url,
+    {
+      responseType: "text",
+      headers: {
+        Accept: "application/atom+xml,application/rss+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        Referer: "https://www.reddit.com/",
+        "User-Agent": REDDIT_USER_AGENT,
+      },
+      maxRedirects: 2,
+      validateStatus: (status) => status >= 200 && status < 400,
+    },
+    2,
+  );
+
+  return response.data;
+}
+
+function parseListingPosts(payload: RedditListingResponse, limit: number): ScrapedPost[] {
+  const children = payload.data?.children ?? [];
+  const posts: ScrapedPost[] = [];
+
+  for (const item of children) {
+    const data = item.data;
+    if (!data?.id || !data.title) {
+      continue;
+    }
+
+    const title = cleanText(data.title);
+    if (!title) {
+      continue;
+    }
+
+    posts.push({
+      externalId: data.id,
+      title,
+      bodyPreview: cleanText(data.selftext).slice(0, 200) || undefined,
+      url: toDisplayUrl(data),
+      author: cleanText(data.author),
+      likeCount: toNumber(data.score),
+      commentCount: toNumber(data.num_comments),
+      postedAt: toPostedAt(data.created_utc),
+    });
+
+    if (posts.length >= limit) {
+      break;
+    }
+  }
+
+  return posts;
+}
+
+async function parseRssPosts(xml: string, limit: number): Promise<ScrapedPost[]> {
+  const { load } = await import("cheerio");
+  const $ = load(xml, { xmlMode: true });
+  const entries = $("entry").length > 0 ? $("entry") : $("item");
+  const posts: ScrapedPost[] = [];
+  const seen = new Set<string>();
+
+  entries.each((index, element) => {
+    if (posts.length >= limit) {
+      return false;
+    }
+
+    const entry = $(element);
+    const title = cleanText(entry.find("title").first().text());
+    if (!title) {
+      return;
+    }
+
+    const link =
+      cleanText(entry.find("link").first().attr("href")) ||
+      cleanText(entry.find("link").first().text()) ||
+      cleanText(entry.find("id").first().text());
+    if (!link) {
+      return;
+    }
+
+    const atomId = cleanText(entry.find("id").first().text()) || cleanText(entry.find("guid").first().text());
+    const externalId =
+      extractExternalIdFromAtomId(atomId) ||
+      extractExternalIdFromLink(link) ||
+      fallbackExternalId(`${index}-${title}-${link}`);
+
+    if (seen.has(externalId)) {
+      return;
+    }
+    seen.add(externalId);
+
+    const bodyPreview =
+      cleanText(entry.find("content").first().text()) ||
+      cleanText(entry.find("summary").first().text()) ||
+      cleanText(entry.find("description").first().text());
+
+    const postedAt = toIsoDate(
+      cleanText(entry.find("updated").first().text()) ||
+        cleanText(entry.find("published").first().text()) ||
+        cleanText(entry.find("pubDate").first().text()),
+    );
+
+    const author =
+      cleanText(entry.find("author > name").first().text()) ||
+      cleanText(entry.find("author").first().text()) ||
+      undefined;
+
+    posts.push({
+      externalId,
+      title,
+      bodyPreview: bodyPreview.slice(0, 200) || undefined,
+      url: link,
+      author,
+      postedAt,
+    });
+  });
+
+  return posts;
+}
+
 export class RedditScraper extends BaseScraper {
   sourceId: RedditSourceId;
 
@@ -271,42 +444,26 @@ export class RedditScraper extends BaseScraper {
       }
     }
 
-    if (!payload) {
-      throw new Error(
-        `Reddit listing fetch failed for ${this.sourceId}. ${errors.join(" | ")}`.slice(0, 1500),
-      );
+    const listingPosts = payload ? parseListingPosts(payload, limit) : [];
+    if (listingPosts.length > 0) {
+      return listingPosts;
     }
 
-    const children = payload.data?.children ?? [];
-    const posts: ScrapedPost[] = [];
-
-    for (const item of children) {
-      const data = item.data;
-      if (!data?.id || !data.title) {
-        continue;
-      }
-
-      const title = cleanText(data.title);
-      if (!title) {
-        continue;
-      }
-
-      posts.push({
-        externalId: data.id,
-        title,
-        bodyPreview: cleanText(data.selftext).slice(0, 200) || undefined,
-        url: toDisplayUrl(data),
-        author: cleanText(data.author),
-        likeCount: toNumber(data.score),
-        commentCount: toNumber(data.num_comments),
-        postedAt: toPostedAt(data.created_utc),
-      });
-
-      if (posts.length >= limit) {
-        break;
+    for (const rssUrl of buildPublicRssUrls(path, limit)) {
+      try {
+        const rssXml = await fetchPublicRssListing(rssUrl);
+        const rssPosts = await parseRssPosts(rssXml, limit);
+        if (rssPosts.length > 0) {
+          return rssPosts;
+        }
+        errors.push(`${rssUrl}: parsed 0 posts`);
+      } catch (error) {
+        errors.push(`${rssUrl}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
-    return posts;
+    throw new Error(
+      `Reddit listing fetch failed for ${this.sourceId}. ${errors.join(" | ")}`.slice(0, 1500),
+    );
   }
 }

@@ -2664,3 +2664,13 @@
   - `/pulse/compare` 200
   - `/pulse/admin/pipeline-status` 200
   - `/pulse` HTML fallback regex match count: 0
+
+## 2026-04-19 Status Update (GP-20260419-117)
+- Added source policy automation script: `scripts/apply-source-policy.ts`.
+- Added npm command: `npm run ops:source:apply-policy`.
+- Applied default `isActive` policy alignment for remaining degraded IDs (13 targets):
+  - disable-now/disable-until-fixed: `naver_news_ranking`, `joongang_rss`, `reuters_rss`, `reuters_uk_rss`, `reuters_mideast_rss`, `nikkei_rss`, `kompas_rss`, `pti_rss`, `punch_rss`, `iol_rss`, `reddit_russia`
+  - keep-active-observe: `cbc_rss`, `yandex_news_trending`
+- Kept and validated Reddit/Fark degraded recovery patches.
+- Local validation passed: `lint`, `test` (25/25), `build`.
+- Degraded re-test delta: `40/63 -> 50/63` recovered, with reddit-403 `36/37` recovered.
