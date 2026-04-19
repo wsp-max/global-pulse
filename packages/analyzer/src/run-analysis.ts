@@ -32,7 +32,7 @@ interface TopicInsertRow {
   summary_ko: string | null;
   summary_en: string | null;
   keywords: string[];
-  sentiment: number;
+  sentiment: number | null;
   heat_score: number;
   post_count: number;
   total_views: number;
@@ -49,7 +49,7 @@ interface HeatHistoryInsertRow {
   region_id: string;
   topic_name: string;
   heat_score: number;
-  sentiment: number;
+  sentiment: number | null;
   post_count: number;
   recorded_at: string;
 }
@@ -58,7 +58,7 @@ interface SnapshotInsertRow {
   region_id: string;
   total_heat_score: number;
   active_topics: number;
-  avg_sentiment: number;
+  avg_sentiment: number | null;
   top_keywords: string[];
   sources_active: number;
   sources_total: number;
@@ -310,15 +310,19 @@ async function runRegionAnalysis(params: {
   await storage.insertHeatHistory(historyRows);
 
   const totalHeatScore = analyzedTopics.reduce((sum, topic) => sum + topic.heatScore, 0);
+  const sentimentValues = analyzedTopics
+    .map((topic) => topic.sentiment)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
   const avgSentiment =
-    analyzedTopics.reduce((sum, topic) => sum + topic.sentiment, 0) /
-    Math.max(analyzedTopics.length, 1);
+    sentimentValues.length > 0
+      ? sentimentValues.reduce((sum, value) => sum + value, 0) / sentimentValues.length
+      : null;
 
   await storage.insertRegionSnapshot({
     region_id: regionId,
     total_heat_score: totalHeatScore,
     active_topics: analyzedTopics.length,
-    avg_sentiment: Number(avgSentiment.toFixed(4)),
+    avg_sentiment: avgSentiment === null ? null : Number(avgSentiment.toFixed(4)),
     top_keywords: keywords.slice(0, 10).map((keyword) => keyword.keyword),
     sources_active: new Set(posts.map((post) => post.sourceId)).size,
     sources_total: sourceIds.length,

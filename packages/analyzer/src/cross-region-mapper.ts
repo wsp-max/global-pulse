@@ -463,9 +463,13 @@ function aggregateComponent(component: TopicNode[]): GlobalTopic | null {
   for (const regionId of regionIds) {
     const regionTopics = topics.filter((topic) => topic.regionId === regionId);
     const totalHeat = regionTopics.reduce((sum, topic) => sum + topic.heatScore, 0);
+    const sentimentValues = regionTopics
+      .map((topic) => topic.sentiment)
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
     const avgSentiment =
-      regionTopics.reduce((sum, topic) => sum + topic.sentiment, 0) /
-      Math.max(regionTopics.length, 1);
+      sentimentValues.length > 0
+        ? sentimentValues.reduce((sum, value) => sum + value, 0) / sentimentValues.length
+        : 0;
 
     regionalHeatScores[regionId] = Number(totalHeat.toFixed(3));
     regionalSentiments[regionId] = Number(avgSentiment.toFixed(3));

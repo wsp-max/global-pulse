@@ -1,4 +1,4 @@
-const POSITIVE_KEYWORDS = [
+const POSITIVE_TERMS = [
   "good",
   "great",
   "success",
@@ -8,16 +8,26 @@ const POSITIVE_KEYWORDS = [
   "awesome",
   "happy",
   "improve",
-  "상승",
-  "성공",
+  "growth",
+  "bullish",
+  "support",
+  "liked",
+  "love",
+  "흥행",
   "호재",
+  "성공",
+  "개선",
   "좋다",
   "긍정",
-  "승리",
-  "기대",
+  "상승",
+  "好評",
+  "成功",
+  "改善",
+  "上昇",
+  "勝利",
 ];
 
-const NEGATIVE_KEYWORDS = [
+const NEGATIVE_TERMS = [
   "bad",
   "fail",
   "crisis",
@@ -27,30 +37,55 @@ const NEGATIVE_KEYWORDS = [
   "angry",
   "decline",
   "risk",
+  "bearish",
+  "drop",
+  "fraud",
+  "hate",
   "하락",
-  "실패",
   "악재",
+  "실패",
+  "문제",
   "부정",
-  "논란",
   "위기",
-  "사고",
+  "손실",
+  "悪化",
+  "失敗",
+  "下落",
+  "危機",
+  "炎上",
 ];
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-export function analyzeSentiment(text: string): number {
-  const lowered = text.toLowerCase();
-
-  let score = 0;
-  for (const word of POSITIVE_KEYWORDS) {
-    if (lowered.includes(word)) score += 0.15;
-  }
-  for (const word of NEGATIVE_KEYWORDS) {
-    if (lowered.includes(word)) score -= 0.15;
-  }
-
-  return clamp(score, -1, 1);
+function countMatches(text: string, terms: string[]): number {
+  return terms.reduce((count, term) => {
+    if (!term) {
+      return count;
+    }
+    return text.includes(term) ? count + 1 : count;
+  }, 0);
 }
 
+export function analyzeSentiment(text: string): number | null {
+  const normalized = text.normalize("NFKC").toLowerCase();
+  if (!normalized.trim()) {
+    return null;
+  }
+
+  const positiveCount = countMatches(normalized, POSITIVE_TERMS);
+  const negativeCount = countMatches(normalized, NEGATIVE_TERMS);
+  const totalSignals = positiveCount + negativeCount;
+
+  if (totalSignals === 0) {
+    return null;
+  }
+
+  let score = (positiveCount - negativeCount) / totalSignals;
+  if (normalized.includes("!")) {
+    score += score >= 0 ? 0.05 : -0.05;
+  }
+
+  return Number(clamp(score, -1, 1).toFixed(3));
+}

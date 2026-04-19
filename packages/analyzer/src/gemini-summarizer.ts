@@ -41,7 +41,10 @@ function sanitizeJsonText(text: string): string {
   return text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
 }
 
-function toNumber(value: unknown, fallback: number): number {
+function toSentiment(value: unknown, fallback: number | null): number | null {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
     return fallback;
@@ -235,7 +238,7 @@ export async function summarizeTopicsWithGemini(
         nameEn: summary.name_en?.trim() || topic.nameEn,
         summaryKo: summary.summary_ko?.trim() || topic.summaryKo || "요약 준비 중",
         summaryEn: summary.summary_en?.trim() || topic.summaryEn || "Summary pending",
-        sentiment: toNumber(summary.sentiment, topic.sentiment),
+        sentiment: toSentiment(summary.sentiment, topic.sentiment),
       };
     });
   }

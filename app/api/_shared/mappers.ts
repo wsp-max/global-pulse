@@ -16,6 +16,13 @@ function toOptionalNumber(value: unknown): number | undefined {
   return parsed;
 }
 
+function toNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const parsed = toNumber(value, Number.NaN);
+  if (Number.isNaN(parsed)) return null;
+  return parsed;
+}
+
 export interface TopicRow {
   id: number;
   region_id: string;
@@ -62,7 +69,7 @@ export function mapTopicRow(row: TopicRow): Topic {
     summaryKo: row.summary_ko ?? undefined,
     summaryEn: row.summary_en ?? undefined,
     keywords: row.keywords ?? [],
-    sentiment: toNumber(row.sentiment),
+    sentiment: toNullableNumber(row.sentiment),
     heatScore: toNumber(row.heat_score),
     postCount: toNumber(row.post_count),
     totalViews: toNumber(row.total_views),

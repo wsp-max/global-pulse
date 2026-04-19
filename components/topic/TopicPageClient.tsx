@@ -14,6 +14,9 @@ interface TopicPageClientProps {
 }
 
 function buildRegionalSentiments(topic: Topic): Record<string, number> {
+  if (typeof topic.sentiment !== "number" || !Number.isFinite(topic.sentiment)) {
+    return {};
+  }
   return { [topic.regionId]: topic.sentiment };
 }
 
@@ -121,4 +124,3 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
     </main>
   );
 }
-

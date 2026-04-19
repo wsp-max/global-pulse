@@ -501,6 +501,45 @@ function buildRepresentativeTopicName(params: {
   return buildFallbackTopicName(clusterKeywords, keywordOriginalMap, keywordScoreMap);
 }
 
+function hasLatinText(value: string): boolean {
+  return /[a-z]/iu.test(value);
+}
+
+function hasKoreanOrCjkText(value: string): boolean {
+  return /[\p{Script=Hangul}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(value);
+}
+
+function sanitizeEnglishPhrase(value: string): string {
+  return value
+    .normalize("NFKC")
+    .replace(/[^a-z0-9/&+.\- ]/giu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function titleCase(value: string): string {
+  return value
+    .split(" ")
+    .map((part) => (part.length > 0 ? `${part[0]!.toUpperCase()}${part.slice(1)}` : part))
+    .join(" ");
+}
+
+function buildEnglishTopicName(topicName: string, keywords: string[], regionId: string, index: number): string {
+  if (hasLatinText(topicName) || !hasKoreanOrCjkText(topicName)) {
+    return topicName;
+  }
+
+  const keywordCandidate = keywords
+    .map((keyword) => sanitizeEnglishPhrase(keyword))
+    .find((candidate) => candidate && hasLatinText(candidate) && candidate.length >= 3);
+
+  if (keywordCandidate) {
+    return titleCase(keywordCandidate);
+  }
+
+  return `Region ${regionId.toUpperCase()} Topic ${index + 1}`;
+}
+
 export async function clusterTopics(
   regionId: string,
   keywords: KeywordScore[],
@@ -651,9 +690,11 @@ export async function clusterTopics(
       };
     });
 
-    const sentiments = relatedPosts.map((post) => analyzeSentiment(`${post.title} ${post.bodyPreview ?? ""}`));
+    const sentiments = relatedPosts
+      .map((post) => analyzeSentiment(`${post.title} ${post.bodyPreview ?? ""}`))
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
     const avgSentiment =
-      sentiments.length > 0 ? sentiments.reduce((sum, value) => sum + value, 0) / sentiments.length : 0;
+      sentiments.length > 0 ? sentiments.reduce((sum, value) => sum + value, 0) / sentiments.length : null;
 
     const sourceIds = [...new Set(relatedPosts.map((post) => post.sourceId))];
     const topicKeywords = [...new Set(clusterKeywords.map((keyword) => keywordOriginalMap.get(keyword) ?? keyword))];
@@ -664,6 +705,7 @@ export async function clusterTopics(
       keywordOriginalMap,
       keywordScoreMap,
     });
+    const topicNameEn = buildEnglishTopicName(topicName, topicKeywords, regionId, clusteredTopics.length);
 
     if (isSingleTokenLabel(topicName) && (relatedPosts.length < 3 || clusterKeywords.length < 2)) {
       continue;
@@ -676,9 +718,9 @@ export async function clusterTopics(
     clusteredTopics.push({
       regionId,
       nameKo: topicName,
-      nameEn: topicName,
+      nameEn: topicNameEn,
       keywords: topicKeywords,
-      sentiment: Number(avgSentiment.toFixed(3)),
+      sentiment: avgSentiment === null ? null : Number(avgSentiment.toFixed(3)),
       heatScore: calculateHeatScore(heatInputs),
       postCount: relatedPosts.length,
       totalViews: relatedPosts.reduce((sum, post) => sum + post.viewCount, 0),

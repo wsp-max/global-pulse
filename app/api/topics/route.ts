@@ -89,7 +89,7 @@ async function getTopics(request: Request) {
             id,region_id,name_ko,name_en,summary_ko,summary_en,keywords,sentiment,heat_score,
             post_count,total_views,total_likes,total_comments,source_ids,rank,period_start,period_end
           from dedup
-          order by ${sortColumn} desc, period_end desc
+          order by ${sortColumn} desc nulls last, period_end desc
           offset $4
           limit $5
           `,

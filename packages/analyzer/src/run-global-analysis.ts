@@ -67,6 +67,14 @@ function toNumber(value: unknown, fallback = 0): number {
   return fallback;
 }
 
+function toNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const parsed = toNumber(value, Number.NaN);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function toTopic(row: TopicRow): Topic {
   return {
     id: toNumber(row.id),
@@ -76,7 +84,7 @@ function toTopic(row: TopicRow): Topic {
     summaryKo: row.summary_ko ?? undefined,
     summaryEn: row.summary_en ?? undefined,
     keywords: row.keywords ?? [],
-    sentiment: toNumber(row.sentiment),
+    sentiment: toNullableNumber(row.sentiment),
     heatScore: toNumber(row.heat_score),
     postCount: toNumber(row.post_count),
     totalViews: toNumber(row.total_views),
@@ -162,8 +170,13 @@ function sanitizeGlobalTopicByRegions(topic: GlobalTopic, topicMap: Map<number, 
 
     seededTopics.push(...regionTopics);
     const totalHeat = regionTopics.reduce((sum, item) => sum + item.heatScore, 0);
+    const regionSentimentValues = regionTopics
+      .map((item) => item.sentiment)
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
     const totalSentiment =
-      regionTopics.reduce((sum, item) => sum + item.sentiment, 0) / Math.max(regionTopics.length, 1);
+      regionSentimentValues.length > 0
+        ? regionSentimentValues.reduce((sum, value) => sum + value, 0) / regionSentimentValues.length
+        : 0;
 
     regionalHeatScores[regionId] = Number(totalHeat.toFixed(3));
     regionalSentiments[regionId] = Number(totalSentiment.toFixed(3));

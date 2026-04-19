@@ -45,7 +45,7 @@ export interface Topic {
   summaryKo?: string;
   summaryEn?: string;
   keywords: string[];
-  sentiment: number;
+  sentiment: number | null;
   heatScore: number;
   postCount: number;
   totalViews: number;
