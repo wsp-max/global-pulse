@@ -1,4 +1,4 @@
-import {
+﻿import {
   getRegionById,
   type Topic,
   type TopicCategory,
@@ -9,9 +9,11 @@ import { getLogger } from "@global-pulse/shared/server-logger";
 
 const GEMINI_API_BASE = process.env.GEMINI_API_BASE?.trim() || "https://generativelanguage.googleapis.com";
 const GEMINI_API_VERSION = process.env.GEMINI_API_VERSION?.trim() || "v1beta";
+const GEMINI_MODEL_PRIMARY = process.env.GEMINI_MODEL_PRIMARY?.trim() || "gemini-2.5-flash";
+const GEMINI_MODEL_FALLBACK = process.env.GEMINI_MODEL_FALLBACK?.trim() || "gemini-2.0-flash";
 const DEFAULT_GEMINI_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
+  GEMINI_MODEL_PRIMARY,
+  GEMINI_MODEL_FALLBACK,
   "gemini-2.5-flash-lite",
   "gemini-2.0-flash-lite",
 ];
@@ -24,6 +26,10 @@ const ANALYZER_GEMINI_TIMEOUT_MS = Math.max(
   Number(process.env.ANALYZER_GEMINI_TIMEOUT_MS ?? 25_000),
   5_000,
 );
+
+const FALLBACK_SUMMARY_KO = "요약 준비 중";
+const FALLBACK_SUMMARY_EN = "Summary pending";
+const SUMMARY_MIN_LENGTH = 40;
 
 const CATEGORY_VALUES: TopicCategory[] = [
   "politics",
@@ -38,6 +44,7 @@ const CATEGORY_VALUES: TopicCategory[] = [
   "science",
   "other",
 ];
+
 const ENTITY_TYPE_VALUES: TopicEntityType[] = ["person", "org", "product", "event", "place", "work", "other"];
 
 const LOW_SIGNAL_NAME_TERMS = new Set([
@@ -65,11 +72,6 @@ const LOW_SIGNAL_NAME_TERMS = new Set([
   "오늘",
   "주요",
   "소식",
-  "뉴스",
-  "이슈",
-  "토픽",
-  "업데이트",
-  "요약",
   "충격",
   "섬뜩",
   "미쳤다",
@@ -95,6 +97,37 @@ const LOW_SIGNAL_NAME_TERMS = new Set([
   "最新",
   "热议",
 ]);
+
+const RESPONSE_SCHEMA = {
+  type: "array",
+  items: {
+    type: "object",
+    required: ["name_ko", "name_en", "summary_ko", "summary_en", "sentiment", "category", "entities", "aliases"],
+    properties: {
+      name_ko: { type: "string", minLength: 2, maxLength: 24 },
+      name_en: { type: "string", minLength: 2, maxLength: 64 },
+      summary_ko: { type: "string", minLength: SUMMARY_MIN_LENGTH, maxLength: 600 },
+      summary_en: { type: "string", minLength: SUMMARY_MIN_LENGTH, maxLength: 600 },
+      sentiment: { type: "number", minimum: -1, maximum: 1 },
+      category: { type: "string", enum: CATEGORY_VALUES },
+      entities: {
+        type: "array",
+        items: {
+          type: "object",
+          required: ["text", "type"],
+          properties: {
+            text: { type: "string", minLength: 1, maxLength: 80 },
+            type: { type: "string", enum: ENTITY_TYPE_VALUES },
+          },
+        },
+      },
+      aliases: {
+        type: "array",
+        items: { type: "string", minLength: 1, maxLength: 80 },
+      },
+    },
+  },
+};
 
 let cachedModels: string[] | null = null;
 let cachedModelsFetchedAt = 0;
@@ -148,6 +181,11 @@ interface GeminiSummaryItem {
   aliases?: string[];
 }
 
+interface RequestGeminiResult {
+  text: string;
+  error?: string;
+}
+
 function sanitizeJsonText(text: string): string {
   return text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
 }
@@ -197,6 +235,39 @@ function preferMeaningfulName(candidate: string | undefined, fallback: string): 
   return isLowSignalName(trimmed) ? fallback : trimmed;
 }
 
+function sentenceCount(text: string): number {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return 0;
+  }
+
+  const punctuated = normalized
+    .split(/(?<=[.!?。！？])\s+/u)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (punctuated.length > 0) {
+    return punctuated.length;
+  }
+
+  return normalized
+    .split(/\n+/u)
+    .map((item) => item.trim())
+    .filter(Boolean).length;
+}
+
+function isValidSummaryText(value: unknown): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length < SUMMARY_MIN_LENGTH) {
+    return false;
+  }
+  const count = sentenceCount(trimmed);
+  return count >= 2 && count <= 3;
+}
+
 function toSentiment(value: unknown, fallback: number | null): number | null {
   if (value === null || value === undefined) {
     return fallback;
@@ -205,7 +276,7 @@ function toSentiment(value: unknown, fallback: number | null): number | null {
   if (!Number.isFinite(numeric)) {
     return fallback;
   }
-  return Math.max(-1, Math.min(1, Number(numeric.toFixed(3))));
+  return Math.max(-1, Math.min(1, Number(numeric.toFixed(1))));
 }
 
 function toCategory(value: unknown, fallback: TopicCategory = "other"): TopicCategory {
@@ -291,28 +362,17 @@ function buildPrompt(regionId: string, topics: Topic[]): string {
   }));
 
   return [
-    "당신은 글로벌 여론 분석가입니다.",
-    `${regionNameKo} (${regionNameEn}) 리전의 토픽을 정제하고 요약하세요.`,
-    "반드시 JSON 배열만 반환하세요. 설명 문장이나 마크다운 금지.",
-    "각 항목 스키마:",
-    `{
-  "name_ko": string,
-  "name_en": string,
-  "summary_ko": string,
-  "summary_en": string,
-  "sentiment": number,
-  "category": "politics" | "economy" | "tech" | "entertainment" | "sports" | "society" | "crime" | "culture" | "health" | "science" | "other",
-  "entities": [{ "text": string, "type": "person" | "org" | "product" | "event" | "place" | "work" | "other" }],
-  "aliases": string[]
-}`,
-    "규칙:",
-    "1) name_ko는 2~20자, name_en은 2~6단어",
-    "2) summary_ko/summary_en은 각각 1~2문장",
-    "3) sentiment는 -1.0~1.0",
-    "4) entities는 최대 8개",
-    "5) aliases는 최대 8개",
-    "6) 입력 토픽 순서를 유지",
-    "입력 JSON:",
+    "You are a global social-signal analyst.",
+    `Region: ${regionNameKo} (${regionNameEn})`,
+    "Return ONLY a JSON array. No markdown, no explanation.",
+    "For each topic, output this schema exactly:",
+    JSON.stringify(RESPONSE_SCHEMA.items.properties),
+    "Rules:",
+    "1) summary_ko and summary_en must be EXACTLY 2-3 complete sentences.",
+    "2) Each summary must include: trigger/event, who-or-what involved, dominant sentiment and reason.",
+    "3) Keep name_ko concise and name_en within 2-6 words.",
+    "4) Keep input topic order unchanged in output.",
+    "Input topics JSON:",
     JSON.stringify(payload),
   ].join("\n");
 }
@@ -335,6 +395,24 @@ function parseGeminiSummaries(rawText: string): GeminiSummaryItem[] | null {
   } catch {
     return null;
   }
+}
+
+function isValidSummaryBatch(summaries: GeminiSummaryItem[] | null, expectedCount: number): boolean {
+  if (!summaries || summaries.length < expectedCount) {
+    return false;
+  }
+
+  for (let index = 0; index < expectedCount; index += 1) {
+    const item = summaries[index];
+    if (!item) {
+      return false;
+    }
+    if (!isValidSummaryText(item.summary_ko) || !isValidSummaryText(item.summary_en)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 async function listAvailableModels(apiKey: string): Promise<string[]> {
@@ -383,7 +461,7 @@ async function resolveCandidateModels(apiKey: string): Promise<string[]> {
   return [...new Set([...envModels, ...DEFAULT_GEMINI_MODELS, ...orderedAvailable])].slice(0, 12);
 }
 
-async function requestGemini(apiKey: string, model: string, prompt: string): Promise<{ text: string; error?: string }> {
+async function requestGemini(apiKey: string, model: string, prompt: string): Promise<RequestGeminiResult> {
   const controller = new AbortController();
   const timeoutRef = setTimeout(() => controller.abort(), ANALYZER_GEMINI_TIMEOUT_MS);
 
@@ -404,6 +482,10 @@ async function requestGemini(apiKey: string, model: string, prompt: string): Pro
         ],
         generationConfig: {
           temperature: 0.2,
+          topP: 0.9,
+          maxOutputTokens: 1536,
+          responseMimeType: "application/json",
+          responseSchema: RESPONSE_SCHEMA,
         },
       }),
       signal: controller.signal,
@@ -458,12 +540,19 @@ function applySummaryItem(topic: Topic, summary: GeminiSummaryItem | undefined):
   const nameKo = preferMeaningfulName(summary?.name_ko, topic.nameKo);
   const nameEn = preferMeaningfulName(summary?.name_en, topic.nameEn);
 
+  const summaryKo = isValidSummaryText(summary?.summary_ko)
+    ? summary?.summary_ko?.trim()
+    : topic.summaryKo ?? FALLBACK_SUMMARY_KO;
+  const summaryEn = isValidSummaryText(summary?.summary_en)
+    ? summary?.summary_en?.trim()
+    : topic.summaryEn ?? FALLBACK_SUMMARY_EN;
+
   return {
     ...topic,
     nameKo,
     nameEn,
-    summaryKo: summary?.summary_ko?.trim() || topic.summaryKo || "요약 준비 중",
-    summaryEn: summary?.summary_en?.trim() || topic.summaryEn || "Summary pending",
+    summaryKo,
+    summaryEn,
     sentiment: toSentiment(summary?.sentiment, topic.sentiment),
     category: toCategory(summary?.category),
     entities: toEntities(summary?.entities),
@@ -479,8 +568,8 @@ export async function summarizeTopicsWithGemini(
   const startedAt = Date.now();
   const fallbackTopics = topics.map((topic) => ({
     ...topic,
-    summaryKo: topic.summaryKo ?? "요약 준비 중",
-    summaryEn: topic.summaryEn ?? "Summary pending",
+    summaryKo: topic.summaryKo ?? FALLBACK_SUMMARY_KO,
+    summaryEn: topic.summaryEn ?? FALLBACK_SUMMARY_EN,
     canonicalKey: normalizeCanonicalKey(topic.nameEn),
   }));
 
@@ -531,33 +620,43 @@ export async function summarizeTopicsWithGemini(
     let summaries: GeminiSummaryItem[] | null = null;
 
     for (const model of models) {
-      requestCount += 1;
       usedModels.add(model);
-      const { text, error } = await requestGemini(apiKey, model, prompt);
-      if (error) {
-        const errorLine = `${model}: ${error}`;
-        batchErrors.push(errorLine);
-        allErrors.push(errorLine);
-        continue;
+
+      let modelSuccess = false;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        requestCount += 1;
+        const { text, error } = await requestGemini(apiKey, model, prompt);
+
+        if (error) {
+          const errorLine = `${model}: ${error}`;
+          batchErrors.push(errorLine);
+          allErrors.push(errorLine);
+          break;
+        }
+
+        if (!text) {
+          const emptyError = `${model}: empty response`;
+          batchErrors.push(emptyError);
+          allErrors.push(emptyError);
+          continue;
+        }
+
+        const parsed = parseGeminiSummaries(text);
+        if (!isValidSummaryBatch(parsed, batch.length)) {
+          const validationError = `${model}: invalid-or-short-summary attempt=${attempt + 1}`;
+          batchErrors.push(validationError);
+          allErrors.push(validationError);
+          continue;
+        }
+
+        summaries = parsed;
+        modelSuccess = true;
+        break;
       }
 
-      if (!text) {
-        const emptyError = `${model}: empty response`;
-        batchErrors.push(emptyError);
-        allErrors.push(emptyError);
-        continue;
+      if (modelSuccess) {
+        break;
       }
-
-      const parsed = parseGeminiSummaries(text);
-      if (!parsed || parsed.length === 0) {
-        const parseError = `${model}: invalid-json`;
-        batchErrors.push(parseError);
-        allErrors.push(parseError);
-        continue;
-      }
-
-      summaries = parsed;
-      break;
     }
 
     if (!summaries) {
@@ -570,8 +669,8 @@ export async function summarizeTopicsWithGemini(
       output.push(
         ...batch.map((topic) => ({
           ...topic,
-          summaryKo: topic.summaryKo ?? "요약 준비 중",
-          summaryEn: topic.summaryEn ?? "Summary pending",
+          summaryKo: topic.summaryKo ?? FALLBACK_SUMMARY_KO,
+          summaryEn: topic.summaryEn ?? FALLBACK_SUMMARY_EN,
           canonicalKey: normalizeCanonicalKey(topic.nameEn),
         })),
       );
@@ -595,7 +694,7 @@ export async function summarizeTopicsWithGemini(
       durationMs,
       promptCharsTotal,
       batches: batches.length,
-      errors: allErrors.slice(0, 32),
+      errors: allErrors.slice(0, 64),
     },
   };
 }

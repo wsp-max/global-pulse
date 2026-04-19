@@ -516,7 +516,17 @@ async function runRegionAnalysis(params: {
         })
         .catch((error) => {
           const message = error instanceof Error ? error.message : String(error);
-          log(`[${regionId}:${scope}] gemini summarization failed, falling back to local topics: ${message}`);
+          log(
+            JSON.stringify({
+              stage: "gemini",
+              regionId,
+              scope,
+              topicCount: topicsWithPortalBoost.length,
+              failedCount: topicsWithPortalBoost.length,
+              firstError: message,
+            }),
+          );
+          log(`[${regionId}:${scope}] gemini summarization failed, falling back to local topics.`);
           return topicsWithPortalBoost;
         })
     : topicsWithPortalBoost;
@@ -610,7 +620,7 @@ async function runAnalysis(): Promise<void> {
   const flagOff = process.argv.includes("--no-gemini");
   const envDef = (process.env.ANALYZER_USE_GEMINI ?? "true").toLowerCase() !== "false";
   const hasKey = Boolean(process.env.GEMINI_API_KEY?.trim());
-  const useGemini = flagOff ? false : flagOn ? true : envDef && hasKey;
+  const useGemini = flagOff ? false : flagOn ? true : envDef;
   const geminiReason = flagOff
     ? "--no-gemini"
     : flagOn

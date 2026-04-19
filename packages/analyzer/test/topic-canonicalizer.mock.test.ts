@@ -57,8 +57,10 @@ test("summarizeTopicsWithGemini maps category/entities/aliases from gemini respo
         {
           name_ko: "스트리트 파이터 대회",
           name_en: "Street Fighter Tournament",
-          summary_ko: "격투 게임 대회 이슈가 확산 중입니다.",
-          summary_en: "Fighting game tournament buzz is spreading.",
+          summary_ko:
+            "캡콤컵 예선 일정 공개 이후 커뮤니티에서 대회 관전 포인트가 빠르게 확산되고 있습니다. 참가 선수와 대진 분석이 집중적으로 공유되며 기대감이 커지고 있습니다.",
+          summary_en:
+            "After the Capcom Cup qualifier schedule was announced, discussion around matchups spread quickly across communities. Players and bracket analysis are driving a mostly positive anticipation signal.",
           sentiment: 0.3,
           category: "entertainment",
           entities: [{ text: "Street Fighter", type: "work" }],
@@ -67,8 +69,10 @@ test("summarizeTopicsWithGemini maps category/entities/aliases from gemini respo
         {
           name_ko: "캡콤 컵",
           name_en: "Capcom Cup",
-          summary_ko: "캡콤 컵 관련 언급이 증가합니다.",
-          summary_en: "Capcom Cup mentions are increasing.",
+          summary_ko:
+            "결승 진출 선수가 확정되면서 캡콤 컵 관련 언급량이 급격히 상승했습니다. 우승 후보 비교와 상금 규모 이슈가 함께 언급되며 관심이 유지되고 있습니다.",
+          summary_en:
+            "Mentions of Capcom Cup surged after the final roster was confirmed for the finals. Debate over title contenders and prize pool size is sustaining attention with mixed sentiment.",
           sentiment: 0.1,
           category: "sports",
           entities: [{ text: "Capcom", type: "org" }],
@@ -142,8 +146,10 @@ test("summarizeTopicsWithGemini keeps lexical names when gemini returns low-sign
                       {
                         name_ko: "오늘 주요 소식",
                         name_en: "Major Related Update",
-                        summary_ko: "요약 텍스트",
-                        summary_en: "Summary text",
+                        summary_ko:
+                          "짧은 요약이 아닌 완성형 문장으로 작성됩니다. 하지만 이름은 저신호 라벨이므로 원래 lexical 이름을 유지해야 합니다.",
+                        summary_en:
+                          "This output uses complete sentences instead of a short placeholder summary. The model name should still be rejected as low-signal and keep lexical naming.",
                         sentiment: 0,
                         category: "other",
                         entities: [],
