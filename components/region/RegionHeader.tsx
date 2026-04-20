@@ -1,4 +1,4 @@
-import { getRegionById } from "@global-pulse/shared";
+﻿import { getRegionById } from "@global-pulse/shared";
 import { HeatBadge } from "@/components/shared/HeatBadge";
 import type { RegionSnapshotApi } from "@/lib/types/api";
 
@@ -18,14 +18,14 @@ export function RegionHeader({ regionId, snapshot }: RegionHeaderProps) {
   const sentiment = snapshot?.avg_sentiment ?? 0;
 
   return (
-    <header className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">
+    <header className="card-panel p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold text-[var(--text-primary)]">
           {region.flagEmoji} {region.nameKo}
         </h1>
         <HeatBadge score={heat} />
       </div>
-      <p className="mt-1 text-sm text-[var(--text-secondary)]">{region.nameEn}</p>
+      <p className="card-sub mt-1">{region.nameEn}</p>
       <div className="mt-3 flex flex-wrap gap-4 text-xs text-[var(--text-tertiary)]">
         <span>평균 감성: {sentiment.toFixed(2)}</span>
         <span>활성 토픽: {snapshot?.active_topics ?? 0}</span>
@@ -36,4 +36,3 @@ export function RegionHeader({ regionId, snapshot }: RegionHeaderProps) {
     </header>
   );
 }
-

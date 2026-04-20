@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 export interface RelatedTopicItem {
   id: number;
@@ -16,16 +16,16 @@ interface RelatedTopicsProps {
 export function RelatedTopics({ title = "연관 토픽", items }: RelatedTopicsProps) {
   if (items.length === 0) {
     return (
-      <section className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        <p className="mt-2 text-xs text-[var(--text-secondary)]">연관 토픽이 아직 없습니다.</p>
+      <section className="card-panel p-5">
+        <h2 className="card-title">{title}</h2>
+        <p className="card-sub mt-2">연관 토픽이 아직 없습니다.</p>
       </section>
     );
   }
 
   return (
-    <section className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-      <h2 className="text-sm font-semibold">{title}</h2>
+    <section className="card-panel p-5">
+      <h2 className="card-title">{title}</h2>
       <ul className="mt-2 space-y-2">
         {items.map((item) => (
           <li key={`${item.id}-${item.href}`}>
@@ -47,4 +47,3 @@ export function RelatedTopics({ title = "연관 토픽", items }: RelatedTopicsP
     </section>
   );
 }
-

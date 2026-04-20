@@ -40,49 +40,48 @@ export default function SearchPage() {
   const { data, isLoading, error } = useSWR(endpoint, fetcher);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-6 lg:px-6">
-      <header className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-        <h1 className="text-lg font-semibold">{t("search.title")}</h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">{t("search.description")}</p>
-      </header>
+    <main className="page-shell">
+      <section>
+        <h1 className="section-title">SEARCH</h1>
+        <p className="card-sub mt-2">{t("search.description")}</p>
+      </section>
 
-      <form
-        className="grid gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 md:grid-cols-[1fr_auto]"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setSubmittedQuery(query);
-        }}
-      >
-        <input
-          type="text"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={t("search.placeholder")}
-          className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--border-hover)]"
-        />
-        <button
-          type="submit"
-          className="rounded-md border border-[var(--border-default)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
+      <section className="card-panel p-5">
+        <form
+          className="grid max-w-2xl gap-2 md:grid-cols-[1fr_auto]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setSubmittedQuery(query);
+          }}
         >
-          {t("search.button")}
-        </button>
-      </form>
+          <input
+            type="text"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t("search.placeholder")}
+            className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--border-hover)]"
+          />
+          <button
+            type="submit"
+            className="rounded-md border border-[var(--border-default)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated)]"
+          >
+            {t("search.button")}
+          </button>
+        </form>
+      </section>
 
-      {!submittedQuery.trim() && <EmptyState title={t("search.empty")} description={t("search.description")} />}
+      {!submittedQuery.trim() ? <EmptyState title={t("search.empty")} description={t("search.description")} /> : null}
 
-      {isLoading && <LoadingSkeleton className="h-24" lines={4} />}
+      {isLoading ? <LoadingSkeleton className="h-24" lines={4} /> : null}
 
-      {error && (
-        <EmptyState
-          title={t("search.failed")}
-          description={error instanceof Error ? error.message : "Search failed"}
-        />
-      )}
+      {error ? (
+        <EmptyState title={t("search.failed")} description={error instanceof Error ? error.message : "Search failed"} />
+      ) : null}
 
-      {data && (
+      {data ? (
         <section className="space-y-4">
-          <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+          <div className="card-panel p-5">
+            <h2 className="card-title">
               {t("search.regional")} ({data.topics.length})
             </h2>
             <ul className="mt-3 space-y-2 text-sm">
@@ -97,14 +96,14 @@ export default function SearchPage() {
                   </div>
                 </li>
               ))}
-              {data.topics.length === 0 && (
+              {data.topics.length === 0 ? (
                 <li className="text-xs text-[var(--text-secondary)]">{t("search.noRegional")}</li>
-              )}
+              ) : null}
             </ul>
           </div>
 
-          <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+          <div className="card-panel p-5">
+            <h2 className="card-title">
               {t("search.global")} ({data.globalTopics.length})
             </h2>
             <ul className="mt-3 space-y-2 text-sm">
@@ -119,13 +118,13 @@ export default function SearchPage() {
                   </div>
                 </li>
               ))}
-              {data.globalTopics.length === 0 && (
+              {data.globalTopics.length === 0 ? (
                 <li className="text-xs text-[var(--text-secondary)]">{t("search.noGlobal")}</li>
-              )}
+              ) : null}
             </ul>
           </div>
         </section>
-      )}
+      ) : null}
     </main>
   );
 }

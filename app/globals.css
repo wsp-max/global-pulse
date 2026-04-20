@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @config "../tailwind.config.ts";
 
 :root {
@@ -101,6 +101,38 @@ a {
   will-change: transform, opacity;
 }
 
+.section-title {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-accent);
+}
+
+.card-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.card-sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.meta-xs {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.card-panel {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-default);
+  background: var(--bg-secondary);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-card);
+}
+
 @media (max-width: 767px) {
   .desktop-only {
     display: none !important;
@@ -117,4 +149,22 @@ a {
   }
 }
 
+
+.page-shell {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  max-width: 80rem;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+@media (min-width: 1024px) {
+  .page-shell {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
 

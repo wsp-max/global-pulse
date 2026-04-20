@@ -1,4 +1,4 @@
-interface SourceBreakdownProps {
+﻿interface SourceBreakdownProps {
   sourceIds: string[];
 }
 

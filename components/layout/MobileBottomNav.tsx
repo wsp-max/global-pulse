@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Globe2, Home, Newspaper, Search, GitCompareArrows } from "lucide-react";
+import { BarChart3, GitCompareArrows, Globe2, Home, Search, Share2 } from "lucide-react";
 import type { ComponentType } from "react";
 import { useLanguage } from "@/lib/i18n/use-language";
 
@@ -15,10 +15,9 @@ interface NavItem {
 
 export function MobileBottomNav() {
   const pathname = usePathname() || "/";
-  const dualMapEnabled = process.env.NEXT_PUBLIC_FEATURE_DUAL_MAP_UI === "true";
   const { t } = useLanguage("ko");
 
-  const baseNavItems: NavItem[] = [
+  const navItems: NavItem[] = [
     {
       href: "/",
       label: t("nav.dashboard"),
@@ -27,9 +26,15 @@ export function MobileBottomNav() {
     },
     {
       href: "/global-issues",
-      label: t("nav.global"),
+      label: t("nav.globalIssues"),
       icon: Globe2,
       match: (currentPathname) => currentPathname.startsWith("/global-issues"),
+    },
+    {
+      href: "/propagation",
+      label: t("nav.propagation"),
+      icon: Share2,
+      match: (currentPathname) => currentPathname.startsWith("/propagation"),
     },
     {
       href: "/timeline",
@@ -43,15 +48,6 @@ export function MobileBottomNav() {
       icon: Search,
       match: (currentPathname) => currentPathname.startsWith("/search"),
     },
-  ];
-
-  const dualMapNavItems: NavItem[] = [
-    {
-      href: "/news",
-      label: t("nav.news"),
-      icon: Newspaper,
-      match: (currentPathname) => currentPathname.startsWith("/news"),
-    },
     {
       href: "/compare",
       label: t("nav.compare"),
@@ -60,15 +56,9 @@ export function MobileBottomNav() {
     },
   ];
 
-  const navItems = dualMapEnabled ? [...baseNavItems, ...dualMapNavItems] : baseNavItems;
-
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--border-default)] bg-[rgba(10,14,23,0.95)] pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 backdrop-blur md:hidden">
-      <ul
-        className={`mx-auto grid max-w-xl gap-1 px-2 ${
-          dualMapEnabled ? "grid-cols-6" : "grid-cols-4"
-        }`}
-      >
+      <ul className="mx-auto grid max-w-xl grid-cols-6 gap-1 px-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = item.match(pathname);

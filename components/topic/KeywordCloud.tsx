@@ -1,4 +1,4 @@
-interface KeywordCloudProps {
+﻿interface KeywordCloudProps {
   keywords: string[];
 }
 
@@ -7,16 +7,16 @@ export function KeywordCloud({ keywords }: KeywordCloudProps) {
 
   if (items.length === 0) {
     return (
-      <section className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-        <h2 className="text-sm font-semibold">키워드 클라우드</h2>
-        <p className="mt-2 text-xs text-[var(--text-secondary)]">아직 키워드가 생성되지 않았습니다.</p>
+      <section className="card-panel p-5">
+        <h2 className="card-title">키워드 클라우드</h2>
+        <p className="card-sub mt-2">아직 키워드가 생성되지 않았습니다.</p>
       </section>
     );
   }
 
   return (
-    <section className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-      <h2 className="text-sm font-semibold">키워드 클라우드</h2>
+    <section className="card-panel p-5">
+      <h2 className="card-title">키워드 클라우드</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         {items.map((keyword, index) => {
           const scale = 0.86 + ((items.length - index) / Math.max(items.length, 1)) * 0.4;
@@ -34,4 +34,3 @@ export function KeywordCloud({ keywords }: KeywordCloudProps) {
     </section>
   );
 }
-

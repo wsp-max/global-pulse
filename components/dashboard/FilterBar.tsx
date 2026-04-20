@@ -1,5 +1,7 @@
 ﻿"use client";
 
+import type { ReactNode } from "react";
+import { useState } from "react";
 import type { DashboardScope } from "@/lib/types/api";
 import { useLanguage } from "@/lib/i18n/use-language";
 
@@ -15,10 +17,12 @@ export interface DashboardFilters {
 interface FilterBarProps {
   value: DashboardFilters;
   onChange: (next: DashboardFilters) => void;
+  rightSlot?: ReactNode;
 }
 
-export function FilterBar({ value, onChange }: FilterBarProps) {
+export function FilterBar({ value, onChange, rightSlot }: FilterBarProps) {
   const { t } = useLanguage("ko");
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const update = <K extends keyof DashboardFilters>(key: K, next: DashboardFilters[K]) => {
     onChange({
@@ -28,13 +32,13 @@ export function FilterBar({ value, onChange }: FilterBarProps) {
   };
 
   return (
-    <section className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3">
-      <div className="grid gap-2 md:grid-cols-6">
+    <section className="card-panel p-3">
+      <div className="grid gap-2 lg:grid-cols-[1.5fr_repeat(4,minmax(0,1fr))_auto]">
         <input
           value={value.q}
           onChange={(event) => update("q", event.target.value)}
           placeholder={t("filter.searchPlaceholder")}
-          className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-xs text-[var(--text-primary)] md:col-span-2"
+          className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-xs text-[var(--text-primary)]"
           aria-label={t("filter.searchPlaceholder")}
         />
 
@@ -86,21 +90,37 @@ export function FilterBar({ value, onChange }: FilterBarProps) {
           <option value="news">{t("filter.scope.news")}</option>
           <option value="mixed">{t("filter.scope.mixed")}</option>
         </select>
+
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((prev) => !prev)}
+            className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
+            aria-label="고급 필터 토글"
+          >
+            고급 필터
+          </button>
+          {rightSlot}
+        </div>
       </div>
 
-      <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-        <span>{t("filter.minZ")} {value.minZ.toFixed(1)}</span>
-        <input
-          type="range"
-          min={0}
-          max={5}
-          step={0.1}
-          value={value.minZ}
-          onChange={(event) => update("minZ", Number(event.target.value))}
-          className="w-full"
-          aria-label={t("filter.minZ")}
-        />
-      </div>
+      {showAdvanced ? (
+        <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+          <span>
+            {t("filter.minZ")} {value.minZ.toFixed(1)}
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={5}
+            step={0.1}
+            value={value.minZ}
+            onChange={(event) => update("minZ", Number(event.target.value))}
+            className="w-full"
+            aria-label={t("filter.minZ")}
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

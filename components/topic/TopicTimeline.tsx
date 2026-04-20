@@ -1,4 +1,4 @@
-import { getRegionById } from "@global-pulse/shared";
+﻿import { getRegionById } from "@global-pulse/shared";
 import type { TimelinePoint } from "@/lib/types/api";
 
 interface TopicTimelineProps {
@@ -28,11 +28,11 @@ export function TopicTimeline({
     .slice(0, 40);
 
   return (
-    <section className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-      <h2 className="text-sm font-semibold">{title}</h2>
+    <section className="card-panel p-5">
+      <h2 className="card-title">{title}</h2>
 
       {timelineRows.length === 0 ? (
-        <p className="mt-2 text-xs text-[var(--text-secondary)]">{emptyLabel}</p>
+        <p className="card-sub mt-2">{emptyLabel}</p>
       ) : (
         <ul className="mt-4 space-y-3 border-l border-[var(--border-default)] pl-4">
           {timelineRows.map((point, index) => {
@@ -62,4 +62,3 @@ export function TopicTimeline({
     </section>
   );
 }
-

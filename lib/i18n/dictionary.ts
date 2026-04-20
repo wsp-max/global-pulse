@@ -10,6 +10,7 @@ export const I18N_MESSAGES = {
     "nav.dashboard": "대시보드",
     "nav.globalIssues": "글로벌 이슈",
     "nav.timeline": "타임라인",
+    "nav.propagation": "전파 분석",
     "nav.search": "검색",
     "nav.news": "뉴스 트랙",
     "nav.compare": "커뮤 vs 뉴스",
@@ -65,6 +66,7 @@ export const I18N_MESSAGES = {
     "nav.dashboard": "Dashboard",
     "nav.globalIssues": "Global Issues",
     "nav.timeline": "Timeline",
+    "nav.propagation": "Propagation",
     "nav.search": "Search",
     "nav.news": "News Track",
     "nav.compare": "Community vs News",
@@ -123,3 +125,4 @@ export function normalizeLanguage(value: string | null | undefined): AppLanguage
   }
   return null;
 }
+

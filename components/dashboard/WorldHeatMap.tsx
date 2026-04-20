@@ -12,6 +12,7 @@ interface WorldHeatMapProps {
   regions: RegionDashboardRow[];
   globalTopics?: GlobalTopic[];
   variant?: "community" | "news";
+  compact?: boolean;
   onTopicSelect?: (topicId: number) => void;
 }
 
@@ -159,7 +160,13 @@ function buildClusterMarkers(regions: RegionDashboardRow[], zoom: number): Clust
   return [...buckets.values()];
 }
 
-export function WorldHeatMap({ regions, globalTopics = [], variant = "community", onTopicSelect }: WorldHeatMapProps) {
+export function WorldHeatMap({
+  regions,
+  globalTopics = [],
+  variant = "community",
+  compact = false,
+  onTopicSelect,
+}: WorldHeatMapProps) {
   const maxHeat = Math.max(...regions.map((region) => region.totalHeatScore), 1);
   const flowEdges = useMemo(
     () =>
@@ -229,7 +236,9 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
         <div className="mt-4 rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-2">
           <div
             ref={viewportRef}
-            className="relative h-[220px] overflow-hidden rounded-lg sm:h-[300px]"
+            className={`relative overflow-hidden rounded-lg ${
+              compact ? "h-[360px]" : "h-[520px] sm:h-[620px] lg:h-[720px] xl:h-[780px]"
+            }`}
             style={{ touchAction: "none" }}
             onWheel={(event) => {
               event.preventDefault();
@@ -273,7 +282,7 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                 transition: reducedMotion || isDragging ? "none" : "transform 180ms cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             >
-              <ComposableMap projectionConfig={{ scale: 145 }} style={{ width: "100%", height: "100%" }}>
+              <ComposableMap projectionConfig={{ scale: 175 }} style={{ width: "100%", height: "100%" }}>
                 <Geographies geography={GEO_URL}>
                   {({ geographies }) =>
                     geographies.map((geo) => (
@@ -320,7 +329,7 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                   const durationSec = Math.max(3.2, Math.min(5.5, 5.7 - volumeBand * 2.5));
                   const flowColor = getFlowStrokeColor(variant, volumeBand);
                   const strokeOpacity = Math.max(0.3, Math.min(0.9, edge.confidence));
-                  const strokeWidth = 0.5 + Math.max(0, Math.min(0.8, volumeBand * 0.8));
+                  const strokeWidth = 0.6 + Math.max(0, Math.min(1.0, volumeBand * 1.0));
                   const isFast = edge.velocity >= surgingVelocityCutoff;
                   const particleCount = edge.confidence >= 0.75 ? 3 : edge.confidence >= 0.45 ? 2 : 1;
                   const lagText = `${toLagText(edge.lagMinutes)}${isFast ? " ⚡" : ""}`;
@@ -472,3 +481,4 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
     </div>
   );
 }
+

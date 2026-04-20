@@ -1,4 +1,4 @@
-import { getRegionById } from "@global-pulse/shared";
+﻿import { getRegionById } from "@global-pulse/shared";
 
 interface CrossRegionComparisonProps {
   sentiments: Record<string, number>;
@@ -38,9 +38,9 @@ export function CrossRegionComparison({ sentiments, heatScores }: CrossRegionCom
 
   if (rows.length === 0) {
     return (
-      <section className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-        <h2 className="text-sm font-semibold">리전별 반응 비교</h2>
-        <p className="mt-2 text-xs text-[var(--text-secondary)]">비교 가능한 리전 데이터가 없습니다.</p>
+      <section className="card-panel p-5">
+        <h2 className="card-title">리전별 반응 비교</h2>
+        <p className="card-sub mt-2">비교 가능한 리전 데이터가 없습니다.</p>
       </section>
     );
   }
@@ -48,8 +48,8 @@ export function CrossRegionComparison({ sentiments, heatScores }: CrossRegionCom
   const maxHeat = Math.max(...rows.map((row) => row.heatScore), 1);
 
   return (
-    <section className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-      <h2 className="text-sm font-semibold">리전별 반응 비교</h2>
+    <section className="card-panel p-5">
+      <h2 className="card-title">리전별 반응 비교</h2>
       <div className="mt-3 space-y-3">
         {rows.map((row) => {
           const region = getRegionById(row.regionId);
@@ -94,4 +94,3 @@ export function CrossRegionComparison({ sentiments, heatScores }: CrossRegionCom
     </section>
   );
 }
-

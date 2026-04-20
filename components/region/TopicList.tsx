@@ -16,6 +16,7 @@ function deriveHeatTrend(miniTrend: number[] | null | undefined): number | null 
   if (!miniTrend || miniTrend.length < 2) {
     return null;
   }
+
   const first = miniTrend[0] ?? 0;
   const last = miniTrend[miniTrend.length - 1] ?? 0;
   return ((last - first) / Math.max(first, 1)) * 100;
@@ -42,6 +43,7 @@ export function TopicList({ topics, selectedTopicId, onSelect }: TopicListProps)
           keywords: topic.keywords,
           entities: topic.entities ?? null,
         });
+
         return (
           <TopicCard
             key={topic.id ?? `${topic.nameEn}-${index}`}

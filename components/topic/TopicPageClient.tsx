@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { GlobalTopic, Topic } from "@global-pulse/shared";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -55,7 +55,7 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
 
   if (isLoading) {
     return (
-      <main className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-6">
+      <main className="page-shell">
         <LoadingSkeleton className="h-28" lines={4} />
       </main>
     );
@@ -63,21 +63,18 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
 
   if (error || !data) {
     return (
-      <main className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-6">
-        <EmptyState
-          title="토픽 상세 데이터를 불러오지 못했습니다."
-          description="잠시 후 다시 시도해 주세요."
-        />
+      <main className="page-shell">
+        <EmptyState title="토픽 상세 데이터를 불러오지 못했습니다." description="잠시 후 다시 시도해 주세요." />
       </main>
     );
   }
 
   if (data.kind === "not_configured") {
     return (
-      <main className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-6">
+      <main className="page-shell">
         <EmptyState
           title="데이터베이스 설정이 필요합니다."
-          description="PostgreSQL 연결을 확인한 뒤 다시 시도해 주세요."
+          description="PostgreSQL 연결 상태를 확인한 뒤 다시 시도해 주세요."
         />
       </main>
     );
@@ -92,8 +89,8 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
     : (topic?.nameKo ?? topic?.nameEn ?? "Regional Topic");
 
   const subtitle = isGlobal
-    ? (globalTopic?.summaryKo ?? globalTopic?.summaryEn ?? "글로벌 이슈 요약이 아직 없습니다.")
-    : (topic?.summaryKo ?? topic?.summaryEn ?? "리전 토픽 요약이 아직 없습니다.");
+    ? (globalTopic?.summaryKo ?? globalTopic?.summaryEn ?? "요약 준비 중")
+    : (topic?.summaryKo ?? topic?.summaryEn ?? "요약 준비 중");
 
   const sentiments = isGlobal
     ? (globalTopic?.regionalSentiments ?? {})
@@ -106,21 +103,23 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
       ? buildRegionalHeat(topic)
       : {};
 
-  const relatedItems = isGlobal
-    ? toGlobalRelatedItems(data.relatedGlobalTopics)
-    : toRegionalRelatedItems(data.relatedTopics);
+  const relatedItems = isGlobal ? toGlobalRelatedItems(data.relatedGlobalTopics) : toRegionalRelatedItems(data.relatedTopics);
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 lg:px-6">
-      <header className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4">
-        <h1 className="text-lg font-semibold">{title}</h1>
-        <p className="mt-2 text-sm text-[var(--text-secondary)]">{subtitle}</p>
+    <main className="page-shell">
+      <header className="card-panel p-5">
+        <p className="section-title">TOPIC DETAIL</p>
+        <h1 className="text-xl font-semibold text-[var(--text-primary)]">{title}</h1>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">{subtitle}</p>
       </header>
 
       <CrossRegionComparison sentiments={sentiments} heatScores={heatScores} />
       <TopicTimeline points={data.timeline} />
-      <KeywordCloud keywords={data.keywords} />
-      <RelatedTopics title={isGlobal ? "연관 글로벌 이슈" : "같은 리전 연관 토픽"} items={relatedItems} />
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <KeywordCloud keywords={data.keywords} />
+        <RelatedTopics title={isGlobal ? "연관 글로벌 이슈" : "연관 리전 토픽"} items={relatedItems} />
+      </section>
     </main>
   );
 }

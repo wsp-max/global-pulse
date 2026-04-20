@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { TopicPeriod, TopicSort } from "@/lib/hooks/useTopics";
 
@@ -30,7 +30,7 @@ function chipClass(active: boolean): string {
 
 export function FilterBar({ period, sort, onPeriodChange, onSortChange }: FilterBarProps) {
   return (
-    <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3">
+    <div className="card-panel p-3">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-xs text-[var(--text-tertiary)]">기간</span>

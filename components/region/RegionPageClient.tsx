@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useMemo, useState } from "react";
 import type { Topic } from "@global-pulse/shared";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
+import { KeywordCloud } from "@/components/topic/KeywordCloud";
 import { useTimeline } from "@/lib/hooks/useTimeline";
 import { useTopics, type TopicPeriod, type TopicSort } from "@/lib/hooks/useTopics";
 import { useLanguage } from "@/lib/i18n/use-language";
@@ -30,6 +31,40 @@ function parsePeriod(input: string | null): TopicPeriod {
 function parseSort(input: string | null): TopicSort {
   if (!input) return "heat";
   return SORT_OPTIONS.includes(input as TopicSort) ? (input as TopicSort) : "heat";
+}
+
+function hasPlaceholderSummary(summary: string | null | undefined): boolean {
+  if (!summary) {
+    return true;
+  }
+
+  const normalized = summary.trim();
+  return (
+    normalized.startsWith("요약 준비 중") ||
+    normalized.startsWith("Summary pending") ||
+    normalized.startsWith("핵심 키워드")
+  );
+}
+
+function firstSummarySentence(summary: string | null | undefined): string | null {
+  if (!summary || hasPlaceholderSummary(summary)) {
+    return null;
+  }
+
+  const first = summary
+    .split(/[.!?。！？]\s|$/u)
+    .map((item) => item.trim())
+    .filter(Boolean)[0];
+
+  if (!first) {
+    return null;
+  }
+
+  if (first.length <= 80) {
+    return first;
+  }
+
+  return `${first.slice(0, 80).trim()}…`;
 }
 
 export function RegionPageClient({ regionId }: RegionPageClientProps) {
@@ -76,8 +111,9 @@ export function RegionPageClient({ regionId }: RegionPageClientProps) {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 lg:px-6">
+    <main className="page-shell">
       <RegionHeader regionId={regionId} snapshot={data?.snapshot} />
+
       <FilterBar
         period={period}
         sort={sort}
@@ -85,26 +121,21 @@ export function RegionPageClient({ regionId }: RegionPageClientProps) {
         onSortChange={(nextSort) => updateFilter({ sort: nextSort })}
       />
 
-      {timelineLoading ? <LoadingSkeleton className="h-32" /> : <TrendChart points={timeline} />}
+      <section className="card-panel p-5">
+        <h2 className="card-title mb-3">열기 추이</h2>
+        {timelineLoading ? <LoadingSkeleton className="h-32" /> : <TrendChart points={timeline} />}
+      </section>
 
-      {error && (
-        <EmptyState
-          title={t("dashboard.loadError")}
-          description={t("dashboard.loadErrorDesc")}
-        />
-      )}
+      {error ? <EmptyState title={t("dashboard.loadError")} description={t("dashboard.loadErrorDesc")} /> : null}
 
-      {!error && !isLoading && topics.length === 0 && (
-        <EmptyState
-          title={t("dashboard.empty.topics")}
-          description={t("dashboard.error.globalRetry")}
-        />
-      )}
+      {!error && !isLoading && topics.length === 0 ? (
+        <EmptyState title={t("dashboard.empty.topics")} description={t("dashboard.error.globalRetry")} />
+      ) : null}
 
-      {!error && (isLoading || topics.length > 0) && (
-        <section className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-          <div className="order-2 rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 lg:order-1">
-            <h2 className="mb-3 text-sm font-semibold">Top Topics</h2>
+      {!error && (isLoading || topics.length > 0) ? (
+        <section className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+          <div className="card-panel p-5">
+            <h2 className="card-title mb-3">Top Topics</h2>
             {isLoading ? (
               <LoadingSkeleton className="h-44" lines={5} />
             ) : (
@@ -116,19 +147,33 @@ export function RegionPageClient({ regionId }: RegionPageClientProps) {
             )}
           </div>
 
-          <div className="order-1 space-y-4 rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 lg:order-2">
-            <h2 className="text-sm font-semibold">{selectedTopic?.nameKo ?? "Topic Detail"}</h2>
-            <p className="text-xs text-[var(--text-secondary)]">
-              {selectedTopic?.summaryKo ?? "요약 데이터가 아직 없습니다."}
-            </p>
-            <SentimentGauge value={selectedTopic?.sentiment ?? null} />
-            <SourceBreakdown sourceIds={selectedTopic?.sourceIds ?? []} />
-            <div className="text-xs text-[var(--text-tertiary)]">
-              게시글 {selectedTopic?.postCount ?? 0} / 댓글 {selectedTopic?.totalComments ?? 0}
-            </div>
+          <div className="space-y-4">
+            <section className="card-panel p-5">
+              <h2 className="card-title">선택 토픽 요약</h2>
+              <p className="card-sub mt-1">{selectedTopic?.nameKo ?? "토픽 상세"}</p>
+              {firstSummarySentence(selectedTopic?.summaryKo ?? null) ? (
+                <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
+                  {firstSummarySentence(selectedTopic?.summaryKo ?? null)}
+                </p>
+              ) : null}
+              <div className="mt-3">
+                <SentimentGauge value={selectedTopic?.sentiment ?? null} />
+              </div>
+              <div className="meta-xs mt-3">
+                게시글 {selectedTopic?.postCount ?? 0} / 댓글 {selectedTopic?.totalComments ?? 0}
+              </div>
+            </section>
+
+            <section className="card-panel p-5">
+              <h2 className="card-title mb-3">출처 분포</h2>
+              <SourceBreakdown sourceIds={selectedTopic?.sourceIds ?? []} />
+            </section>
+
+            <KeywordCloud keywords={selectedTopic?.keywords ?? []} />
           </div>
         </section>
-      )}
+      ) : null}
     </main>
   );
 }
+

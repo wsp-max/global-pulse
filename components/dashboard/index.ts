@@ -1,7 +1,6 @@
-export { WorldHeatMap } from "./WorldHeatMap";
+﻿export { WorldHeatMap } from "./WorldHeatMap";
 export { RegionCard } from "./RegionCard";
 export { GlobalIssuePanel } from "./GlobalIssuePanel";
-export { LivePulseStrip } from "./LivePulseStrip";
 export { PulseSignalBoard } from "./PulseSignalBoard";
 export { PropagationStream } from "./PropagationStream";
 export { DashboardClient } from "./DashboardClient";
@@ -13,3 +12,7 @@ export { CompareDrawer } from "./CompareDrawer";
 export { PropagationMatrix } from "./PropagationMatrix";
 export { HealthStrip } from "./HealthStrip";
 export { WatchBell } from "./WatchBell";
+export { RegionRiseList } from "./RegionRiseList";
+export { HotIssueList } from "./HotIssueList";
+export { RegionChipRow } from "./RegionChipRow";
+export { PropagationPageClient } from "./PropagationPageClient";

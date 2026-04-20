@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { HeatBadge } from "@/components/shared/HeatBadge";
 import { useLanguage } from "@/lib/i18n/use-language";
@@ -34,6 +34,7 @@ function getWhyLine(summary: string | null | undefined): string | null {
   if (!summary) {
     return null;
   }
+
   const first = summary
     .split(/[.!?。！？]\s|$/u)
     .map((item) => item.trim())
@@ -46,6 +47,7 @@ function getWhyLine(summary: string | null | undefined): string | null {
   if (first.length <= 80) {
     return first;
   }
+
   return `${first.slice(0, 80).trim()}…`;
 }
 
@@ -101,14 +103,8 @@ export function TopicCard({
   const sentimentBadge = resolveSentimentBadge(sentimentDistribution, sentiment);
   const whyLine = getWhyLine(summaryKo);
   const hasTrend = typeof heatTrend === "number" && Number.isFinite(heatTrend) && Math.abs(heatTrend) >= 5;
-  const trendLabel = hasTrend
-    ? `${heatTrend! > 0 ? "▲" : "▼"} ${Math.round(Math.abs(heatTrend!))}%`
-    : null;
-  const trendClass = hasTrend
-    ? heatTrend! > 0
-      ? "text-emerald-400"
-      : "text-rose-400"
-    : "text-slate-400";
+  const trendLabel = hasTrend ? `${heatTrend! > 0 ? "▲" : "▼"} ${Math.round(Math.abs(heatTrend!))}%` : null;
+  const trendClass = hasTrend ? (heatTrend! > 0 ? "text-emerald-400" : "text-rose-400") : "text-slate-400";
 
   return (
     <button
@@ -120,23 +116,19 @@ export function TopicCard({
           : "border-[var(--border-default)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)]"
       }`}
     >
-      <div className="flex items-center justify-between">
-        <p className="text-sm">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm text-[var(--text-primary)]">
           #{rank} {name}
-          {isFallbackName && (
+          {isFallbackName ? (
             <span className="ml-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-300">
               {nameRefiningLabel ?? t("dashboard.badge.nameRefining")}
             </span>
-          )}
+          ) : null}
         </p>
         <HeatBadge score={Math.round(heatScore)} />
       </div>
 
-      {whyLine && (
-        <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-[var(--text-secondary)]">
-          {whyLine}
-        </p>
-      )}
+      {whyLine ? <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-[var(--text-secondary)]">{whyLine}</p> : null}
 
       <div className="mt-2 h-1.5 rounded-full bg-[var(--bg-tertiary)]">
         <div className="h-full rounded-full bg-[var(--text-accent)]" style={{ width: `${relativePercent}%` }} />
@@ -153,12 +145,10 @@ export function TopicCard({
         >
           {sentimentBadge.label}
         </span>
-        {trendLabel && <span className={`text-[10px] ${trendClass}`}>{trendLabel}</span>}
+        {trendLabel ? <span className={`text-[10px] ${trendClass}`}>{trendLabel}</span> : null}
       </div>
 
-      <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">
-        Heat {Math.round(heatScore)} / 상대 강도 {relativePercent}%
-      </p>
+      <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">Heat {Math.round(heatScore)} / 상대 강도 {relativePercent}%</p>
     </button>
   );
 }

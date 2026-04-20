@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { getRegionById, type GlobalTopic } from "@global-pulse/shared";
@@ -7,17 +7,30 @@ import { cleanupTopicName } from "@/lib/utils/topic-name";
 
 interface GlobalIssuePanelProps {
   topics: GlobalTopic[];
+  maxItems?: number;
 }
 
 function firstSentence(value: string | null | undefined): string | null {
   if (!value) {
     return null;
   }
-  const first = value
+  const normalized = value.trim();
+  if (
+    normalized.startsWith("요약 준비 중") ||
+    normalized.startsWith("Summary pending") ||
+    normalized.startsWith("Signals for") ||
+    normalized.startsWith("핵심 키워드")
+  ) {
+    return null;
+  }
+  const first = normalized
     .split(/[.!?。！？]\s|$/u)
     .map((item) => item.trim())
     .filter(Boolean)[0];
-  return first ?? null;
+  if (!first) {
+    return null;
+  }
+  return first.length > 120 ? `${first.slice(0, 120).trimEnd()}…` : first;
 }
 
 function toSentimentLabel(value: number): string {
@@ -28,13 +41,13 @@ function toSentimentLabel(value: number): string {
   return "매우 긍정";
 }
 
-export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
+export function GlobalIssuePanel({ topics, maxItems = 8 }: GlobalIssuePanelProps) {
   const { t } = useLanguage("ko");
-  const rows = topics.slice(0, 8);
+  const rows = topics.slice(0, maxItems);
 
   return (
-    <section className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-card)]">
-      <h2 className="font-display text-base text-[var(--text-accent)]">GLOBAL ISSUES</h2>
+    <section className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-card)]">
+      <h2 className="section-title">Global Issues</h2>
 
       {rows.length === 0 ? (
         <div className="mt-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 text-sm text-[var(--text-secondary)]">
@@ -50,23 +63,23 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
               keywords: [],
               entities: null,
             });
-            const sentimentEntries = Object.entries(topic.regionalSentiments);
+            const sentimentEntries = Object.entries(topic.regionalSentiments ?? {});
             const primaryRegion =
               (topic.firstSeenRegion && getRegionById(topic.firstSeenRegion)) ||
               (topic.regions.length > 0 ? getRegionById(topic.regions[0]) : null);
-            const topicSummary = firstSentence(topic.summaryKo ?? null);
+            const summary = firstSentence(topic.summaryKo ?? null);
 
             const card = (
               <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 transition-colors hover:border-[var(--border-hover)]">
-                <p className="text-sm font-medium text-[var(--text-primary)]">
+                <p className="card-title">
                   {cleaned.displayKo}
-                  {cleaned.isFallback && (
+                  {cleaned.isFallback ? (
                     <span className="ml-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-300">
                       {t("dashboard.badge.nameRefining")}
                     </span>
-                  )}
+                  ) : null}
                 </p>
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                <p className="card-sub mt-1">
                   {topic.regions
                     .map((regionId) => {
                       const region = getRegionById(regionId);
@@ -74,11 +87,7 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
                     })
                     .join(" · ")}
                 </p>
-                {topicSummary && (
-                  <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-[var(--text-secondary)]">
-                    {topicSummary}
-                  </p>
-                )}
+                {summary ? <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-[var(--text-secondary)]">{summary}</p> : null}
 
                 <div className="mt-3 space-y-1.5">
                   {sentimentEntries.slice(0, 3).map(([regionId, value]) => {
@@ -101,7 +110,7 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
                   })}
                 </div>
 
-                <div className="mt-3 text-[11px] text-[var(--text-tertiary)]">
+                <div className="meta-xs mt-3">
                   Heat {Math.round(topic.totalHeatScore)}
                   {primaryRegion ? ` · 최초 감지 ${primaryRegion.flagEmoji} ${primaryRegion.nameKo}` : ""}
                 </div>
