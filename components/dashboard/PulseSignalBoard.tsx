@@ -1,4 +1,5 @@
-﻿import type { GlobalTopic } from "@global-pulse/shared";
+import type { GlobalTopic } from "@global-pulse/shared";
+import { useLanguage } from "@/lib/i18n/use-language";
 import type { RegionDashboardRow } from "@/lib/types/api";
 import { toHeatBand, toHeatPercent } from "@/lib/utils/heat";
 import { cleanupTopicName } from "@/lib/utils/topic-name";
@@ -28,6 +29,7 @@ function topicDisplayBand(topic: GlobalTopic, maxHeat: number): number {
 }
 
 export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProps) {
+  const { t } = useLanguage("ko");
   const totalHeat = regions.reduce((sum, region) => sum + region.totalHeatScore, 0);
   const totalActiveTopics = regions.reduce((sum, region) => sum + region.activeTopics, 0);
   const totalSources = regions.reduce((sum, region) => sum + region.sourcesTotal, 0);
@@ -203,7 +205,7 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
                           {cleaned.displayKo}
                           {cleaned.isFallback && (
                             <span className="ml-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-300">
-                              이름 정제 중
+                              {t("dashboard.badge.nameRefining")}
                             </span>
                           )}
                         </p>
@@ -222,3 +224,4 @@ export function PulseSignalBoard({ regions, globalTopics }: PulseSignalBoardProp
     </section>
   );
 }
+

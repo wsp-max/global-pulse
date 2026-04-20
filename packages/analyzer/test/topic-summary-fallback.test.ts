@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+// @ts-expect-error test runner loads ts source directly via tsx.
 import summaryUtils from "../../../lib/utils/topic-summary.ts";
 
 const { buildTopicSummaries } = summaryUtils;

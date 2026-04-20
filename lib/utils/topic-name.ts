@@ -43,7 +43,7 @@ function isKoTwoTokenLowInfo(value: string): boolean {
     .split(/\s+/u)
     .map((token) => token.trim())
     .filter(Boolean);
-  return tokens.length === 2 && tokens.every((token) => token.length <= 4);
+  return tokens.length === 2 && tokens.every((token) => token.length <= 2);
 }
 
 function findEntityLabel(entities: TopicNameEntity[] | null | undefined): string | null {
@@ -100,7 +100,7 @@ function keepDominantScript(value: string): string {
   const hangulCount = countByRegex(value, /[가-힣]/gu);
   const latinCount = countByRegex(value, /[A-Za-z]/g);
 
-  if (hangulCount >= latinCount) {
+  if (hangulCount >= latinCount * 0.5) {
     return value
       .replace(/[^가-힣0-9\s]/gu, " ")
       .replace(/\s+/g, " ")

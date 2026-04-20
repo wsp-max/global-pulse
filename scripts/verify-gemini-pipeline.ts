@@ -5,12 +5,39 @@ const GEMINI_API_BASE = process.env.GEMINI_API_BASE?.trim() || "https://generati
 const GEMINI_API_VERSION = process.env.GEMINI_API_VERSION?.trim() || "v1beta";
 const GEMINI_MODEL_PRIMARY = process.env.GEMINI_MODEL_PRIMARY?.trim() || "gemini-2.5-flash";
 const GEMINI_MODEL_FALLBACK = process.env.GEMINI_MODEL_FALLBACK?.trim() || "gemini-2.0-flash";
+const GROQ_MODEL = process.env.GROQ_MODEL?.trim() || "moonshotai/kimi-k2-instruct-0905";
 const FALLBACK_SUMMARY_KO = "요약 준비 중";
 const FALLBACK_SUMMARY_EN = "Summary pending";
 
 interface SampleCase {
   regionId: string;
   topic: Topic;
+}
+
+interface CliOptions {
+  regionId?: string;
+  limit?: number;
+}
+
+function parseCliOptions(): CliOptions {
+  const options: CliOptions = {};
+  for (let index = 0; index < process.argv.length; index += 1) {
+    const token = process.argv[index];
+    if (token === "--regionId") {
+      options.regionId = process.argv[index + 1];
+    }
+    if (token === "--limit") {
+      const numeric = Number(process.argv[index + 1]);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        options.limit = Math.floor(numeric);
+      }
+    }
+  }
+  return options;
+}
+
+function tokenCount(value: string | null | undefined): number {
+  return (value ?? "").trim().split(/\s+/u).filter(Boolean).length;
 }
 
 function buildTopic(regionId: string, nameKo: string, nameEn: string, keywords: string[]): Topic {
@@ -92,17 +119,20 @@ async function probeRawGemini(regionId: string, topic: Topic): Promise<string> {
 }
 
 async function main(): Promise<void> {
+  const cli = parseCliOptions();
   const envStatus = {
     GEMINI_API_KEY: Boolean(process.env.GEMINI_API_KEY?.trim()),
+    GROQ_API_KEY: Boolean(process.env.GROQ_API_KEY?.trim()),
     ANALYZER_USE_GEMINI: process.env.ANALYZER_USE_GEMINI ?? "(unset)",
     GEMINI_MODEL_PRIMARY,
     GEMINI_MODEL_FALLBACK,
+    GROQ_MODEL,
   };
 
   console.log("[verify-gemini] env", JSON.stringify(envStatus));
 
-  if (!envStatus.GEMINI_API_KEY) {
-    console.error("[verify-gemini] missing GEMINI_API_KEY");
+  if (!envStatus.GEMINI_API_KEY && !envStatus.GROQ_API_KEY) {
+    console.error("[verify-gemini] missing GEMINI_API_KEY and GROQ_API_KEY");
     process.exit(2);
   }
 
@@ -111,14 +141,21 @@ async function main(): Promise<void> {
     { regionId: "us", topic: buildTopic("us", "미국 반도체 보조금", "US Chip Subsidy", ["semiconductor", "subsidy", "policy"]) },
     { regionId: "jp", topic: buildTopic("jp", "일본 엔화 변동", "Japan Yen Volatility", ["yen", "fx", "boj"]) },
   ];
+  const selectedSamples = samples
+    .filter((sample) => !cli.regionId || sample.regionId === cli.regionId)
+    .slice(0, cli.limit ?? samples.length);
 
   let fallbackDetected = false;
 
-  for (const sample of samples) {
+  for (const sample of selectedSamples) {
     console.log(`\n[verify-gemini] sample region=${sample.regionId}`);
 
-    const raw = await probeRawGemini(sample.regionId, sample.topic);
-    console.log("[verify-gemini] raw-json", raw.slice(0, 1200));
+    if (envStatus.GEMINI_API_KEY) {
+      const raw = await probeRawGemini(sample.regionId, sample.topic);
+      console.log("[verify-gemini] raw-json", raw.slice(0, 1200));
+    } else {
+      console.log("[verify-gemini] raw-json skipped (gemini api key missing, relying on groq fallback)");
+    }
 
     const result = await summarizeTopicsWithGemini([sample.topic], { regionId: sample.regionId });
     const mapped = result.topics[0];
@@ -131,6 +168,10 @@ async function main(): Promise<void> {
       regionId: sample.regionId,
       nameKo: mapped.nameKo,
       nameEn: mapped.nameEn,
+      nameKoLength: mapped.nameKo.length,
+      nameEnLength: mapped.nameEn.length,
+      nameKoTokens: tokenCount(mapped.nameKo),
+      nameEnTokens: tokenCount(mapped.nameEn),
       summaryKoLength: mapped.summaryKo?.length ?? 0,
       summaryEnLength: mapped.summaryEn?.length ?? 0,
       fallbackHit: result.stats.fallbackCount > 0 || mapped.summaryKo === FALLBACK_SUMMARY_KO || mapped.summaryEn === FALLBACK_SUMMARY_EN,

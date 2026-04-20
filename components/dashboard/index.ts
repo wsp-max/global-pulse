@@ -1,8 +1,7 @@
 export { WorldHeatMap } from "./WorldHeatMap";
 export { RegionCard } from "./RegionCard";
-export { HotTopicTicker } from "./HotTopicTicker";
 export { GlobalIssuePanel } from "./GlobalIssuePanel";
-export { LivePulseIndicator } from "./LivePulseIndicator";
+export { LivePulseStrip } from "./LivePulseStrip";
 export { PulseSignalBoard } from "./PulseSignalBoard";
 export { PropagationStream } from "./PropagationStream";
 export { DashboardClient } from "./DashboardClient";
@@ -14,5 +13,3 @@ export { CompareDrawer } from "./CompareDrawer";
 export { PropagationMatrix } from "./PropagationMatrix";
 export { HealthStrip } from "./HealthStrip";
 export { WatchBell } from "./WatchBell";
-
-

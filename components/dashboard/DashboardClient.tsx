@@ -6,8 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { GlobalTopic, Topic } from "@global-pulse/shared";
 import {
   GlobalIssuePanel,
-  HotTopicTicker,
-  LivePulseIndicator,
+  LivePulseStrip,
   PropagationMatrix,
   PulseSignalBoard,
   RegionCard,
@@ -192,6 +191,7 @@ export function DashboardClient({
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [pinnedTopicIds, setPinnedTopicIds] = useState<number[]>([]);
+  const [advancedExpanded, setAdvancedExpanded] = useState(false);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const filters = useMemo(
     () => parseFilters(new URLSearchParams(searchParams.toString()), scope),
@@ -281,6 +281,8 @@ export function DashboardClient({
     });
   }, [filters.q, filters.sentiment, globalTopicsData?.globalTopics]);
 
+  const topGlobalIssues = useMemo(() => filteredGlobalTopics.slice(0, 5), [filteredGlobalTopics]);
+
   const comparePool = useMemo(() => {
     const byId = new Map<number, Topic>();
     for (const region of rawRegions) {
@@ -317,7 +319,7 @@ export function DashboardClient({
           keywords: topic.keywords,
           entities: topic.entities ?? null,
         });
-        const badge = cleaned.isFallback ? " [이름 정제 중]" : "";
+        const badge = cleaned.isFallback ? ` [${t("dashboard.badge.nameRefining")}]` : "";
         return `${region.flagEmoji} ${region.nameKo}: "${cleaned.displayKo}" 🔥${Math.round(topic.heatScore)}${badge}`;
       }),
     )
@@ -381,28 +383,27 @@ export function DashboardClient({
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-10 pt-6 lg:px-6">
-      <FilterBar value={filters} onChange={updateFilters} />
-
-      <div className="flex items-center justify-end">
-        <WatchBell
-          items={watchedItems}
-          alertCount={alertCount}
-          onClearAlerts={clearAlerts}
-          onRequestNotification={requestBrowserNotification}
-          onTopicSelect={openTopicSheet}
-        />
-        <button
-          type="button"
-          aria-label="비교 드로어 열기"
-          onClick={() => setIsCompareOpen(true)}
-          className="ml-2 rounded-md border border-[var(--border-default)] bg-[var(--bg-secondary)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
-        >
-          {t("dashboard.compareDrawer")} ({validPinnedTopicIds.length}/3)
-        </button>
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 pb-10 pt-6 lg:px-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 py-2">
+        <FilterBar value={filters} onChange={updateFilters} />
+        <div className="flex items-center gap-2">
+          <WatchBell
+            items={watchedItems}
+            alertCount={alertCount}
+            onClearAlerts={clearAlerts}
+            onRequestNotification={requestBrowserNotification}
+            onTopicSelect={openTopicSheet}
+          />
+          <button
+            type="button"
+            aria-label={t("dashboard.action.openCompare")}
+            onClick={() => setIsCompareOpen(true)}
+            className="rounded-md border border-[var(--border-default)] bg-[var(--bg-secondary)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
+          >
+            {t("dashboard.compareDrawer")} ({validPinnedTopicIds.length}/3)
+          </button>
+        </div>
       </div>
-
-      <HotTopicTicker items={tickerItems} />
 
       {regionsError && (
         <EmptyState
@@ -426,54 +427,81 @@ export function DashboardClient({
       )}
 
       {!regionsError && filteredRegions.length > 0 && (
-        <section className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
-          <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3 shadow-[var(--shadow-card)] sm:p-4 md:flex md:flex-col">
-            <WorldHeatMap
-              regions={filteredRegions}
-              globalTopics={filteredGlobalTopics}
-              onTopicSelect={openTopicSheet}
-            />
-            <div className="mt-4">
-              <LivePulseIndicator />
+        <>
+          <section className="py-8">
+            <div className="grid gap-4 xl:grid-cols-[1.45fr_1fr]">
+              <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-5 shadow-[var(--shadow-card)]">
+                <WorldHeatMap
+                  regions={filteredRegions}
+                  globalTopics={filteredGlobalTopics}
+                  onTopicSelect={openTopicSheet}
+                />
+              </div>
+              <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-5 shadow-[var(--shadow-card)]">
+                {isGlobalLoading ? (
+                  <LoadingSkeleton className="h-36" />
+                ) : globalError ? (
+                  <EmptyState
+                    title={t("dashboard.empty.globalTopics")}
+                    description={t("dashboard.error.globalRetry")}
+                  />
+                ) : (
+                  <GlobalIssuePanel topics={topGlobalIssues} />
+                )}
+              </div>
             </div>
-            <div className="mt-4 min-h-[220px] flex-1 md:min-h-[260px]">
-              <PulseSignalBoard regions={filteredRegions} globalTopics={filteredGlobalTopics} />
+          </section>
+
+          <div className="my-8 border-t border-white/5" />
+
+          <section className="py-8">
+            <div className="space-y-4">
+              <LivePulseStrip items={tickerItems} />
+              <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+                <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-5 shadow-[var(--shadow-card)]">
+                  <PulseSignalBoard regions={filteredRegions} globalTopics={filteredGlobalTopics} />
+                </div>
+                <aside className="space-y-4 xl:max-h-[780px] xl:overflow-y-auto xl:pr-1">
+                  {filteredRegions.map((region) => (
+                    <RegionCard
+                      key={region.id}
+                      region={region}
+                      scope={activeScope}
+                      onTopicSelect={openTopicSheet}
+                      onToggleWatch={toggleWatch}
+                      isTopicWatched={isWatched}
+                    />
+                  ))}
+                </aside>
+              </div>
             </div>
-          </div>
+          </section>
 
-          <div className="space-y-4">
-            {filteredRegions.map((region) => (
-              <RegionCard
-                key={region.id}
-                region={region}
-                scope={activeScope}
-                onTopicSelect={openTopicSheet}
-                onToggleWatch={toggleWatch}
-                isTopicWatched={isWatched}
-              />
-            ))}
-          </div>
-        </section>
+          <div className="my-8 border-t border-white/5" />
+
+          <section className="py-8">
+            <details
+              className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-5 shadow-[var(--shadow-card)]"
+              open={advancedExpanded}
+              onToggle={(event) => setAdvancedExpanded((event.currentTarget as HTMLDetailsElement).open)}
+            >
+              <summary className="cursor-pointer select-none text-sm font-medium text-[var(--text-primary)]">
+                {t("dashboard.section.advancedExpand")}
+              </summary>
+              {advancedExpanded ? (
+                <div className="mt-4 space-y-4">
+                  <PropagationStream
+                    regions={filteredRegions}
+                    globalTopics={filteredGlobalTopics}
+                    onTopicSelect={openTopicSheet}
+                  />
+                  <PropagationMatrix scope={activeScope} />
+                </div>
+              ) : null}
+            </details>
+          </section>
+        </>
       )}
-
-      {!regionsError && filteredRegions.length > 0 && (
-        <PropagationStream
-          regions={filteredRegions}
-          globalTopics={filteredGlobalTopics}
-          onTopicSelect={openTopicSheet}
-        />
-      )}
-
-      {!regionsError && filteredRegions.length > 0 && <PropagationMatrix scope={activeScope} />}
-
-      {isGlobalLoading && <LoadingSkeleton className="h-28" />}
-      {globalError && (
-        <EmptyState
-          title="글로벌 이슈를 불러오지 못했습니다."
-          description="잠시 후 자동으로 다시 시도합니다."
-        />
-      )}
-      {!isGlobalLoading && !globalError && <GlobalIssuePanel topics={filteredGlobalTopics} />}
 
       <TopicDetailSheet
         topicId={selectedTopicId}

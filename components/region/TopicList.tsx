@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import type { Topic } from "@global-pulse/shared";
+import { useLanguage } from "@/lib/i18n/use-language";
 import { toHeatBand } from "@/lib/utils/heat";
 import { cleanupTopicName } from "@/lib/utils/topic-name";
 import { TopicCard } from "./TopicCard";
@@ -11,9 +12,20 @@ interface TopicListProps {
   onSelect?: (topic: Topic) => void;
 }
 
+function deriveHeatTrend(miniTrend: number[] | null | undefined): number | null {
+  if (!miniTrend || miniTrend.length < 2) {
+    return null;
+  }
+  const first = miniTrend[0] ?? 0;
+  const last = miniTrend[miniTrend.length - 1] ?? 0;
+  return ((last - first) / Math.max(first, 1)) * 100;
+}
+
 export function TopicList({ topics, selectedTopicId, onSelect }: TopicListProps) {
+  const { t } = useLanguage("ko");
+
   if (topics.length === 0) {
-    return <div className="text-sm text-[var(--text-secondary)]">표시할 토픽이 없습니다.</div>;
+    return <div className="text-sm text-[var(--text-secondary)]">{t("dashboard.empty.topics")}</div>;
   }
 
   const maxHeat = Math.max(...topics.map((topic) => topic.heatScore), 1);
@@ -37,7 +49,12 @@ export function TopicList({ topics, selectedTopicId, onSelect }: TopicListProps)
             name={cleaned.displayKo}
             heatScore={topic.heatScore}
             heatBand={heatBand}
+            summaryKo={topic.summaryKo ?? null}
+            sentimentDistribution={topic.sentimentDistribution ?? null}
+            sentiment={topic.sentiment}
+            heatTrend={deriveHeatTrend(topic.miniTrend ?? null)}
             isFallbackName={cleaned.isFallback}
+            nameRefiningLabel={t("dashboard.badge.nameRefining")}
             selected={topic.id === selectedTopicId}
             onClick={() => onSelect?.(topic)}
           />

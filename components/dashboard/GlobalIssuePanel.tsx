@@ -1,9 +1,23 @@
-﻿import Link from "next/link";
+"use client";
+
+import Link from "next/link";
 import { getRegionById, type GlobalTopic } from "@global-pulse/shared";
+import { useLanguage } from "@/lib/i18n/use-language";
 import { cleanupTopicName } from "@/lib/utils/topic-name";
 
 interface GlobalIssuePanelProps {
   topics: GlobalTopic[];
+}
+
+function firstSentence(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  const first = value
+    .split(/[.!?。！？]\s|$/u)
+    .map((item) => item.trim())
+    .filter(Boolean)[0];
+  return first ?? null;
 }
 
 function toSentimentLabel(value: number): string {
@@ -15,6 +29,7 @@ function toSentimentLabel(value: number): string {
 }
 
 export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
+  const { t } = useLanguage("ko");
   const rows = topics.slice(0, 8);
 
   return (
@@ -23,7 +38,7 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
 
       {rows.length === 0 ? (
         <div className="mt-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 text-sm text-[var(--text-secondary)]">
-          아직 글로벌 토픽이 없습니다. 분석 배치 실행 후 자동 반영됩니다.
+          {t("dashboard.empty.globalTopics")}. {t("dashboard.error.globalRetry")}
         </div>
       ) : (
         <div className="mt-3 space-y-3">
@@ -39,6 +54,7 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
             const primaryRegion =
               (topic.firstSeenRegion && getRegionById(topic.firstSeenRegion)) ||
               (topic.regions.length > 0 ? getRegionById(topic.regions[0]) : null);
+            const topicSummary = firstSentence(topic.summaryKo ?? null);
 
             const card = (
               <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 transition-colors hover:border-[var(--border-hover)]">
@@ -46,7 +62,7 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
                   {cleaned.displayKo}
                   {cleaned.isFallback && (
                     <span className="ml-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-300">
-                      이름 정제 중
+                      {t("dashboard.badge.nameRefining")}
                     </span>
                   )}
                 </p>
@@ -58,6 +74,11 @@ export function GlobalIssuePanel({ topics }: GlobalIssuePanelProps) {
                     })
                     .join(" · ")}
                 </p>
+                {topicSummary && (
+                  <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-[var(--text-secondary)]">
+                    {topicSummary}
+                  </p>
+                )}
 
                 <div className="mt-3 space-y-1.5">
                   {sentimentEntries.slice(0, 3).map(([regionId, value]) => {

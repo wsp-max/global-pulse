@@ -77,6 +77,18 @@ function normalizeCanonicalKey(value: string | null | undefined, fallbackLabel: 
   return raw;
 }
 
+function applyDisplaySourceAdjustment(
+  heatScoreDisplay: number | null,
+  dominantSourceShare: number | null,
+): number | null {
+  if (heatScoreDisplay === null) {
+    return null;
+  }
+  const sourceAdjustment =
+    dominantSourceShare !== null && dominantSourceShare > 0.8 ? 0.75 : 1;
+  return Number((heatScoreDisplay * sourceAdjustment).toFixed(4));
+}
+
 function toTopicCategoryOrNull(value: unknown): TopicCategory | null {
   return toTopicCategory(value) ?? null;
 }
@@ -218,6 +230,8 @@ export function mapTopicRow(row: TopicRow): Topic {
     sampleTitles: row.sample_titles ?? [],
   });
 
+  const dominantSourceShare = toOptionalNumberOrNull(row.dominant_source_share);
+
   return {
     id: toOptionalNumber(row.id),
     regionId: row.region_id,
@@ -234,7 +248,10 @@ export function mapTopicRow(row: TopicRow): Topic {
     canonicalKey: normalizeCanonicalKey(row.canonical_key, cleaned.displayEn),
     embeddingJson: row.embedding_json ?? undefined,
     heatScore: toNumber(row.heat_score),
-    heatScoreDisplay: toOptionalNumberOrNull(row.heat_score_display),
+    heatScoreDisplay: applyDisplaySourceAdjustment(
+      toOptionalNumberOrNull(row.heat_score_display),
+      dominantSourceShare,
+    ),
     postCount: toNumber(row.post_count),
     totalViews: toNumber(row.total_views),
     totalLikes: toNumber(row.total_likes),
@@ -245,7 +262,7 @@ export function mapTopicRow(row: TopicRow): Topic {
     lifecycleStage: row.lifecycle_stage ?? null,
     miniTrend: row.mini_trend ?? null,
     sourceDiversity: toOptionalNumberOrNull(row.source_diversity),
-    dominantSourceShare: toOptionalNumberOrNull(row.dominant_source_share),
+    dominantSourceShare,
     representativeExcerpts: row.representative_excerpts ?? null,
     velocityPerHour: toOptionalNumberOrNull(row.velocity_per_hour),
     acceleration: toOptionalNumberOrNull(row.acceleration),
@@ -296,6 +313,5 @@ export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
     scope: row.scope ?? undefined,
   };
 }
-
 
 

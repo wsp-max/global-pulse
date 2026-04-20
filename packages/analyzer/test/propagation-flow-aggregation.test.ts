@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { GlobalTopic } from "@global-pulse/shared";
+// @ts-expect-error test runner loads ts source directly via tsx.
 import flowUtils from "../../../lib/utils/propagation-flow.ts";
 
 const { aggregateFlowEdges, getFlowStrokeColor, toVolumeBand } = flowUtils;

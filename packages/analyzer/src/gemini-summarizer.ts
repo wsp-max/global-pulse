@@ -34,6 +34,7 @@ const ANALYZER_GEMINI_TIMEOUT_MS = Math.max(
 
 const GROQ_API_BASE = process.env.GROQ_API_BASE?.trim() || "https://api.groq.com/openai/v1";
 const GROQ_MODEL = process.env.GROQ_MODEL?.trim() || "moonshotai/kimi-k2-instruct-0905";
+const GROQ_MODEL_FALLBACK = process.env.GROQ_MODEL_FALLBACK?.trim() || "llama-3.3-70b-versatile";
 const ANALYZER_GROQ_TIMEOUT_MS = Math.max(
   Number(process.env.ANALYZER_GROQ_TIMEOUT_MS ?? 30_000),
   5_000,
@@ -43,7 +44,7 @@ const FALLBACK_SUMMARY_KO = "요약 준비 중";
 const FALLBACK_SUMMARY_EN = "Summary pending";
 const FALLBACK_SENTIMENT_REASONING_KO = "감성 근거 분석 중";
 const FALLBACK_SENTIMENT_REASONING_EN = "Sentiment reasoning pending";
-const SUMMARY_MIN_LENGTH = 40;
+const SUMMARY_MIN_LENGTH = 80;
 
 const CATEGORY_VALUES: TopicCategory[] = [
   "politics",
@@ -95,8 +96,6 @@ const LOW_SIGNAL_NAME_TERMS = new Set([
   "논란",
   "속보",
   "단독",
-  "입수",
-  "공개",
   "폭로",
   "衝撃",
   "速報",
@@ -118,8 +117,8 @@ const RESPONSE_SCHEMA = {
     type: "object",
     required: ["name_ko", "name_en", "summary_ko", "summary_en", "sentiment", "sentiment_distribution", "sentiment_reasoning_ko", "sentiment_reasoning_en", "category", "entities", "aliases"],
     properties: {
-      name_ko: { type: "string", minLength: 2, maxLength: 24 },
-      name_en: { type: "string", minLength: 2, maxLength: 64 },
+      name_ko: { type: "string", minLength: 6, maxLength: 32 },
+      name_en: { type: "string", minLength: 8, maxLength: 80 },
       summary_ko: { type: "string", minLength: SUMMARY_MIN_LENGTH, maxLength: 600 },
       summary_en: { type: "string", minLength: SUMMARY_MIN_LENGTH, maxLength: 600 },
       sentiment: { type: "number", minimum: -1, maximum: 1 },
@@ -258,7 +257,7 @@ function isLowSignalName(value: string): boolean {
   if (meaningfulCount === 0) {
     return true;
   }
-  return lowSignalCount >= 1 && meaningfulCount <= 1;
+  return lowSignalCount >= 2 || (lowSignalCount >= 1 && meaningfulCount === 0);
 }
 
 function preferMeaningfulName(candidate: string | undefined, fallback: string): string {
@@ -403,12 +402,13 @@ function buildPrompt(regionId: string, topics: Topic[]): string {
     "For each topic, output this schema exactly:",
     JSON.stringify(RESPONSE_SCHEMA.items.properties),
     "Rules:",
-    "1) summary_ko and summary_en must be EXACTLY 2-3 complete sentences.",
+    "1) summary_ko와 summary_en은 정확히 2-3개 완전한 문장, 각 요약은 최소 80자이고 trigger/event, who-or-what, dominant sentiment와 reason을 모두 포함할 것.",
     "2) Each summary must include: trigger/event, who-or-what involved, dominant sentiment and reason.",
-    "3) Keep name_ko concise and name_en within 2-6 words.",
+    "3) name_ko는 6-30자 사이의 짧은 구로, 단일 단어 금지. 주어(사람/기관/작품 등)와 사건/상태를 함께 담을 것. 예: '이재명 대북송금 재판 증인 교체', '용산 전세사기 피해자 집회', '삼성 HBM4 양산 일정 지연'. name_en은 8-70자 사이 2-6 단어 명사구, Title Case, 헤드라인 스타일. 클릭베이트 감탄사(Shocking, Breaking, Exclusive, Revealed, Jaw-dropping 등) 금지. 감탄 부호(!)와 물음표(?)도 금지.",
     "4) Keep input topic order unchanged in output.",
     "5) sentiment_reasoning_ko must be <= 60 chars and sentiment_reasoning_en <= 120 chars.",
     "6) sentiment_distribution must sum approximately to 1.0 and reflect controversial mood when positive and negative are both high.",
+    "7) name_ko와 name_en은 서로 같은 의미를 담되 축자 번역이 아닌 지역 뉴스 헤드라인 관습을 따를 것.",
     "Input topics JSON:",
     JSON.stringify(payload),
   ].join("\n");
@@ -566,7 +566,7 @@ async function requestGemini(apiKey: string, model: string, prompt: string): Pro
   return { text };
 }
 
-async function requestGroq(apiKey: string, prompt: string): Promise<RequestGeminiResult> {
+async function requestGroq(apiKey: string, prompt: string, model: string): Promise<RequestGeminiResult> {
   const controller = new AbortController();
   const timeoutRef = setTimeout(() => controller.abort(), ANALYZER_GROQ_TIMEOUT_MS);
 
@@ -581,7 +581,7 @@ async function requestGroq(apiKey: string, prompt: string): Promise<RequestGemin
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model,
         messages: [{ role: "user", content: wrappedPrompt }],
         temperature: 0.2,
         top_p: 0.9,
@@ -624,8 +624,8 @@ function chunkTopics(topics: Topic[], size: number): Topic[][] {
 }
 
 function applySummaryItem(topic: Topic, summary: GeminiSummaryItem | undefined): Topic {
-  const nameKo = preferMeaningfulName(summary?.name_ko, topic.nameKo);
-  const nameEn = preferMeaningfulName(summary?.name_en, topic.nameEn);
+  let nameKo = preferMeaningfulName(summary?.name_ko, topic.nameKo);
+  let nameEn = preferMeaningfulName(summary?.name_en, topic.nameEn);
   const sentiment = toSentiment(summary?.sentiment, topic.sentiment);
 
   const summaryKo = isValidSummaryText(summary?.summary_ko)
@@ -634,6 +634,29 @@ function applySummaryItem(topic: Topic, summary: GeminiSummaryItem | undefined):
   const summaryEn = isValidSummaryText(summary?.summary_en)
     ? summary?.summary_en?.trim()
     : topic.summaryEn ?? FALLBACK_SUMMARY_EN;
+  const sampleTitles = topic.sampleTitles ?? [];
+  if (nameKo.split(/\s+/u).filter(Boolean).length < 2) {
+    const koCandidate =
+      sampleTitles
+        .filter((title) => /[가-힣]/u.test(title))
+        .map((title) => title.trim())
+        .filter((title) => title.length >= 16 && title.length <= 32)
+        .sort((left, right) => right.length - left.length)[0] ?? null;
+    if (koCandidate) {
+      nameKo = koCandidate;
+    }
+  }
+  if (nameEn.split(/\s+/u).filter(Boolean).length < 2) {
+    const enCandidate =
+      sampleTitles
+        .filter((title) => /[A-Za-z]/.test(title))
+        .map((title) => title.replace(/\s+/g, " ").trim())
+        .filter((title) => title.length >= 16 && title.length <= 32)
+        .sort((left, right) => right.length - left.length)[0] ?? null;
+    if (enCandidate) {
+      nameEn = enCandidate;
+    }
+  }
 
   return {
     ...topic,
@@ -688,8 +711,10 @@ export async function summarizeTopicsWithGemini(
     };
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey?.trim()) {
+  const geminiKey = process.env.GEMINI_API_KEY?.trim() ?? "";
+  const groqKey = process.env.GROQ_API_KEY?.trim() ?? "";
+
+  if (!geminiKey && !groqKey) {
     return {
       topics: fallbackTopics,
       stats: {
@@ -704,7 +729,7 @@ export async function summarizeTopicsWithGemini(
     };
   }
 
-  const models = await resolveCandidateModels(apiKey);
+  const models = geminiKey ? await resolveCandidateModels(geminiKey) : [];
   const batches = chunkTopics(topics, ANALYZER_LLM_CANONICAL_BATCH);
   const output: Topic[] = [];
   let requestCount = 0;
@@ -719,63 +744,24 @@ export async function summarizeTopicsWithGemini(
     const batchErrors: string[] = [];
     let summaries: GeminiSummaryItem[] | null = null;
 
-    for (const model of models) {
-      usedModels.add(model);
+    if (geminiKey) {
+      for (const model of models) {
+        usedModels.add(model);
 
-      let modelSuccess = false;
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        requestCount += 1;
-        const { text, error } = await requestGemini(apiKey, model, prompt);
-
-        if (error) {
-          const errorLine = `${model}: ${error}`;
-          batchErrors.push(errorLine);
-          allErrors.push(errorLine);
-          break;
-        }
-
-        if (!text) {
-          const emptyError = `${model}: empty response`;
-          batchErrors.push(emptyError);
-          allErrors.push(emptyError);
-          continue;
-        }
-
-        const parsed = parseGeminiSummaries(text);
-        if (!isValidSummaryBatch(parsed, batch.length)) {
-          const validationError = `${model}: invalid-or-short-summary attempt=${attempt + 1}`;
-          batchErrors.push(validationError);
-          allErrors.push(validationError);
-          continue;
-        }
-
-        summaries = parsed;
-        modelSuccess = true;
-        break;
-      }
-
-      if (modelSuccess) {
-        break;
-      }
-    }
-
-    if (!summaries) {
-      const groqKey = process.env.GROQ_API_KEY;
-      if (groqKey?.trim()) {
-        usedModels.add(`groq:${GROQ_MODEL}`);
+        let modelSuccess = false;
         for (let attempt = 0; attempt < 2; attempt += 1) {
           requestCount += 1;
-          const { text, error } = await requestGroq(groqKey, prompt);
+          const { text, error } = await requestGemini(geminiKey, model, prompt);
 
           if (error) {
-            const errorLine = `groq:${GROQ_MODEL}: ${error}`;
+            const errorLine = `${model}: ${error}`;
             batchErrors.push(errorLine);
             allErrors.push(errorLine);
             break;
           }
 
           if (!text) {
-            const emptyError = `groq:${GROQ_MODEL}: empty response`;
+            const emptyError = `${model}: empty response`;
             batchErrors.push(emptyError);
             allErrors.push(emptyError);
             continue;
@@ -783,13 +769,58 @@ export async function summarizeTopicsWithGemini(
 
           const parsed = parseGeminiSummaries(text);
           if (!isValidSummaryBatch(parsed, batch.length)) {
-            const validationError = `groq:${GROQ_MODEL}: invalid-or-short-summary attempt=${attempt + 1}`;
+            const validationError = `${model}: invalid-or-short-summary attempt=${attempt + 1}`;
             batchErrors.push(validationError);
             allErrors.push(validationError);
             continue;
           }
 
           summaries = parsed;
+          modelSuccess = true;
+          break;
+        }
+
+        if (modelSuccess) {
+          break;
+        }
+      }
+    }
+
+    if (!summaries && groqKey) {
+      const groqModels = [...new Set([GROQ_MODEL, GROQ_MODEL_FALLBACK].filter(Boolean))];
+      for (const groqModel of groqModels) {
+        usedModels.add(`groq:${groqModel}`);
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          requestCount += 1;
+          const { text, error } = await requestGroq(groqKey, prompt, groqModel);
+
+          if (error) {
+            const errorLine = `groq:${groqModel}: ${error}`;
+            batchErrors.push(errorLine);
+            allErrors.push(errorLine);
+            break;
+          }
+
+          if (!text) {
+            const emptyError = `groq:${groqModel}: empty response`;
+            batchErrors.push(emptyError);
+            allErrors.push(emptyError);
+            continue;
+          }
+
+          const parsed = parseGeminiSummaries(text);
+          if (!isValidSummaryBatch(parsed, batch.length)) {
+            const validationError = `groq:${groqModel}: invalid-or-short-summary attempt=${attempt + 1}`;
+            batchErrors.push(validationError);
+            allErrors.push(validationError);
+            continue;
+          }
+
+          summaries = parsed;
+          break;
+        }
+
+        if (summaries) {
           break;
         }
       }

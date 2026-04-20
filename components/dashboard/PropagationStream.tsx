@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import { getRegionById, type GlobalTopic } from "@global-pulse/shared";
 import { cleanupTopicName } from "@/lib/utils/topic-name";
+import { useLanguage } from "@/lib/i18n/use-language";
 import type { RegionDashboardRow } from "@/lib/types/api";
 
 interface PropagationStreamProps {
@@ -106,6 +107,7 @@ function buildLanes(topics: GlobalTopic[]): PropagationLane[] {
 
 export function PropagationStream({ regions, globalTopics, onTopicSelect }: PropagationStreamProps) {
   void regions;
+  const { t } = useLanguage("ko");
   const lanes = useMemo(() => buildLanes(globalTopics), [globalTopics]);
   const maxVelocity = Math.max(...lanes.map((lane) => lane.velocity), 1);
 
@@ -137,7 +139,7 @@ export function PropagationStream({ regions, globalTopics, onTopicSelect }: Prop
                       {lane.label}
                       {lane.isFallback && (
                         <span className="ml-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-300">
-                          이름 정제 중
+                          {t("dashboard.badge.nameRefining")}
                         </span>
                       )}
                     </p>

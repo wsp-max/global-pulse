@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useTimeline } from "@/lib/hooks/useTimeline";
 import { useTopics, type TopicPeriod, type TopicSort } from "@/lib/hooks/useTopics";
+import { useLanguage } from "@/lib/i18n/use-language";
 import { FilterBar } from "./FilterBar";
 import { RegionHeader } from "./RegionHeader";
 import { SentimentGauge } from "./SentimentGauge";
@@ -32,6 +33,7 @@ function parseSort(input: string | null): TopicSort {
 }
 
 export function RegionPageClient({ regionId }: RegionPageClientProps) {
+  const { t } = useLanguage("ko");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -87,15 +89,15 @@ export function RegionPageClient({ regionId }: RegionPageClientProps) {
 
       {error && (
         <EmptyState
-          title="리전 토픽을 불러오지 못했습니다."
-          description="잠시 후 자동으로 다시 시도합니다. 문제가 계속되면 API 상태를 확인해 주세요."
+          title={t("dashboard.loadError")}
+          description={t("dashboard.loadErrorDesc")}
         />
       )}
 
       {!error && !isLoading && topics.length === 0 && (
         <EmptyState
-          title="표시할 토픽이 없습니다."
-          description="수집 데이터가 누적되면 자동으로 표시됩니다."
+          title={t("dashboard.empty.topics")}
+          description={t("dashboard.error.globalRetry")}
         />
       )}
 

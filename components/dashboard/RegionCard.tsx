@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { SOURCES, type Topic } from "@global-pulse/shared";
 import { HeatBadge } from "@/components/shared/HeatBadge";
+import { useLanguage } from "@/lib/i18n/use-language";
 import type { DashboardScope, RegionDashboardRow } from "@/lib/types/api";
 import { toHeatPercent } from "@/lib/utils/heat";
 
@@ -17,6 +18,40 @@ interface RegionCardProps {
 const PORTAL_SOURCE_ID_SET = new Set(
   SOURCES.filter((source) => source.type === "news" && source.newsCategory === "portal").map((source) => source.id),
 );
+
+function extractFirstSentence(summary: string | null | undefined): string {
+  if (!summary) {
+    return "";
+  }
+  const first = summary
+    .split(/[.!?。！？]\s|$/u)
+    .map((item) => item.trim())
+    .filter(Boolean)[0];
+  return first ?? "";
+}
+
+function sentimentDotColor(topic: Topic): string {
+  const distribution = topic.sentimentDistribution;
+  if (distribution?.controversial !== undefined && distribution.controversial > 0.35) {
+    return "var(--sentiment-negative)";
+  }
+  if (distribution) {
+    if (distribution.positive >= distribution.negative && distribution.positive >= distribution.neutral) {
+      return "var(--sentiment-positive)";
+    }
+    if (distribution.negative >= distribution.positive && distribution.negative >= distribution.neutral) {
+      return "var(--sentiment-negative)";
+    }
+    return "var(--sentiment-neutral)";
+  }
+  if ((topic.sentiment ?? 0) >= 0.2) {
+    return "var(--sentiment-positive)";
+  }
+  if ((topic.sentiment ?? 0) <= -0.2) {
+    return "var(--sentiment-negative)";
+  }
+  return "var(--sentiment-neutral)";
+}
 
 function buildMiniSparkline(values: number[] | null | undefined): string {
   if (!values || values.length < 2) {
@@ -40,6 +75,7 @@ export function RegionCard({
   onToggleWatch,
   isTopicWatched,
 }: RegionCardProps) {
+  const { t } = useLanguage("ko");
   const router = useRouter();
   const heatScore = Math.round(region.totalHeatScore);
   const sentimentPercent = Math.round(((region.avgSentiment + 1) / 2) * 100);
@@ -81,7 +117,7 @@ export function RegionCard({
       </div>
 
       <div className="mt-3 text-xs text-[var(--text-secondary)]">
-        TOP 키워드: {topKeywords.length > 0 ? topKeywords.join(" / ") : "데이터 수집 중"}
+        TOP 키워드: {topKeywords.length > 0 ? topKeywords.join(" / ") : t("dashboard.status.collecting")}
       </div>
 
       <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-[var(--text-tertiary)]">
@@ -102,12 +138,19 @@ export function RegionCard({
                     }}
                     aria-label={`${topic.nameKo || topic.nameEn} 상세 열기`}
                   >
-                    <span>{topic.nameKo || topic.nameEn}</span>
+                    <span title={extractFirstSentence(topic.summaryKo ?? null) || undefined}>
+                      {topic.nameKo || topic.nameEn}
+                    </span>
+                    <span
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: sentimentDotColor(topic) }}
+                      aria-hidden="true"
+                    />
                     {topic.dominantSourceShare !== null && topic.dominantSourceShare !== undefined && topic.dominantSourceShare > 0.8 ? (
-                      <span className="rounded-full border border-slate-500/40 bg-slate-500/10 px-1 text-[9px] text-slate-200">⚠️ 단일 출처</span>
+                      <span className="rounded-full border border-slate-500/40 bg-slate-500/20 px-1 text-[9px] text-slate-200">⚠️ 단일 출처</span>
                     ) : null}
                     {topic.sourceDiversity !== null && topic.sourceDiversity !== undefined && topic.sourceDiversity > 0.7 ? (
-                      <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1 text-[9px] text-emerald-200">✅ 다출처</span>
+                      <span className="rounded-full border border-emerald-500/40 bg-emerald-500/20 px-1 text-[9px] text-emerald-200">✅ 다출처</span>
                     ) : null}
                     {sparkline ? (
                       <svg viewBox="0 0 28 8" className="h-2 w-7" aria-hidden="true">
@@ -136,12 +179,19 @@ export function RegionCard({
 
             return (
               <span key={topic.nameEn} className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] px-2 py-0.5">
-                <span>{topic.nameKo || topic.nameEn}</span>
+                <span title={extractFirstSentence(topic.summaryKo ?? null) || undefined}>
+                  {topic.nameKo || topic.nameEn}
+                </span>
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: sentimentDotColor(topic) }}
+                  aria-hidden="true"
+                />
                 {topic.dominantSourceShare !== null && topic.dominantSourceShare !== undefined && topic.dominantSourceShare > 0.8 ? (
-                  <span className="rounded-full border border-slate-500/40 bg-slate-500/10 px-1 text-[9px] text-slate-200">⚠️ 단일 출처</span>
+                  <span className="rounded-full border border-slate-500/40 bg-slate-500/20 px-1 text-[9px] text-slate-200">⚠️ 단일 출처</span>
                 ) : null}
                 {topic.sourceDiversity !== null && topic.sourceDiversity !== undefined && topic.sourceDiversity > 0.7 ? (
-                  <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1 text-[9px] text-emerald-200">✅ 다출처</span>
+                  <span className="rounded-full border border-emerald-500/40 bg-emerald-500/20 px-1 text-[9px] text-emerald-200">✅ 다출처</span>
                 ) : null}
                 {sparkline ? (
                   <svg viewBox="0 0 28 8" className="h-2 w-7" aria-hidden="true">
@@ -152,14 +202,14 @@ export function RegionCard({
             );
           })
         ) : (
-          <span>수집 대기</span>
+          <span>{t("dashboard.status.waiting")}</span>
         )}
         {extraTopicCount > 0 ? <span className="ml-1">+{extraTopicCount}</span> : null}
       </div>
 
       {isPartiallyStale && (
         <div className="mt-2 inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">
-          partially-stale
+          {t("dashboard.badge.partiallyStale")}
         </div>
       )}
 
