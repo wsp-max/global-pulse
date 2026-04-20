@@ -57,6 +57,66 @@ const HEAT_LEGEND = [
   { label: "high", color: "var(--heat-high)" },
 ];
 
+const EU_COUNTRY_CODES = new Set([
+  "DE",
+  "FR",
+  "IT",
+  "ES",
+  "NL",
+  "BE",
+  "PL",
+  "SE",
+  "AT",
+  "DK",
+  "FI",
+  "IE",
+  "PT",
+  "CZ",
+  "GR",
+  "HU",
+  "RO",
+  "BG",
+  "HR",
+  "SK",
+  "SI",
+  "EE",
+  "LV",
+  "LT",
+  "LU",
+  "MT",
+  "CY",
+]);
+
+function resolveRegionIdFromGeography(geo: { properties?: Record<string, unknown> }): string | null {
+  const props = geo.properties ?? {};
+  const iso2Raw =
+    (props.ISO_A2 as string | undefined) ??
+    (props.iso_a2 as string | undefined) ??
+    (props.iso2 as string | undefined);
+  const iso2 = typeof iso2Raw === "string" ? iso2Raw.trim().toUpperCase() : "";
+
+  if (iso2 === "US") return "us";
+  if (iso2 === "CN") return "cn";
+  if (iso2 === "JP") return "jp";
+  if (iso2 === "KR") return "kr";
+  if (iso2 === "TW") return "tw";
+  if (iso2 === "RU") return "ru";
+  if (iso2 === "BR") return "br";
+  if (iso2 === "IN") return "in";
+  if (iso2 === "ID") return "id";
+  if (iso2 === "MX") return "mx";
+  if (iso2 === "AU") return "au";
+  if (iso2 === "VN") return "vn";
+  if (iso2 === "TH") return "th";
+  if (iso2 === "AR") return "ar";
+  if (iso2 === "CA") return "ca";
+  if (iso2 === "NG") return "ng";
+  if (iso2 === "ZA") return "za";
+  if (EU_COUNTRY_CODES.has(iso2)) return "eu";
+
+  return null;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -193,6 +253,8 @@ export function WorldHeatMap({
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [showFlowLabels, setShowFlowLabels] = useState(false);
+  const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -227,10 +289,21 @@ export function WorldHeatMap({
   const markers = useMemo(() => buildClusterMarkers(regions, zoom), [regions, zoom]);
 
   return (
-    <div className="panel-grid relative overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4">
+    <div className="panel-grid relative overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-2">
       <div className={`absolute inset-0 ${radialGlow}`} />
       <div className="relative">
-        <p className="font-display text-lg text-[var(--text-accent)]">WORLD HEAT MAP</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-display text-lg text-[var(--text-accent)]">WORLD HEAT MAP</p>
+          <label className="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
+            <input
+              type="checkbox"
+              checked={showFlowLabels}
+              onChange={(event) => setShowFlowLabels(event.target.checked)}
+              className="accent-[var(--text-accent)]"
+            />
+            Flow labels
+          </label>
+        </div>
         <p className="mt-1 text-xs text-[var(--text-secondary)]">Regional heat and cross-region signal routes.</p>
 
         <div className="mt-4 rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-2">
@@ -286,7 +359,22 @@ export function WorldHeatMap({
                 <Geographies geography={GEO_URL}>
                   {({ geographies }) =>
                     geographies.map((geo) => (
-                      <Geography key={geo.rsmKey} geography={geo} fill="#0f172a" stroke="#334155" strokeWidth={0.45} />
+                      <Geography
+                        key={geo.rsmKey}
+                        geography={geo}
+                        fill="#0f172a"
+                        stroke="#334155"
+                        strokeWidth={0.45}
+                        onMouseEnter={() => {
+                          const regionId = resolveRegionIdFromGeography(
+                            geo as unknown as { properties?: Record<string, unknown> },
+                          );
+                          if (regionId) {
+                            setHoveredRegion(regionId);
+                          }
+                        }}
+                        onMouseLeave={() => setHoveredRegion(null)}
+                      />
                     ))
                   }
                 </Geographies>
@@ -301,10 +389,10 @@ export function WorldHeatMap({
                       <marker
                         key={`arrow-${edge.from}-${edge.to}-${index}`}
                         id={`arrow-${variant}-${index}`}
-                        markerWidth="3.6"
-                        markerHeight="3.6"
-                        refX="3"
-                        refY="1.8"
+                        markerWidth="2.6"
+                        markerHeight="2.6"
+                        refX="2.2"
+                        refY="1.3"
                         orient="auto"
                         markerUnits="strokeWidth"
                       >
@@ -328,10 +416,16 @@ export function WorldHeatMap({
                   const volumeBand = toVolumeBand(edge.volumeHeatSum, maxVolume);
                   const durationSec = Math.max(3.2, Math.min(5.5, 5.7 - volumeBand * 2.5));
                   const flowColor = getFlowStrokeColor(variant, volumeBand);
-                  const strokeOpacity = Math.max(0.3, Math.min(0.9, edge.confidence));
-                  const strokeWidth = 0.6 + Math.max(0, Math.min(1.0, volumeBand * 1.0));
+                  const strokeOpacity = Math.max(0.22, Math.min(0.55, edge.confidence * 0.6));
+                  const strokeWidth = 0.35 + Math.max(0, Math.min(0.6, volumeBand * 0.6));
                   const isFast = edge.velocity >= surgingVelocityCutoff;
-                  const particleCount = edge.confidence >= 0.75 ? 3 : edge.confidence >= 0.45 ? 2 : 1;
+                  const particleCount = edge.confidence >= 0.85 ? 2 : edge.confidence >= 0.55 ? 1 : 0;
+                  const isHoveredFlow = hoveredRegion ? edge.from === hoveredRegion || edge.to === hoveredRegion : false;
+                  const resolvedOpacity = hoveredRegion
+                    ? isHoveredFlow
+                      ? Math.min(0.9, strokeOpacity * 1.6)
+                      : Math.max(0.08, strokeOpacity * 0.4)
+                    : strokeOpacity;
                   const lagText = `${toLagText(edge.lagMinutes)}${isFast ? " ⚡" : ""}`;
 
                   return (
@@ -342,16 +436,22 @@ export function WorldHeatMap({
                         stroke={flowColor}
                         strokeWidth={strokeWidth}
                         fill="none"
-                        opacity={strokeOpacity}
+                        opacity={resolvedOpacity}
                         markerEnd={`url(#arrow-${variant}-${index})`}
                         style={{ pointerEvents: "none" }}
                       >
                         <title>{`From ${edge.from.toUpperCase()} to ${edge.to.toUpperCase()}, lag ${toLagText(edge.lagMinutes)}, confidence ${edge.confidence.toFixed(2)}, volume ${Math.round(edge.volumeHeatSum)}, edges ${edge.edgeCount}`}</title>
                       </path>
 
-                      <g transform={`translate(${curve.mx} ${curve.my})`} style={{ pointerEvents: "none" }}>
-                        <rect x={-5} y={-3.4} width={10} height={4.8} rx={2.4} fill="rgba(10,14,23,0.75)" stroke="rgba(148,163,184,0.25)" />
-                        <text textAnchor="middle" y={0.1} className="font-mono text-[2.6px]" fill={flowColor}>
+                      <g
+                        transform={`translate(${curve.mx} ${curve.my})`}
+                        style={{
+                          pointerEvents: "none",
+                          opacity: showFlowLabels || isHoveredFlow ? 1 : 0,
+                        }}
+                      >
+                        <rect x={-4} y={-2.4} width={8} height={3.2} rx={1.6} fill="rgba(10,14,23,0.6)" stroke="none" />
+                        <text textAnchor="middle" y={0.1} className="font-mono text-[2px]" fill={flowColor}>
                           {lagText}
                         </text>
                       </g>
@@ -404,6 +504,8 @@ export function WorldHeatMap({
                         event.stopPropagation();
                         onTopicSelect?.(targetTopicId);
                       }}
+                      onMouseEnter={() => setHoveredRegion(primaryRegion.id)}
+                      onMouseLeave={() => setHoveredRegion(null)}
                     >
                       <circle
                         r={radius}

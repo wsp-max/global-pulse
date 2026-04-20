@@ -4,7 +4,8 @@ import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { HotIssueList } from "@/components/dashboard/HotIssueList";
-import { RegionChipRow } from "@/components/dashboard/RegionChipRow";
+import { RegionBoard } from "@/components/dashboard/RegionBoard";
+import { ScopeTabs } from "@/components/dashboard/ScopeTabs";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGlobalTopics } from "@/lib/hooks/useGlobalTopics";
@@ -122,7 +123,12 @@ export function DashboardClient({
       .slice(0, 5);
   }, [globalTopicsData?.globalTopics]);
 
-  const hottestTopic = filteredRegions[0]?.topTopics[0] ?? null;
+  const topGlobalTopicIds = useMemo(
+    () => new Set(topGlobalIssues.flatMap((globalTopic) => globalTopic.topicIds ?? [])),
+    [topGlobalIssues],
+  );
+
+  const hottestTopic = filteredRegions.find((region) => region.topTopics.length > 0)?.topTopics[0] ?? null;
 
   const applyQuery = (next: { period?: DashboardPeriod; scope?: DashboardScope }) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -158,24 +164,8 @@ export function DashboardClient({
                   key={item}
                   type="button"
                   onClick={() => applyQuery({ period: item })}
-                  className={`rounded-full px-2 py-0.5 text-[11px] ${
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
                     period === item
-                      ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)]"
-                      : "text-[var(--text-secondary)]"
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-            <div className="inline-flex items-center rounded-full border border-[var(--border-default)] p-0.5">
-              {(["community", "news"] as const).map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => applyQuery({ scope: item })}
-                  className={`rounded-full px-2 py-0.5 text-[11px] ${
-                    activeScope === item
                       ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)]"
                       : "text-[var(--text-secondary)]"
                   }`}
@@ -187,6 +177,8 @@ export function DashboardClient({
           </div>
         </div>
       </section>
+
+      <ScopeTabs value={activeScope} onChange={(nextScope) => applyQuery({ scope: nextScope })} />
 
       {regionsError ? <EmptyState title={t("dashboard.loadError")} description={t("dashboard.loadErrorDesc")} /> : null}
 
@@ -217,7 +209,11 @@ export function DashboardClient({
           </section>
 
           <section>
-            <RegionChipRow regions={filteredRegions} />
+            <RegionBoard
+              regions={filteredRegions}
+              topGlobalTopicIds={topGlobalTopicIds}
+              onTopicSelect={(topicId) => setSelectedTopicId(topicId)}
+            />
           </section>
         </>
       ) : null}

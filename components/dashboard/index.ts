@@ -14,5 +14,6 @@ export { HealthStrip } from "./HealthStrip";
 export { WatchBell } from "./WatchBell";
 export { RegionRiseList } from "./RegionRiseList";
 export { HotIssueList } from "./HotIssueList";
-export { RegionChipRow } from "./RegionChipRow";
 export { PropagationPageClient } from "./PropagationPageClient";
+export { ScopeTabs } from "./ScopeTabs";
+export { RegionBoard } from "./RegionBoard";

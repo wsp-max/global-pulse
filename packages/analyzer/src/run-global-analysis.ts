@@ -1,4 +1,4 @@
-import { SOURCES, type GlobalTopic, type Topic } from "@global-pulse/shared";
+﻿import { SOURCES, type GlobalTopic, type Topic } from "@global-pulse/shared";
 import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
 import { getLogger } from "@global-pulse/shared/server-logger";
 import type { Pool } from "pg";
@@ -199,6 +199,8 @@ function hasRegionSourceOverlap(regionId: string, sourceIds: string[] | null): b
   return sourceIds.some((sourceId) => allowedSources.has(sourceId));
 }
 
+const GLOBAL_PLACEHOLDER_NAME_REGEX = /^(🌐|🇰🇷|🇺🇸|🇯🇵|🇨🇳|🇪🇺|🇮🇳|🇧🇷|🇷🇺)\s*토픽\s*#\d+/u;
+
 const GLOBAL_NAME_LOW_SIGNAL_TOKENS = new Set([
   "topic",
   "topics",
@@ -268,6 +270,17 @@ function buildKeywordLabel(topics: Topic[]): string | null {
     return null;
   }
   return keywords.slice(0, 3).join(" · ");
+}
+
+function sanitizePersistedGlobalName(
+  value: string | null | undefined,
+  fallback: string,
+): string {
+  const normalized = normalizeName(value);
+  if (!normalized || GLOBAL_PLACEHOLDER_NAME_REGEX.test(normalized)) {
+    return fallback;
+  }
+  return normalized;
 }
 
 function pickBestGlobalName(globalTopic: GlobalTopic, topicMap: Map<number, Topic>): { nameKo: string; nameEn: string } {
@@ -716,27 +729,38 @@ async function runGlobalAnalysis(): Promise<void> {
     const metricsApplied = applyPropagationMetrics(enrichedMapped, historyPoints, nowIso);
     const maxTotalHeat = Math.max(...metricsApplied.map((topic) => topic.totalHeatScore), 1);
 
-    const payload: GlobalTopicInsertRow[] = metricsApplied.map((topic) => ({
-      name_en: topic.nameEn,
-      name_ko: topic.nameKo,
-      scope,
-      summary_en: topic.summaryEn ?? null,
-      summary_ko: topic.summaryKo ?? null,
-      regions: topic.regions,
-      regional_sentiments: JSON.stringify(topic.regionalSentiments),
-      regional_heat_scores: JSON.stringify(topic.regionalHeatScores),
-      topic_ids: topic.topicIds,
-      total_heat_score: topic.totalHeatScore,
-      heat_score_display: toHeatBand(topic.totalHeatScore, maxTotalHeat),
-      first_seen_region: topic.firstSeenRegion ?? null,
-      first_seen_at: topic.firstSeenAt ?? null,
-      velocity_per_hour: Number(topic.velocityPerHour ?? 0),
-      acceleration: Number(topic.acceleration ?? 0),
-      spread_score: Number(topic.spreadScore ?? 0),
-      propagation_timeline: JSON.stringify(topic.propagationTimeline ?? []),
-      propagation_edges: JSON.stringify(topic.propagationEdges ?? []),
-      expires_at: expiresAt,
-    }));
+    const payload: GlobalTopicInsertRow[] = metricsApplied.map((topic) => {
+      const keywordFallback = buildKeywordLabel(
+        topic.topicIds
+          .map((topicId) => topicById.get(topicId))
+          .filter((item): item is Topic => Boolean(item)),
+      );
+      const fallbackName = keywordFallback || "Global Issue";
+      const safeNameKo = sanitizePersistedGlobalName(topic.nameKo, fallbackName);
+      const safeNameEn = sanitizePersistedGlobalName(topic.nameEn, safeNameKo || fallbackName);
+
+      return {
+        name_en: safeNameEn,
+        name_ko: safeNameKo,
+        scope,
+        summary_en: topic.summaryEn ?? null,
+        summary_ko: topic.summaryKo ?? null,
+        regions: topic.regions,
+        regional_sentiments: JSON.stringify(topic.regionalSentiments),
+        regional_heat_scores: JSON.stringify(topic.regionalHeatScores),
+        topic_ids: topic.topicIds,
+        total_heat_score: topic.totalHeatScore,
+        heat_score_display: toHeatBand(topic.totalHeatScore, maxTotalHeat),
+        first_seen_region: topic.firstSeenRegion ?? null,
+        first_seen_at: topic.firstSeenAt ?? null,
+        velocity_per_hour: Number(topic.velocityPerHour ?? 0),
+        acceleration: Number(topic.acceleration ?? 0),
+        spread_score: Number(topic.spreadScore ?? 0),
+        propagation_timeline: JSON.stringify(topic.propagationTimeline ?? []),
+        propagation_edges: JSON.stringify(topic.propagationEdges ?? []),
+        expires_at: expiresAt,
+      };
+    });
 
     await storage.insertGlobalTopics(payload);
 
@@ -795,3 +819,4 @@ runGlobalAnalysis().catch((error) => {
   logger.error(`Global analysis failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });
+

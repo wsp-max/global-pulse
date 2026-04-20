@@ -55,6 +55,7 @@ const TOPIC_ENTITY_TYPES = new Set<TopicEntityType>([
 ]);
 
 const REGION_TOPIC_FALLBACK_REGEX = /^region\s+[a-z]{2}\s+topic\s+\d+$/i;
+const GLOBAL_PLACEHOLDER_NAME_REGEX = /^(🌐|🇰🇷|🇺🇸|🇯🇵|🇨🇳|🇪🇺|🇮🇳|🇧🇷|🇷🇺)\s*토픽\s*#\d+/u;
 
 function toTopicCategory(value: unknown): TopicCategory | undefined {
   if (typeof value !== "string") {
@@ -279,8 +280,21 @@ export function mapTopicRow(row: TopicRow): Topic {
 export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
   const rawNameKo = (row.name_ko ?? "").normalize("NFKC").replace(/\s+/g, " ").trim();
   const rawNameEn = (row.name_en ?? "").normalize("NFKC").replace(/\s+/g, " ").trim();
-  const displayKo = rawNameKo || rawNameEn || `Global Topic ${row.id ?? "?"}`;
-  const displayEn = rawNameEn || rawNameKo || `Global Topic ${row.id ?? "?"}`;
+  const koIsPlaceholder = GLOBAL_PLACEHOLDER_NAME_REGEX.test(rawNameKo);
+  const enIsPlaceholder = GLOBAL_PLACEHOLDER_NAME_REGEX.test(rawNameEn);
+  const safeRawKo = koIsPlaceholder ? "" : rawNameKo;
+  const safeRawEn = enIsPlaceholder ? "" : rawNameEn;
+  const cleaned = cleanupTopicName({
+    id: row.id,
+    nameKo: safeRawKo,
+    nameEn: safeRawEn,
+  });
+  const displayKo = cleaned.isFallback
+    ? safeRawKo || safeRawEn || `Global Topic ${row.id ?? "?"}`
+    : cleaned.displayKo;
+  const displayEn = cleaned.isFallback
+    ? safeRawEn || safeRawKo || `Global Topic ${row.id ?? "?"}`
+    : cleaned.displayEn;
   const summaries = buildTopicSummaries({
     summaryKo: row.summary_ko,
     summaryEn: row.summary_en,
@@ -310,4 +324,3 @@ export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
     scope: row.scope ?? undefined,
   };
 }
-
