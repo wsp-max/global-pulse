@@ -9,6 +9,7 @@ import { toHeatPercent } from "@/lib/utils/heat";
 
 interface RegionCardProps {
   region: RegionDashboardRow;
+  maxRegionHeatScore?: number;
   scope?: DashboardScope;
   onTopicSelect?: (topicId: number) => void;
   onToggleWatch?: (topic: Topic) => void;
@@ -68,8 +69,32 @@ function buildMiniSparkline(values: number[] | null | undefined): string {
     .join(" ");
 }
 
+function resolveCoverage(
+  totalHeatScore: number,
+  maxRegionHeatScore: number,
+): { label: "Low" | "Mid" | "High"; className: string } {
+  const ratio = maxRegionHeatScore > 0 ? totalHeatScore / maxRegionHeatScore : 0;
+  if (ratio < 0.2) {
+    return {
+      label: "Low",
+      className: "border-slate-500/40 text-slate-300",
+    };
+  }
+  if (ratio < 0.6) {
+    return {
+      label: "Mid",
+      className: "border-sky-500/40 text-sky-300",
+    };
+  }
+  return {
+    label: "High",
+    className: "border-emerald-500/40 text-emerald-200",
+  };
+}
+
 export function RegionCard({
   region,
+  maxRegionHeatScore = 1,
   scope = "community",
   onTopicSelect,
   onToggleWatch,
@@ -87,6 +112,7 @@ export function RegionCard({
     scope === "news" &&
     region.topTopics.some((topic) => topic.sourceIds.some((sourceId) => PORTAL_SOURCE_ID_SET.has(sourceId)));
   const isPartiallyStale = region.dataState === "partially-stale";
+  const coverage = resolveCoverage(region.totalHeatScore, maxRegionHeatScore);
 
   return (
     <article
@@ -113,7 +139,14 @@ export function RegionCard({
             </span>
           )}
         </div>
-        <HeatBadge score={heatScore} />
+        <div className="flex items-center gap-2">
+          <HeatBadge score={heatScore} />
+          <span
+            className={`rounded-full border px-1.5 py-0.5 text-[10px] ${coverage.className}`}
+          >
+            Coverage: {coverage.label}
+          </span>
+        </div>
       </div>
 
       <div className="mt-3 text-xs text-[var(--text-secondary)]">

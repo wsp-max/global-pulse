@@ -53,6 +53,8 @@ const PERIOD_HOURS: Record<DashboardFilters["period"], number> = {
   "7d": 24 * 7,
 };
 
+const MAIN_REGION_ORDER = ["us", "cn", "jp", "kr", "eu", "in", "br", "ru"] as const;
+
 const DEFAULT_FILTERS: DashboardFilters = {
   category: "all",
   period: "24h",
@@ -223,8 +225,23 @@ export function DashboardClient({
 
   const rawRegions = useMemo(() => {
     const regions = regionsData?.regions ?? [];
-    return [...regions].sort((a, b) => b.totalHeatScore - a.totalHeatScore);
+    return [...regions].sort((a, b) => {
+      const leftIndex = MAIN_REGION_ORDER.indexOf(a.id as (typeof MAIN_REGION_ORDER)[number]);
+      const rightIndex = MAIN_REGION_ORDER.indexOf(b.id as (typeof MAIN_REGION_ORDER)[number]);
+      const normalizedLeft = leftIndex < 0 ? 99 : leftIndex;
+      const normalizedRight = rightIndex < 0 ? 99 : rightIndex;
+
+      if (normalizedLeft !== normalizedRight) {
+        return normalizedLeft - normalizedRight;
+      }
+      return b.totalHeatScore - a.totalHeatScore;
+    });
   }, [regionsData?.regions]);
+
+  const maxRegionHeatScore = useMemo(
+    () => Math.max(...rawRegions.map((region) => region.totalHeatScore), 1),
+    [rawRegions],
+  );
 
   const filteredRegions = useMemo(() => {
     return rawRegions
@@ -466,6 +483,7 @@ export function DashboardClient({
                     <RegionCard
                       key={region.id}
                       region={region}
+                      maxRegionHeatScore={maxRegionHeatScore}
                       scope={activeScope}
                       onTopicSelect={openTopicSheet}
                       onToggleWatch={toggleWatch}

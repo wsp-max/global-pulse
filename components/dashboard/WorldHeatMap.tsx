@@ -101,6 +101,9 @@ function isSurging(topic: GlobalTopic, velocityThreshold: number): boolean {
 function buildClusterMarkers(regions: RegionDashboardRow[], zoom: number): ClusterMarker[] {
   const markers = regions
     .map((region) => {
+      if (region.totalHeatScore <= 0) {
+        return null;
+      }
       const coord = REGION_COORDINATES[region.id];
       if (!coord) {
         return null;
@@ -289,10 +292,10 @@ export function WorldHeatMap({ regions, globalTopics = [], variant = "community"
                       <marker
                         key={`arrow-${edge.from}-${edge.to}-${index}`}
                         id={`arrow-${variant}-${index}`}
-                        markerWidth="5"
-                        markerHeight="5"
-                        refX="4.2"
-                        refY="2.5"
+                        markerWidth="3.6"
+                        markerHeight="3.6"
+                        refX="3"
+                        refY="1.8"
                         orient="auto"
                         markerUnits="strokeWidth"
                       >

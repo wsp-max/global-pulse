@@ -59,6 +59,13 @@ function ageMinutes(iso: string | null | undefined): number | null {
   return Math.max(0, Math.floor((Date.now() - parsed) / 60_000));
 }
 
+function ratioLabel(left: number | undefined, right: number | undefined): string {
+  if (typeof left !== "number" || typeof right !== "number") {
+    return "N/A";
+  }
+  return `${left}/${right}`;
+}
+
 export function HealthStrip() {
   const { data: regions } = useSWR<RegionsHealthResponse>("/regions/health", fetcher, {
     refreshInterval: 60_000,
@@ -71,8 +78,15 @@ export function HealthStrip() {
   });
 
   const freshnessMinutes = ageMinutes(regions?.latestSnapshotAt);
-  const coverage = Math.round(((analyzer?.metrics?.geminiSuccessRate ?? 0) * 100));
+  const successRate = analyzer?.metrics?.geminiSuccessRate;
+  const coverageLabel =
+    typeof successRate === "number"
+      ? successRate <= 0
+        ? "아직 집계 전"
+        : `${Math.round(successRate * 100)}%`
+      : "N/A";
   const autoDisabledCount = sources?.autoDisabledSources24h ?? 0;
+  const updatedLabel = freshnessMinutes === null ? "갱신 정보 없음" : `updated ${freshnessMinutes}m ago`;
 
   return (
     <Link
@@ -82,15 +96,15 @@ export function HealthStrip() {
     >
       <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-1 text-[var(--text-secondary)]">
         <span className={`${freshnessColor(freshnessMinutes)} font-medium`}>
-          {freshnessIcon(freshnessMinutes)} LIVE · updated {freshnessMinutes ?? "-"}m ago
+          {freshnessIcon(freshnessMinutes)} LIVE · {updatedLabel}
         </span>
         <span>
-          Regions: {regions?.activeRegions ?? 0}/{regions?.totalRegions ?? 0} active
+          Regions: {ratioLabel(regions?.activeRegions, regions?.totalRegions)} active
         </span>
         <span>
-          Sources: {sources?.healthySources ?? 0}/{sources?.totalSources ?? 0} healthy
+          Sources: {ratioLabel(sources?.healthySources, sources?.totalSources)} healthy
         </span>
-        <span>Gemini: {coverage}% summary coverage</span>
+        <span>Gemini: {coverageLabel} summary coverage</span>
         {autoDisabledCount > 0 ? (
           <span className="rounded-full border border-red-500/50 bg-red-500/10 px-2 py-0.5 text-red-300">
             auto-disabled {autoDisabledCount}

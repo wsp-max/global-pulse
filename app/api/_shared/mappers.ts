@@ -277,24 +277,21 @@ export function mapTopicRow(row: TopicRow): Topic {
 }
 
 export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
-  const cleaned = cleanupTopicName({
-    id: row.id,
-    nameKo: row.name_ko,
-    nameEn: row.name_en,
-    keywords: [],
-    entities: [],
-  });
+  const rawNameKo = (row.name_ko ?? "").normalize("NFKC").replace(/\s+/g, " ").trim();
+  const rawNameEn = (row.name_en ?? "").normalize("NFKC").replace(/\s+/g, " ").trim();
+  const displayKo = rawNameKo || rawNameEn || `Global Topic ${row.id ?? "?"}`;
+  const displayEn = rawNameEn || rawNameKo || `Global Topic ${row.id ?? "?"}`;
   const summaries = buildTopicSummaries({
     summaryKo: row.summary_ko,
     summaryEn: row.summary_en,
-    nameKo: cleaned.displayKo,
-    nameEn: cleaned.displayEn,
+    nameKo: displayKo,
+    nameEn: displayEn,
   });
 
   return {
     id: toOptionalNumber(row.id),
-    nameEn: cleaned.displayEn,
-    nameKo: cleaned.displayKo,
+    nameEn: displayEn,
+    nameKo: displayKo,
     summaryEn: summaries.summaryEn,
     summaryKo: summaries.summaryKo,
     regions: row.regions ?? [],
@@ -313,5 +310,4 @@ export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
     scope: row.scope ?? undefined,
   };
 }
-
 

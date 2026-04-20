@@ -1,4 +1,4 @@
-﻿import { SOURCES } from "@global-pulse/shared";
+import { SOURCES, type Topic } from "@global-pulse/shared";
 import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
 import { getLogger } from "@global-pulse/shared/server-logger";
 import type { Pool } from "pg";
@@ -8,6 +8,8 @@ import { summarizeTopicsWithGemini } from "./gemini-summarizer";
 import { calculateAnomalyScore, computeHeatStats, type HeatStats } from "./baseline";
 import { enrichTopicsWithEmbeddings } from "./topic-embeddings";
 import { clusterTopics } from "./topic-clusterer";
+import { buildTopicSummaryFallback } from "./topic-summary-fallback";
+import { normalizeTopicNamesForStorage } from "./topic-name-normalizer";
 
 const logger = getLogger("analyzer");
 type AnalysisScope = "community" | "news" | "mixed";
@@ -180,6 +182,76 @@ function normalizeBurstTerm(value: string): string {
 
 function normalizeCanonicalKey(value: string): string {
   return value.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function normalizeTopicKeyValue(value: string | undefined): string {
+  return (value ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function buildTopicMergeKey(topic: Topic): string {
+  if (typeof topic.id === "number" && Number.isFinite(topic.id)) {
+    return `id:${topic.id}`;
+  }
+
+  const canonical = normalizeTopicKeyValue(topic.canonicalKey ?? undefined);
+  if (canonical) {
+    return `canonical:${canonical}`;
+  }
+
+  const composite = [
+    normalizeTopicKeyValue(topic.regionId),
+    normalizeTopicKeyValue(topic.nameEn),
+    normalizeTopicKeyValue(topic.nameKo),
+    normalizeTopicKeyValue(topic.periodStart),
+    normalizeTopicKeyValue(topic.periodEnd),
+  ]
+    .filter(Boolean)
+    .join("|");
+
+  if (composite) {
+    return `composite:${composite}`;
+  }
+
+  const fallback = [
+    String(topic.heatScore ?? 0),
+    String(topic.postCount ?? 0),
+    normalizeTopicKeyValue(topic.sourceIds?.join(",") ?? ""),
+  ].join("|");
+  return `generated:${fallback}`;
+}
+
+function isSingleShortTokenLabel(value: string): boolean {
+  const tokens = value
+    .split(/\s+/u)
+    .map((token) => token.trim())
+    .filter(Boolean);
+  return tokens.length === 1 && tokens[0]!.length <= 4;
+}
+
+function buildKeywordLabel(topic: Topic): string | null {
+  const labels = [...new Set((topic.keywords ?? []).map((keyword) => keyword.trim()).filter(Boolean))];
+  if (labels.length < 2) {
+    return null;
+  }
+  return `${labels[0]} · ${labels[1]}`;
+}
+
+function applyPhraseFallback(topic: Topic): Topic {
+  const keywordLabel = buildKeywordLabel(topic);
+  const fallbackSummary = buildTopicSummaryFallback(topic);
+  const normalizedNames = normalizeTopicNamesForStorage(topic);
+
+  return {
+    ...topic,
+    nameKo: isSingleShortTokenLabel(normalizedNames.nameKo)
+      ? keywordLabel ?? normalizedNames.nameKo
+      : normalizedNames.nameKo,
+    nameEn: isSingleShortTokenLabel(normalizedNames.nameEn)
+      ? keywordLabel ?? normalizedNames.nameEn
+      : normalizedNames.nameEn,
+    summaryKo: fallbackSummary.summaryKo,
+    summaryEn: fallbackSummary.summaryEn,
+  };
 }
 
 function determineLifecycleStage(params: {
@@ -636,31 +708,54 @@ async function runRegionAnalysis(params: {
     return;
   }
 
-  const summarizedTopics = useGemini
-    ? await summarizeTopicsWithGemini(topicsWithPortalBoost, { regionId })
-        .then((result) => {
-          const lastError = result.stats.errors.at(-1);
-          log(
-            `[${regionId}:${scope}] gemini stats calls=${result.stats.requestCount} fallbacks=${result.stats.fallbackCount} batches=${result.stats.batches} promptChars=${result.stats.promptCharsTotal} model=${result.stats.modelUsed.join(",") || "none"} durationMs=${result.stats.durationMs} errors=${result.stats.errors.length}${lastError ? ` lastError=${lastError}` : ""}`,
-          );
-          return result.topics;
-        })
-        .catch((error) => {
-          const message = error instanceof Error ? error.message : String(error);
-          log(
-            JSON.stringify({
-              stage: "gemini",
-              regionId,
-              scope,
-              topicCount: topicsWithPortalBoost.length,
-              failedCount: topicsWithPortalBoost.length,
-              firstError: message,
-            }),
-          );
-          log(`[${regionId}:${scope}] gemini summarization failed, falling back to local topics.`);
-          return topicsWithPortalBoost;
-        })
-    : topicsWithPortalBoost;
+  const summaryTopN = Math.max(1, Number(process.env.ANALYZER_LLM_SUMMARY_TOP_N ?? 5));
+  const summaryCandidates = [...topicsWithPortalBoost]
+    .sort((left, right) => right.heatScore - left.heatScore)
+    .slice(0, summaryTopN);
+  const summaryCandidateKeys = summaryCandidates.map((topic) => buildTopicMergeKey(topic));
+  const summaryKeySet = new Set(summaryCandidateKeys);
+  const summarizedByKey = new Map<string, Topic>();
+
+  if (useGemini && summaryCandidates.length > 0) {
+    await summarizeTopicsWithGemini(summaryCandidates, { regionId })
+      .then((result) => {
+        const lastError = result.stats.errors.at(-1);
+        log(
+          `[${regionId}:${scope}] gemini stats calls=${result.stats.requestCount} fallbacks=${result.stats.fallbackCount} batches=${result.stats.batches} promptChars=${result.stats.promptCharsTotal} model=${result.stats.modelUsed.join(",") || "none"} durationMs=${result.stats.durationMs} errors=${result.stats.errors.length} candidates=${summaryCandidates.length}${lastError ? ` lastError=${lastError}` : ""}`,
+        );
+        for (let index = 0; index < summaryCandidateKeys.length; index += 1) {
+          const key = summaryCandidateKeys[index]!;
+          const topic = result.topics[index] ?? summaryCandidates[index];
+          if (topic) {
+            summarizedByKey.set(key, topic);
+          }
+        }
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        log(
+          JSON.stringify({
+            stage: "gemini",
+            regionId,
+            scope,
+            topicCount: summaryCandidates.length,
+            failedCount: summaryCandidates.length,
+            firstError: message,
+          }),
+        );
+        log(`[${regionId}:${scope}] gemini summarization failed, falling back to local topics.`);
+      });
+  }
+
+  const summarizedTopics = topicsWithPortalBoost.map((topic) => {
+    const key = buildTopicMergeKey(topic);
+    const llmTopic = summaryKeySet.has(key) ? summarizedByKey.get(key) : undefined;
+    if (llmTopic) {
+      return llmTopic;
+    }
+    return applyPhraseFallback(topic);
+  });
+
   const analyzedTopics = await enrichTopicsWithEmbeddings(summarizedTopics, { regionId }).catch((error) => {
     log(
       `[${regionId}:${scope}] embedding enrichment failed, skipping embeddings: ${
@@ -876,11 +971,6 @@ runAnalysis().catch((error) => {
   logger.error(`Analysis failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });
-
-
-
-
-
 
 
 

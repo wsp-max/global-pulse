@@ -199,6 +199,113 @@ function hasRegionSourceOverlap(regionId: string, sourceIds: string[] | null): b
   return sourceIds.some((sourceId) => allowedSources.has(sourceId));
 }
 
+const GLOBAL_NAME_LOW_SIGNAL_TOKENS = new Set([
+  "topic",
+  "topics",
+  "signal",
+  "signals",
+  "summary",
+  "pending",
+  "someone",
+  "know",
+  "lots",
+  "maybe",
+  "unknown",
+  "global",
+  "issue",
+  "news",
+  "trend",
+  "trending",
+  "요약",
+  "준비",
+  "토픽",
+  "글로벌",
+  "이슈",
+  "반응",
+  "住民",
+  "たちの",
+]);
+
+function normalizeName(value: string | null | undefined): string {
+  return (value ?? "").normalize("NFKC").replace(/\s+/g, " ").trim();
+}
+
+function tokenizeName(value: string): string[] {
+  return value
+    .toLowerCase()
+    .split(/[\s/|,:;()[\]{}'"`~!@#$%^&*+=?.-]+/u)
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
+
+function isLowSignalName(value: string): boolean {
+  const normalized = normalizeName(value);
+  if (!normalized) {
+    return true;
+  }
+  if (/^🌐\s*토픽\s*#\d+$/u.test(normalized) || /^global\s+topic\s*#?\d+$/iu.test(normalized)) {
+    return true;
+  }
+  const tokens = tokenizeName(normalized);
+  if (tokens.length < 2) {
+    return true;
+  }
+  const meaningfulCount = tokens.filter((token) => !GLOBAL_NAME_LOW_SIGNAL_TOKENS.has(token)).length;
+  return meaningfulCount < 1;
+}
+
+function buildKeywordLabel(topics: Topic[]): string | null {
+  const keywords = [
+    ...new Set(
+      topics.flatMap((topic) =>
+        (topic.keywords ?? [])
+          .map((keyword) => normalizeName(keyword))
+          .filter(Boolean),
+      ),
+    ),
+  ];
+  if (keywords.length === 0) {
+    return null;
+  }
+  return keywords.slice(0, 3).join(" · ");
+}
+
+function pickBestGlobalName(globalTopic: GlobalTopic, topicMap: Map<number, Topic>): { nameKo: string; nameEn: string } {
+  const underlyingTopics = globalTopic.topicIds
+    .map((topicId) => topicMap.get(topicId))
+    .filter((topic): topic is Topic => Boolean(topic))
+    .sort((left, right) => right.heatScore - left.heatScore);
+
+  for (const candidate of underlyingTopics) {
+    const candidateKo = normalizeName(candidate.nameKo);
+    const candidateEn = normalizeName(candidate.nameEn);
+    if (!isLowSignalName(candidateKo) && !isLowSignalName(candidateEn)) {
+      return { nameKo: candidateKo, nameEn: candidateEn };
+    }
+  }
+
+  for (const candidate of underlyingTopics) {
+    const candidateKo = normalizeName(candidate.nameKo);
+    const candidateEn = normalizeName(candidate.nameEn);
+    if (!isLowSignalName(candidateKo)) {
+      return { nameKo: candidateKo, nameEn: candidateEn || candidateKo };
+    }
+    if (!isLowSignalName(candidateEn)) {
+      return { nameKo: candidateKo || candidateEn, nameEn: candidateEn };
+    }
+  }
+
+  const keywordLabel = buildKeywordLabel(underlyingTopics);
+  if (keywordLabel) {
+    return { nameKo: keywordLabel, nameEn: keywordLabel };
+  }
+
+  return {
+    nameKo: normalizeName(globalTopic.nameKo) || `Global Topic ${globalTopic.id ?? "?"}`,
+    nameEn: normalizeName(globalTopic.nameEn) || normalizeName(globalTopic.nameKo) || `Global Topic ${globalTopic.id ?? "?"}`,
+  };
+}
+
 function sanitizeGlobalTopicByRegions(topic: GlobalTopic, topicMap: Map<number, Topic>): GlobalTopic | null {
   const filteredRegionEntries = new Map<string, number[]>();
 
@@ -267,8 +374,12 @@ function sanitizeGlobalTopicByRegions(topic: GlobalTopic, topicMap: Map<number, 
 
   const totalHeatScore = filteredRegions.reduce((sum, regionId) => sum + (regionalHeatScores[regionId] ?? 0), 0);
 
+  const bestNames = pickBestGlobalName(topic, topicMap);
+
   return {
     ...topic,
+    nameKo: bestNames.nameKo,
+    nameEn: bestNames.nameEn,
     regions: filteredRegions,
     regionalHeatScores,
     regionalSentiments,
