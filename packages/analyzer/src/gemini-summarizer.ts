@@ -32,6 +32,13 @@ const ANALYZER_GEMINI_TIMEOUT_MS = Math.max(
   5_000,
 );
 
+const GROQ_API_BASE = process.env.GROQ_API_BASE?.trim() || "https://api.groq.com/openai/v1";
+const GROQ_MODEL = process.env.GROQ_MODEL?.trim() || "moonshotai/kimi-k2-instruct-0905";
+const ANALYZER_GROQ_TIMEOUT_MS = Math.max(
+  Number(process.env.ANALYZER_GROQ_TIMEOUT_MS ?? 30_000),
+  5_000,
+);
+
 const FALLBACK_SUMMARY_KO = "요약 준비 중";
 const FALLBACK_SUMMARY_EN = "Summary pending";
 const FALLBACK_SENTIMENT_REASONING_KO = "감성 근거 분석 중";
@@ -412,11 +419,16 @@ function parseGeminiSummaries(rawText: string): GeminiSummaryItem[] | null {
 
   try {
     const parsed = JSON.parse(cleaned);
-    if (!Array.isArray(parsed)) {
+    const list = Array.isArray(parsed)
+      ? parsed
+      : parsed && typeof parsed === "object" && Array.isArray((parsed as { topics?: unknown }).topics)
+        ? ((parsed as { topics: unknown[] }).topics)
+        : null;
+    if (!list) {
       return null;
     }
 
-    return parsed.map((item) => {
+    return list.map((item) => {
       if (!item || typeof item !== "object") {
         return {};
       }
@@ -551,6 +563,51 @@ async function requestGemini(apiKey: string, model: string, prompt: string): Pro
       .join("\n")
       .trim() ?? "";
 
+  return { text };
+}
+
+async function requestGroq(apiKey: string, prompt: string): Promise<RequestGeminiResult> {
+  const controller = new AbortController();
+  const timeoutRef = setTimeout(() => controller.abort(), ANALYZER_GROQ_TIMEOUT_MS);
+
+  const wrappedPrompt = `${prompt}\n\nReturn a JSON object shaped as {"topics": [...]} where topics is the array described above.`;
+
+  let response: Response;
+  try {
+    response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [{ role: "user", content: wrappedPrompt }],
+        temperature: 0.2,
+        top_p: 0.9,
+        response_format: { type: "json_object" },
+      }),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return { text: "", error: `timeout after ${ANALYZER_GROQ_TIMEOUT_MS}ms` };
+    }
+    return { text: "", error: error instanceof Error ? error.message : String(error) };
+  } finally {
+    clearTimeout(timeoutRef);
+  }
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    const compactBody = sanitizeJsonText(body).slice(0, 400);
+    return { text: "", error: `HTTP ${response.status}${compactBody ? ` ${compactBody}` : ""}` };
+  }
+
+  const data = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const text = data.choices?.[0]?.message?.content?.trim() ?? "";
   return { text };
 }
 
@@ -703,6 +760,42 @@ export async function summarizeTopicsWithGemini(
     }
 
     if (!summaries) {
+      const groqKey = process.env.GROQ_API_KEY;
+      if (groqKey?.trim()) {
+        usedModels.add(`groq:${GROQ_MODEL}`);
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          requestCount += 1;
+          const { text, error } = await requestGroq(groqKey, prompt);
+
+          if (error) {
+            const errorLine = `groq:${GROQ_MODEL}: ${error}`;
+            batchErrors.push(errorLine);
+            allErrors.push(errorLine);
+            break;
+          }
+
+          if (!text) {
+            const emptyError = `groq:${GROQ_MODEL}: empty response`;
+            batchErrors.push(emptyError);
+            allErrors.push(emptyError);
+            continue;
+          }
+
+          const parsed = parseGeminiSummaries(text);
+          if (!isValidSummaryBatch(parsed, batch.length)) {
+            const validationError = `groq:${GROQ_MODEL}: invalid-or-short-summary attempt=${attempt + 1}`;
+            batchErrors.push(validationError);
+            allErrors.push(validationError);
+            continue;
+          }
+
+          summaries = parsed;
+          break;
+        }
+      }
+    }
+
+    if (!summaries) {
       fallbackCount += 1;
       logger.warn(
         `[${options.regionId}] gemini canonicalization fallback for batch size=${batch.length}: ${
@@ -744,4 +837,3 @@ export async function summarizeTopicsWithGemini(
     },
   };
 }
-
