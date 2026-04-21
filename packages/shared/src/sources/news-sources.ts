@@ -31,7 +31,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     trustTier: 2,
     language: "ko",
     rankingHint: "popularDay",
-    isActive: false, // policy: disable-now (robots disallow)
+    isActive: false, // policy: keep-disabled (robots disallow)
   },
   {
     id: "daum_news_ranking",
@@ -77,7 +77,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "newspaper",
     trustTier: 2,
     language: "ko",
-    isActive: false, // policy: disable-until-fixed (empty feed)
+    isActive: false, // policy: disable-until-fixed (rss service terminated)
   },
   {
     id: "hankyoreh_rss",
@@ -229,7 +229,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "business_media",
     trustTier: 2,
     language: "ja",
-    isActive: false, // TODO: paywall-heavy sections, verify free feeds only.
+    isActive: false, // policy: disable-until-fixed (rss 404, no verified open feed)
   },
 
   // US
@@ -261,7 +261,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "wire_service",
     trustTier: 1,
     language: "en",
-    isActive: false, // policy: disable-until-fixed (endpoint 404)
+    isActive: false, // policy: disable-until-fixed (endpoint 404 / bot-forbidden)
   },
   {
     id: "npr_rss",
@@ -306,7 +306,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "newspaper",
     trustTier: 2,
     language: "en",
-    isActive: false, // TODO: keep free/open feed sections only.
+    isActive: true, // policy: active (verified open RSS feed)
   },
   {
     id: "wapo_rss",
@@ -321,7 +321,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "newspaper",
     trustTier: 2,
     language: "en",
-    isActive: false, // TODO: paywall-heavy coverage.
+    isActive: true, // policy: active (verified open RSS feed)
   },
   {
     id: "bloomberg_rss",
@@ -336,7 +336,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "business_media",
     trustTier: 2,
     language: "en",
-    isActive: false, // TODO: verify freely accessible sections only.
+    isActive: true, // policy: active (verified open RSS feed)
   },
   {
     id: "techcrunch_rss",
@@ -505,7 +505,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "portal",
     trustTier: 2,
     language: "zh",
-    isActive: false, // TODO: selector stability and anti-bot variance.
+    isActive: false, // policy: disable-until-fixed (ranking selector stability pending)
   },
   {
     id: "sohu_news_ranking",
@@ -520,7 +520,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "portal",
     trustTier: 2,
     language: "zh",
-    isActive: false, // TODO: selector stability and anti-bot variance.
+    isActive: true, // policy: active (verified HTML ranking parse)
   },
   {
     id: "163_news_ranking",
@@ -535,7 +535,7 @@ export const NEWS_SOURCES: readonly Source[] = [
     newsCategory: "portal",
     trustTier: 2,
     language: "zh",
-    isActive: false, // TODO: selector stability and anti-bot variance.
+    isActive: true, // policy: active (verified HTML ranking parse)
   },
 
   // TW

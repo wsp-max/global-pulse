@@ -2,6 +2,7 @@ import { DISABLED_SOURCE_ID_SET, SOURCES, type ScraperResult, type Source } from
 import { TiebaScraper } from "./scrapers/china/tieba";
 import { WeiboScraper } from "./scrapers/china/weibo";
 import { ZhihuScraper } from "./scrapers/china/zhihu";
+import { RssCommunityScraper } from "./scrapers/community/rss-community";
 import { GutefrageScraper } from "./scrapers/europe/gutefrage";
 import { MumsnetScraper } from "./scrapers/europe/mumsnet";
 import { ClienScraper } from "./scrapers/korea/clien";
@@ -19,6 +20,7 @@ import { GirlschannelScraper } from "./scrapers/japan/girlschannel";
 import { HatenaScraper } from "./scrapers/japan/hatena";
 import { TogetterScraper } from "./scrapers/japan/togetter";
 import { YahooJapanScraper } from "./scrapers/japan/yahoo-japan";
+import { ExpatMideastScraper } from "./scrapers/mideast/expat-mideast";
 import { RedditMideastScraper } from "./scrapers/mideast/reddit-mideast";
 import { JsonNewsScraper } from "./scrapers/news/json-news-scraper";
 import { RankingNewsScraper } from "./scrapers/news/ranking-news-scraper";
@@ -227,6 +229,13 @@ async function run(): Promise<void> {
     new SlashdotScraper(),
     new FarkScraper(),
     new ReseteraScraper(),
+    new RssCommunityScraper("metafilter_rss"),
+    new RssCommunityScraper("lobsters_rss"),
+    new RssCommunityScraper("neogaf_gaming_rss"),
+    new RssCommunityScraper("hardware_fr_rss"),
+    new ExpatMideastScraper(),
+    new RssCommunityScraper("dtf_rss"),
+    new RssCommunityScraper("vc_ru_rss"),
     new YoutubeScraper("youtube_kr"),
     new YoutubeScraper("youtube_jp"),
     new YoutubeScraper("youtube_us"),
@@ -356,4 +365,3 @@ run().catch((error) => {
   Logger.error(`Collector crashed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });
-

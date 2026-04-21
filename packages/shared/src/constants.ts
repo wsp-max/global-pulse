@@ -624,6 +624,39 @@ const CORE_SOURCES = [
     scrapeUrl: "https://www.resetera.com/forums/gaming-forum.7/index.rss",
     scrapeIntervalMinutes: 30,
   },
+  {
+    id: "metafilter_rss",
+    regionId: "us",
+    name: "MetaFilter",
+    nameEn: "MetaFilter",
+    url: "https://www.metafilter.com",
+    type: "community" as const,
+    scrapeUrl: "https://rss.metafilter.com/metafilter.rss",
+    scrapeIntervalMinutes: 60,
+    isActive: false,
+  },
+  {
+    id: "lobsters_rss",
+    regionId: "us",
+    name: "Lobsters",
+    nameEn: "Lobsters",
+    url: "https://lobste.rs",
+    type: "community" as const,
+    scrapeUrl: "https://lobste.rs/rss",
+    scrapeIntervalMinutes: 60,
+    isActive: false,
+  },
+  {
+    id: "neogaf_gaming_rss",
+    regionId: "us",
+    name: "NeoGAF Gaming",
+    nameEn: "NeoGAF Gaming Discussion",
+    url: "https://www.neogaf.com",
+    type: "community" as const,
+    scrapeUrl: "https://www.neogaf.com/forums/gaming-discussion.2/index.rss",
+    scrapeIntervalMinutes: 60,
+    isActive: false,
+  },
 
   // EU
   {
@@ -655,6 +688,17 @@ const CORE_SOURCES = [
     type: "community" as const,
     scrapeUrl: "https://www.mumsnet.com/talk/feed",
     scrapeIntervalMinutes: 60,
+  },
+  {
+    id: "hardware_fr_rss",
+    regionId: "eu",
+    name: "Forum HardWare.fr",
+    nameEn: "Forum HardWare.fr",
+    url: "https://forum.hardware.fr",
+    type: "community" as const,
+    scrapeUrl: "https://forum.hardware.fr/rss.php?config=hfr.inc&cat=13&subcat=0&num=10",
+    scrapeIntervalMinutes: 60,
+    isActive: false,
   },
   {
     id: "reddit_askuk",
@@ -799,6 +843,17 @@ const CORE_SOURCES = [
     scrapeIntervalMinutes: 120,
   },
   {
+    id: "expat_mideast",
+    regionId: "me",
+    name: "Expat Middle East",
+    nameEn: "Expat.com Middle East Forum",
+    url: "https://www.expat.com",
+    type: "community" as const,
+    scrapeUrl: "https://www.expat.com/en/forum/middle-east/",
+    scrapeIntervalMinutes: 60,
+    isActive: false,
+  },
+  {
     id: "reddit_russia",
     regionId: "ru",
     name: "Reddit Russia",
@@ -848,6 +903,28 @@ const CORE_SOURCES = [
     type: "community" as const,
     scrapeUrl: "https://habr.com/ru/rss/news/",
     scrapeIntervalMinutes: 60,
+  },
+  {
+    id: "dtf_rss",
+    regionId: "ru",
+    name: "DTF",
+    nameEn: "DTF",
+    url: "https://dtf.ru",
+    type: "community" as const,
+    scrapeUrl: "https://dtf.ru/rss/all",
+    scrapeIntervalMinutes: 60,
+    isActive: false,
+  },
+  {
+    id: "vc_ru_rss",
+    regionId: "ru",
+    name: "vc.ru",
+    nameEn: "vc.ru",
+    url: "https://vc.ru",
+    type: "community" as const,
+    scrapeUrl: "https://vc.ru/rss/all",
+    scrapeIntervalMinutes: 60,
+    isActive: false,
   },
   {
     id: "reddit_brasil",
@@ -1210,6 +1287,14 @@ export type SourceId = (typeof SOURCES)[number]["id"];
 
 // Cost-control policy: keep high-friction sources disabled by default.
 // They can still be run explicitly via --source <id> for ad-hoc diagnostics.
-export const DISABLED_SOURCE_ID_SET = new Set<string>([]);
+export const DISABLED_SOURCE_ID_SET = new Set<string>([
+  "metafilter_rss",
+  "lobsters_rss",
+  "neogaf_gaming_rss",
+  "hardware_fr_rss",
+  "expat_mideast",
+  "dtf_rss",
+  "vc_ru_rss",
+]);
 
 

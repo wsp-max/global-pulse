@@ -1,6 +1,7 @@
 import { ClienScraper } from "../packages/collector/src/scrapers/korea/clien";
 import { ArcaScraper } from "../packages/collector/src/scrapers/korea/arca";
 import { DcInsideScraper } from "../packages/collector/src/scrapers/korea/dcinside";
+import { RssCommunityScraper } from "../packages/collector/src/scrapers/community/rss-community";
 import { RedditEuropeScraper } from "../packages/collector/src/scrapers/europe/reddit-europe";
 import { FivechScraper } from "../packages/collector/src/scrapers/japan/fivech";
 import { GirlschannelScraper } from "../packages/collector/src/scrapers/japan/girlschannel";
@@ -13,6 +14,7 @@ import { RuliwebScraper } from "../packages/collector/src/scrapers/korea/ruliweb
 import { TheqooScraper } from "../packages/collector/src/scrapers/korea/theqoo";
 import { TogetterScraper } from "../packages/collector/src/scrapers/japan/togetter";
 import { YahooJapanScraper } from "../packages/collector/src/scrapers/japan/yahoo-japan";
+import { ExpatMideastScraper } from "../packages/collector/src/scrapers/mideast/expat-mideast";
 import { RedditMideastScraper } from "../packages/collector/src/scrapers/mideast/reddit-mideast";
 import { JsonNewsScraper } from "../packages/collector/src/scrapers/news/json-news-scraper";
 import { RankingNewsScraper } from "../packages/collector/src/scrapers/news/ranking-news-scraper";
@@ -147,6 +149,13 @@ async function run(): Promise<void> {
     slashdot: new SlashdotScraper(),
     fark: new FarkScraper(),
     resetera: new ReseteraScraper(),
+    metafilter_rss: new RssCommunityScraper("metafilter_rss"),
+    lobsters_rss: new RssCommunityScraper("lobsters_rss"),
+    neogaf_gaming_rss: new RssCommunityScraper("neogaf_gaming_rss"),
+    hardware_fr_rss: new RssCommunityScraper("hardware_fr_rss"),
+    expat_mideast: new ExpatMideastScraper(),
+    dtf_rss: new RssCommunityScraper("dtf_rss"),
+    vc_ru_rss: new RssCommunityScraper("vc_ru_rss"),
     youtube_kr: new YoutubeScraper(),
     youtube_jp: new YoutubeScraper("youtube_jp"),
     youtube_us: new YoutubeScraper("youtube_us"),

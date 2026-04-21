@@ -99,8 +99,15 @@ const SOURCE_WEIGHT_MAP: Record<string, number> = {
   slashdot: 1.05,
   fark: 0.92,
   resetera: 1.0,
+  metafilter_rss: 1.02,
+  lobsters_rss: 1.04,
+  neogaf_gaming_rss: 1.0,
   gutefrage: 0.95,
   mumsnet: 0.95,
+  hardware_fr_rss: 0.98,
+  expat_mideast: 0.95,
+  dtf_rss: 1.02,
+  vc_ru_rss: 1.0,
   youtube_kr: 0.45,
   youtube_jp: 0.45,
   youtube_us: 0.45,
@@ -953,5 +960,4 @@ export async function clusterTopics(
     rank: index + 1,
   }));
 }
-
 

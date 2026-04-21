@@ -28,6 +28,21 @@ function parseArg(flag: string): string | undefined {
   return process.argv[index + 1];
 }
 
+function parseListArg(...flags: string[]): string[] {
+  const values = flags.flatMap((flag) => {
+    const raw = parseArg(flag);
+    if (!raw) {
+      return [];
+    }
+    return raw
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  });
+
+  return [...new Set(values)];
+}
+
 function toAbortSignal(timeoutMs: number): AbortSignal {
   const controller = new AbortController();
   setTimeout(() => controller.abort(), timeoutMs);
@@ -174,6 +189,7 @@ async function applyActivation(results: VerifyResult[]): Promise<void> {
 
 async function main(): Promise<void> {
   const regionFilter = parseArg("--region");
+  const sourceIds = parseListArg("--source", "--sources");
   const apply = process.argv.includes("--apply");
 
   const sources = SOURCES.filter((source) => {
@@ -181,6 +197,9 @@ async function main(): Promise<void> {
       return false;
     }
     if (regionFilter && source.regionId !== regionFilter) {
+      return false;
+    }
+    if (sourceIds.length > 0 && !sourceIds.includes(source.id)) {
       return false;
     }
     return true;
@@ -202,6 +221,7 @@ async function main(): Promise<void> {
   const summary = {
     total: sorted.length,
     region: regionFilter ?? "all",
+    sources: sourceIds,
     connected: sorted.filter((result) => result.ok).length,
     degraded: sorted.filter((result) => !result.ok).length,
     activated: apply ? sorted.filter((result) => result.ok).length : 0,

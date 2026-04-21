@@ -2,15 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
 import { getLogger } from "@global-pulse/shared/server-logger";
-
-type SourcePolicyType = "disable-now" | "disable-until-fixed" | "keep-active-observe";
-
-interface SourcePolicyRow {
-  sourceId: string;
-  policy: SourcePolicyType;
-  reason: string;
-  alternatives: string[];
-}
+import { SOURCE_POLICY_ROWS } from "./lib/source-policy";
 
 interface SourceStateRow {
   id: string;
@@ -21,87 +13,6 @@ interface SourceStateRow {
 
 const logger = getLogger("apply-source-policy");
 
-const POLICY_ROWS: readonly SourcePolicyRow[] = [
-  {
-    sourceId: "naver_news_ranking",
-    policy: "disable-now",
-    reason: "robots_disallow",
-    alternatives: ["daum_news_ranking", "yonhap_kr", "kbs_news_rss", "ytn_rss"],
-  },
-  {
-    sourceId: "punch_rss",
-    policy: "disable-now",
-    reason: "http_403",
-    alternatives: ["thisday_rss"],
-  },
-  {
-    sourceId: "iol_rss",
-    policy: "disable-now",
-    reason: "http_403",
-    alternatives: ["news24_rss"],
-  },
-  {
-    sourceId: "reddit_russia",
-    policy: "disable-now",
-    reason: "reddit_403",
-    alternatives: ["reddit_russian", "reddit_ukraine", "habr"],
-  },
-  {
-    sourceId: "reuters_rss",
-    policy: "disable-until-fixed",
-    reason: "http_404",
-    alternatives: ["ap_rss", "cnn_rss", "npr_rss"],
-  },
-  {
-    sourceId: "reuters_uk_rss",
-    policy: "disable-until-fixed",
-    reason: "http_404",
-    alternatives: ["bbc_rss", "guardian_rss", "euronews_rss"],
-  },
-  {
-    sourceId: "reuters_mideast_rss",
-    policy: "disable-until-fixed",
-    reason: "http_404",
-    alternatives: ["aljazeera_rss", "bbc_arabic_rss"],
-  },
-  {
-    sourceId: "nikkei_rss",
-    policy: "disable-until-fixed",
-    reason: "http_404",
-    alternatives: ["yomiuri_rss", "asahi_rss", "mainichi_rss"],
-  },
-  {
-    sourceId: "kompas_rss",
-    policy: "disable-until-fixed",
-    reason: "http_404",
-    alternatives: ["antara_rss", "detik_rss"],
-  },
-  {
-    sourceId: "pti_rss",
-    policy: "disable-until-fixed",
-    reason: "empty_rss",
-    alternatives: ["thehindu_rss", "timesofindia_rss", "ndtv_rss"],
-  },
-  {
-    sourceId: "joongang_rss",
-    policy: "disable-until-fixed",
-    reason: "empty_rss",
-    alternatives: ["chosun_rss", "hankyoreh_rss", "yonhap_kr"],
-  },
-  {
-    sourceId: "cbc_rss",
-    policy: "keep-active-observe",
-    reason: "timeout",
-    alternatives: ["globeandmail_rss"],
-  },
-  {
-    sourceId: "yandex_news_trending",
-    policy: "keep-active-observe",
-    reason: "timeout",
-    alternatives: ["mail_ru_news", "tass_rss", "meduza_rss"],
-  },
-] as const;
-
 function parseArg(flag: string): string | undefined {
   const index = process.argv.findIndex((arg) => arg === flag);
   if (index < 0) {
@@ -110,7 +21,7 @@ function parseArg(flag: string): string | undefined {
   return process.argv[index + 1];
 }
 
-function toMarkdown(rows: readonly SourcePolicyRow[]): string {
+function toMarkdown(rows: typeof SOURCE_POLICY_ROWS): string {
   const lines: string[] = [];
   lines.push("# Source Policy Plan");
   lines.push("");
@@ -134,9 +45,11 @@ async function applySourcePolicies(): Promise<SourceStateRow[]> {
   }
 
   const pool = createPostgresPool();
-  const disableIds = POLICY_ROWS.filter((row) => row.policy !== "keep-active-observe").map((row) => row.sourceId);
-  const observeIds = POLICY_ROWS.filter((row) => row.policy === "keep-active-observe").map((row) => row.sourceId);
-  const targetIds = POLICY_ROWS.map((row) => row.sourceId);
+  const disableIds = SOURCE_POLICY_ROWS
+    .filter((row) => row.policy === "keep-disabled" || row.policy === "disable-until-fixed")
+    .map((row) => row.sourceId);
+  const activeIds = SOURCE_POLICY_ROWS.filter((row) => row.policy === "active").map((row) => row.sourceId);
+  const targetIds = SOURCE_POLICY_ROWS.map((row) => row.sourceId);
 
   await pool.query(
     `
@@ -153,7 +66,7 @@ async function applySourcePolicies(): Promise<SourceStateRow[]> {
     set is_active = true
     where id = any($1::text[])
     `,
-    [observeIds],
+    [activeIds],
   );
 
   const { rows } = await pool.query<SourceStateRow>(
@@ -186,18 +99,18 @@ async function main(): Promise<void> {
   const payload = {
     generatedAt: new Date().toISOString(),
     apply,
-    rows: POLICY_ROWS,
+    rows: SOURCE_POLICY_ROWS,
   };
 
   if (printOnly) {
     process.stdout.write(
-      format === "json" ? `${JSON.stringify(payload, null, 2)}\n` : `${toMarkdown(POLICY_ROWS)}\n`,
+      format === "json" ? `${JSON.stringify(payload, null, 2)}\n` : `${toMarkdown(SOURCE_POLICY_ROWS)}\n`,
     );
   } else {
     await fs.mkdir(path.dirname(outPath), { recursive: true });
     await fs.writeFile(
       outPath,
-      format === "json" ? `${JSON.stringify(payload, null, 2)}\n` : `${toMarkdown(POLICY_ROWS)}\n`,
+      format === "json" ? `${JSON.stringify(payload, null, 2)}\n` : `${toMarkdown(SOURCE_POLICY_ROWS)}\n`,
       "utf8",
     );
     logger.info(`Source policy plan written: ${outPath.replace(/\\/g, "/")}`);
