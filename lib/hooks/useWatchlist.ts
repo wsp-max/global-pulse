@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Topic } from "@global-pulse/shared";
+import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 const WATCHLIST_KEY = "gp_watchlist_v1";
 const WATCHLIST_ALERT_KEY = "gp_watchlist_alerts_v1";
@@ -67,9 +68,20 @@ function toWatchlistItem(topic: Topic): WatchlistItem | null {
   if (typeof topic.id !== "number") {
     return null;
   }
+  const name = getDisplayTopicName({
+    id: topic.id,
+    regionId: topic.regionId,
+    nameKo: topic.nameKo,
+    nameEn: topic.nameEn,
+    summaryKo: topic.summaryKo,
+    summaryEn: topic.summaryEn,
+    sampleTitles: topic.sampleTitles,
+    keywords: topic.keywords,
+    entities: topic.entities ?? [],
+  });
   return {
     topicId: topic.id,
-    name: topic.nameKo || topic.nameEn,
+    name,
     regionId: topic.regionId,
     lifecycleStage: topic.lifecycleStage ?? null,
     heatScore: topic.heatScore,
@@ -121,6 +133,17 @@ export function useWatchlist(topics: Topic[]) {
       }
 
       const nextLifecycle = liveTopic.lifecycleStage ?? null;
+      const liveTopicName = getDisplayTopicName({
+        id: liveTopic.id,
+        regionId: liveTopic.regionId,
+        nameKo: liveTopic.nameKo,
+        nameEn: liveTopic.nameEn,
+        summaryKo: liveTopic.summaryKo,
+        summaryEn: liveTopic.summaryEn,
+        sampleTitles: liveTopic.sampleTitles,
+        keywords: liveTopic.keywords,
+        entities: liveTopic.entities ?? [],
+      });
       if (
         item.lifecycleStage !== nextLifecycle &&
         (nextLifecycle === "peaking" || nextLifecycle === "fading")
@@ -128,14 +151,14 @@ export function useWatchlist(topics: Topic[]) {
         transitionCount += 1;
         if (typeof Notification !== "undefined" && Notification.permission === "granted") {
           new Notification("Global Pulse Watchlist", {
-            body: `${liveTopic.nameKo || liveTopic.nameEn}: ${nextLifecycle}`,
+            body: `${liveTopicName}: ${nextLifecycle}`,
           });
         }
       }
 
       const next: WatchlistItem = {
         ...item,
-        name: liveTopic.nameKo || liveTopic.nameEn,
+        name: liveTopicName,
         lifecycleStage: nextLifecycle,
         heatScore: liveTopic.heatScore,
         sentiment: liveTopic.sentiment,

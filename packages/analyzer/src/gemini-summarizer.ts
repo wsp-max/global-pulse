@@ -5,12 +5,15 @@
   type TopicEntity,
   type TopicEntityType,
 } from "@global-pulse/shared";
+import { sanitizeTopicSummaryText } from "@global-pulse/shared";
 import { getLogger } from "@global-pulse/shared/server-logger";
 import {
   distributionFromSentiment,
   normalizeSentimentDistribution,
   normalizeSentimentReasoning,
 } from "./sentiment";
+import { buildTopicSummaryFallback } from "./topic-summary-fallback";
+import { normalizeTopicNamesForStorage } from "./topic-name-normalizer";
 
 const GEMINI_API_BASE = process.env.GEMINI_API_BASE?.trim() || "https://generativelanguage.googleapis.com";
 const GEMINI_API_VERSION = process.env.GEMINI_API_VERSION?.trim() || "v1beta";
@@ -623,45 +626,61 @@ function chunkTopics(topics: Topic[], size: number): Topic[][] {
   return chunks;
 }
 
-function applySummaryItem(topic: Topic, summary: GeminiSummaryItem | undefined): Topic {
-  let nameKo = preferMeaningfulName(summary?.name_ko, topic.nameKo);
-  let nameEn = preferMeaningfulName(summary?.name_en, topic.nameEn);
-  const sentiment = toSentiment(summary?.sentiment, topic.sentiment);
+function stableCanonicalKey(topic: Topic): string {
+  return topic.canonicalKey ?? normalizeCanonicalKey(topic.nameEn);
+}
 
-  const summaryKo = isValidSummaryText(summary?.summary_ko)
-    ? summary?.summary_ko?.trim()
-    : topic.summaryKo ?? FALLBACK_SUMMARY_KO;
-  const summaryEn = isValidSummaryText(summary?.summary_en)
-    ? summary?.summary_en?.trim()
-    : topic.summaryEn ?? FALLBACK_SUMMARY_EN;
-  const sampleTitles = topic.sampleTitles ?? [];
-  if (nameKo.split(/\s+/u).filter(Boolean).length < 2) {
-    const koCandidate =
-      sampleTitles
-        .filter((title) => /[가-힣]/u.test(title))
-        .map((title) => title.trim())
-        .filter((title) => title.length >= 16 && title.length <= 32)
-        .sort((left, right) => right.length - left.length)[0] ?? null;
-    if (koCandidate) {
-      nameKo = koCandidate;
-    }
-  }
-  if (nameEn.split(/\s+/u).filter(Boolean).length < 2) {
-    const enCandidate =
-      sampleTitles
-        .filter((title) => /[A-Za-z]/.test(title))
-        .map((title) => title.replace(/\s+/g, " ").trim())
-        .filter((title) => title.length >= 16 && title.length <= 32)
-        .sort((left, right) => right.length - left.length)[0] ?? null;
-    if (enCandidate) {
-      nameEn = enCandidate;
-    }
-  }
+function buildFallbackTopic(topic: Topic): Topic {
+  const fallbackSummary = buildTopicSummaryFallback(topic);
+  const summaryKo = sanitizeTopicSummaryText(topic.summaryKo ?? fallbackSummary.summaryKo, "ko") || FALLBACK_SUMMARY_KO;
+  const summaryEn = sanitizeTopicSummaryText(topic.summaryEn ?? fallbackSummary.summaryEn, "en") || FALLBACK_SUMMARY_EN;
+  const normalizedNames = normalizeTopicNamesForStorage({
+    ...topic,
+    summaryKo,
+    summaryEn,
+  });
 
   return {
     ...topic,
+    nameKo: normalizedNames.nameKo,
+    nameEn: normalizedNames.nameEn,
+    summaryKo,
+    summaryEn,
+    sentimentDistribution: topic.sentimentDistribution ?? distributionFromSentiment(topic.sentiment),
+    sentimentReasoningKo: topic.sentimentReasoningKo ?? FALLBACK_SENTIMENT_REASONING_KO,
+    sentimentReasoningEn: topic.sentimentReasoningEn ?? FALLBACK_SENTIMENT_REASONING_EN,
+    canonicalKey: stableCanonicalKey(topic),
+  };
+}
+
+function applySummaryItem(topic: Topic, summary: GeminiSummaryItem | undefined): Topic {
+  const canonicalKey = stableCanonicalKey(topic);
+  const nameKo = preferMeaningfulName(summary?.name_ko, topic.nameKo);
+  const nameEn = preferMeaningfulName(summary?.name_en, topic.nameEn);
+  const sentiment = toSentiment(summary?.sentiment, topic.sentiment);
+
+  const rawSummaryKo = isValidSummaryText(summary?.summary_ko)
+    ? summary?.summary_ko?.trim()
+    : topic.summaryKo ?? FALLBACK_SUMMARY_KO;
+  const rawSummaryEn = isValidSummaryText(summary?.summary_en)
+    ? summary?.summary_en?.trim()
+    : topic.summaryEn ?? FALLBACK_SUMMARY_EN;
+  const summaryKo = sanitizeTopicSummaryText(rawSummaryKo, "ko") || FALLBACK_SUMMARY_KO;
+  const summaryEn = sanitizeTopicSummaryText(rawSummaryEn, "en") || FALLBACK_SUMMARY_EN;
+  const entities = toEntities(summary?.entities);
+  const normalizedNames = normalizeTopicNamesForStorage({
+    ...topic,
     nameKo,
     nameEn,
+    summaryKo,
+    summaryEn,
+    entities,
+  });
+
+  return {
+    ...topic,
+    nameKo: normalizedNames.nameKo,
+    nameEn: normalizedNames.nameEn,
     summaryKo,
     summaryEn,
     sentiment,
@@ -675,9 +694,9 @@ function applySummaryItem(topic: Topic, summary: GeminiSummaryItem | undefined):
       topic.sentimentReasoningEn ?? FALLBACK_SENTIMENT_REASONING_EN,
     ),
     category: toCategory(summary?.category),
-    entities: toEntities(summary?.entities),
+    entities,
     aliases: toAliases(summary?.aliases, topic),
-    canonicalKey: normalizeCanonicalKey(nameEn),
+    canonicalKey,
   };
 }
 
@@ -686,15 +705,7 @@ export async function summarizeTopicsWithGemini(
   options: SummarizeOptions,
 ): Promise<GeminiSummarizeResult> {
   const startedAt = Date.now();
-  const fallbackTopics = topics.map((topic) => ({
-    ...topic,
-    summaryKo: topic.summaryKo ?? FALLBACK_SUMMARY_KO,
-    summaryEn: topic.summaryEn ?? FALLBACK_SUMMARY_EN,
-    sentimentDistribution: topic.sentimentDistribution ?? distributionFromSentiment(topic.sentiment),
-    sentimentReasoningKo: topic.sentimentReasoningKo ?? FALLBACK_SENTIMENT_REASONING_KO,
-    sentimentReasoningEn: topic.sentimentReasoningEn ?? FALLBACK_SENTIMENT_REASONING_EN,
-    canonicalKey: normalizeCanonicalKey(topic.nameEn),
-  }));
+  const fallbackTopics = topics.map(buildFallbackTopic);
 
   if (topics.length === 0) {
     return {
@@ -834,15 +845,7 @@ export async function summarizeTopicsWithGemini(
         }`,
       );
       output.push(
-        ...batch.map((topic) => ({
-          ...topic,
-          summaryKo: topic.summaryKo ?? FALLBACK_SUMMARY_KO,
-          summaryEn: topic.summaryEn ?? FALLBACK_SUMMARY_EN,
-          sentimentDistribution: topic.sentimentDistribution ?? distributionFromSentiment(topic.sentiment),
-          sentimentReasoningKo: topic.sentimentReasoningKo ?? FALLBACK_SENTIMENT_REASONING_KO,
-          sentimentReasoningEn: topic.sentimentReasoningEn ?? FALLBACK_SENTIMENT_REASONING_EN,
-          canonicalKey: normalizeCanonicalKey(topic.nameEn),
-        })),
+        ...batch.map(buildFallbackTopic),
       );
       continue;
     }

@@ -7,6 +7,7 @@ import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { TopicTimeline } from "@/components/topic/TopicTimeline";
 import { useGlobalTopics } from "@/lib/hooks/useGlobalTopics";
 import { useTimeline } from "@/lib/hooks/useTimeline";
+import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 export default function TimelinePage() {
   const { data: globalData, isLoading: globalLoading, error: globalError } = useGlobalTopics(50);
@@ -69,7 +70,13 @@ export default function TimelinePage() {
               </option>
               {topicOptions.map((topic) => (
                 <option key={topic.id} value={String(topic.id)}>
-                  {topic.nameKo || topic.nameEn}
+                  {getDisplayTopicName({
+                    id: topic.id,
+                    nameKo: topic.nameKo,
+                    nameEn: topic.nameEn,
+                    summaryKo: topic.summaryKo,
+                    summaryEn: topic.summaryEn,
+                  })}
                 </option>
               ))}
             </select>

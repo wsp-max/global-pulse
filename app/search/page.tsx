@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useLanguage } from "@/lib/i18n/use-language";
 import type { SearchApiResponse } from "@/lib/types/api";
+import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 const rawBasePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim() ?? "";
 const normalizedBasePath = rawBasePath
@@ -90,7 +91,19 @@ export default function SearchPage() {
                   key={`${topic.regionId}-${topic.id ?? topic.nameEn}`}
                   className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-3 py-2"
                 >
-                  <div className="font-medium text-[var(--text-primary)]">{topic.nameKo || topic.nameEn}</div>
+                  <div className="font-medium text-[var(--text-primary)]">
+                    {getDisplayTopicName({
+                      id: topic.id,
+                      regionId: topic.regionId,
+                      nameKo: topic.nameKo,
+                      nameEn: topic.nameEn,
+                      summaryKo: topic.summaryKo,
+                      summaryEn: topic.summaryEn,
+                      sampleTitles: topic.sampleTitles,
+                      keywords: topic.keywords,
+                      entities: topic.entities ?? [],
+                    })}
+                  </div>
                   <div className="text-xs text-[var(--text-secondary)]">
                     region={topic.regionId} heat={topic.heatScore.toFixed(1)}
                   </div>
@@ -112,7 +125,15 @@ export default function SearchPage() {
                   key={`global-${topic.id ?? topic.nameEn}`}
                   className="rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-3 py-2"
                 >
-                  <div className="font-medium text-[var(--text-primary)]">{topic.nameKo || topic.nameEn}</div>
+                  <div className="font-medium text-[var(--text-primary)]">
+                    {getDisplayTopicName({
+                      id: topic.id,
+                      nameKo: topic.nameKo,
+                      nameEn: topic.nameEn,
+                      summaryKo: topic.summaryKo,
+                      summaryEn: topic.summaryEn,
+                    })}
+                  </div>
                   <div className="text-xs text-[var(--text-secondary)]">
                     regions={topic.regions.join(", ")} heat={topic.totalHeatScore.toFixed(1)}
                   </div>

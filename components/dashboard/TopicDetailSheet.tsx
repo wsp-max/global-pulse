@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useTopicDetail } from "@/lib/hooks/useTopicDetail";
 import { useTopicTimeline } from "@/lib/hooks/useTopicTimeline";
+import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 interface TopicDetailSheetProps {
   topicId: number | null;
@@ -70,7 +71,13 @@ export function TopicDetailSheet({ topicId, onClose, isWatched = false, onToggle
 
     if (data.kind === "global" && data.globalTopic) {
       return {
-        title: data.globalTopic.nameKo || data.globalTopic.nameEn,
+        title: getDisplayTopicName({
+          id: data.globalTopic.id,
+          nameKo: data.globalTopic.nameKo,
+          nameEn: data.globalTopic.nameEn,
+          summaryKo: data.globalTopic.summaryKo,
+          summaryEn: data.globalTopic.summaryEn,
+        }),
         subtitle: data.globalTopic.summaryKo || data.globalTopic.summaryEn || "요약 준비 중",
         keywords: data.keywords.slice(0, 20),
       };
@@ -78,7 +85,17 @@ export function TopicDetailSheet({ topicId, onClose, isWatched = false, onToggle
 
     if (data.topic) {
       return {
-        title: data.topic.nameKo || data.topic.nameEn,
+        title: getDisplayTopicName({
+          id: data.topic.id,
+          regionId: data.topic.regionId,
+          nameKo: data.topic.nameKo,
+          nameEn: data.topic.nameEn,
+          summaryKo: data.topic.summaryKo,
+          summaryEn: data.topic.summaryEn,
+          sampleTitles: data.topic.sampleTitles,
+          keywords: data.topic.keywords,
+          entities: data.topic.entities ?? [],
+        }),
         subtitle: data.topic.summaryKo || data.topic.summaryEn || "요약 준비 중",
         keywords: data.topic.keywords.slice(0, 20),
       };
@@ -230,14 +247,30 @@ export function TopicDetailSheet({ topicId, onClose, isWatched = false, onToggle
                   {(data?.relatedTopics ?? []).slice(0, 5).map((topic) =>
                     typeof topic.id === "number" ? (
                       <Link key={topic.id} href={`/topic/${topic.id}`} className="block hover:text-[var(--text-primary)]">
-                        {topic.nameKo || topic.nameEn}
+                        {getDisplayTopicName({
+                          id: topic.id,
+                          regionId: topic.regionId,
+                          nameKo: topic.nameKo,
+                          nameEn: topic.nameEn,
+                          summaryKo: topic.summaryKo,
+                          summaryEn: topic.summaryEn,
+                          sampleTitles: topic.sampleTitles,
+                          keywords: topic.keywords,
+                          entities: topic.entities ?? [],
+                        })}
                       </Link>
                     ) : null,
                   )}
                   {(data?.relatedGlobalTopics ?? []).slice(0, 5).map((topic) =>
                     typeof topic.id === "number" ? (
                       <Link key={`g-${topic.id}`} href={`/topic/${topic.id}`} className="block hover:text-[var(--text-primary)]">
-                        {topic.nameKo || topic.nameEn}
+                        {getDisplayTopicName({
+                          id: topic.id,
+                          nameKo: topic.nameKo,
+                          nameEn: topic.nameEn,
+                          summaryKo: topic.summaryKo,
+                          summaryEn: topic.summaryEn,
+                        })}
                       </Link>
                     ) : null,
                   )}
@@ -276,5 +309,4 @@ export function TopicDetailSheet({ topicId, onClose, isWatched = false, onToggle
     </div>
   );
 }
-
 

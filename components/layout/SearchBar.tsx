@@ -8,6 +8,7 @@ import useSWR from "swr";
 import type { SearchApiResponse } from "@/lib/types/api";
 import { useLanguage } from "@/lib/i18n/use-language";
 import { fetcher } from "@/lib/api";
+import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 interface SearchSuggestion {
   id?: number;
@@ -55,7 +56,17 @@ export function SearchBar() {
     return data.topics.slice(0, 6).map((topic) => ({
       id: topic.id,
       regionId: topic.regionId,
-      nameKo: topic.nameKo,
+      nameKo: getDisplayTopicName({
+        id: topic.id,
+        regionId: topic.regionId,
+        nameKo: topic.nameKo,
+        nameEn: topic.nameEn,
+        summaryKo: topic.summaryKo,
+        summaryEn: topic.summaryEn,
+        sampleTitles: topic.sampleTitles,
+        keywords: topic.keywords,
+        entities: topic.entities ?? [],
+      }),
       nameEn: topic.nameEn,
     }));
   }, [data]);

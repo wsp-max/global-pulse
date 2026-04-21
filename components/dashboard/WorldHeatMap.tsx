@@ -7,6 +7,7 @@ import { MapControls } from "@/components/dashboard/MapControls";
 import type { RegionDashboardRow } from "@/lib/types/api";
 import { aggregateFlowEdges, getFlowStrokeColor, toVolumeBand } from "@/lib/utils/propagation-flow";
 import { getHeatTier, toHeatBand } from "@/lib/utils/heat";
+import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 interface WorldHeatMapProps {
   regions: RegionDashboardRow[];
@@ -574,7 +575,13 @@ export function WorldHeatMap({
               .slice(0, 3)
               .map((topic) => (
                 <span key={`surging-${topic.id ?? topic.nameEn}`} className="rounded-full border border-red-500/40 bg-red-500/10 px-2 py-1 text-red-300">
-                  🔥 surging · {topic.nameKo || topic.nameEn}
+                  🔥 surging · {getDisplayTopicName({
+                    id: topic.id,
+                    nameKo: topic.nameKo,
+                    nameEn: topic.nameEn,
+                    summaryKo: topic.summaryKo,
+                    summaryEn: topic.summaryEn,
+                  })}
                 </span>
               ))}
           </div>

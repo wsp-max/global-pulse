@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { getRegionById, type GlobalTopic } from "@global-pulse/shared";
+import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 interface HotIssueListProps {
   topics: GlobalTopic[];
@@ -58,7 +59,13 @@ export function HotIssueList({ topics, onTopicSelect }: HotIssueListProps) {
               .slice(0, 3)
               .map((regionId) => getRegionById(regionId)?.flagEmoji ?? "🌐")
               .join(" ");
-            const title = topic.nameKo || topic.nameEn;
+            const title = getDisplayTopicName({
+              id: topic.id,
+              nameKo: topic.nameKo,
+              nameEn: topic.nameEn,
+              summaryKo: topic.summaryKo,
+              summaryEn: topic.summaryEn,
+            });
             const canOpenSheet = typeof topic.id === "number" && !!onTopicSelect;
 
             return (

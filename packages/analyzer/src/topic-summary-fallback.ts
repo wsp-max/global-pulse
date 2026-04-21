@@ -1,4 +1,4 @@
-import type { Topic } from "@global-pulse/shared";
+import { sanitizeTopicSummaryText, type Topic } from "@global-pulse/shared";
 
 interface SummaryPair {
   summaryKo: string;
@@ -42,8 +42,8 @@ function pickEntitySummary(topic: Topic): SummaryPair | null {
 
   const joined = labels.join(", ");
   return {
-    summaryKo: `핵심 엔티티 ${joined} 중심으로 반응이 모이고 있습니다.`,
-    summaryEn: `Discussion is converging around key entities: ${joined}.`,
+    summaryKo: sanitizeTopicSummaryText(`\ud604\uc7ac \uc218\uc9d1\ub41c \ubc18\uc751\uc5d0\uc11c\ub294 ${joined}\uc774(\uac00) \ud568\uaed8 \uc5b8\uae09\ub41c\ub2e4.`, "ko"),
+    summaryEn: sanitizeTopicSummaryText(`Current coverage mentions ${joined} together in this issue.`, "en"),
   };
 }
 
@@ -52,10 +52,11 @@ function pickKeywordSummary(topic: Topic): SummaryPair | null {
   if (keywords.length === 0) {
     return null;
   }
-  const joined = keywords.join(" · ");
+
+  const joined = keywords.join(" \u00b7 ");
   return {
-    summaryKo: `핵심 키워드 ${joined} 중심으로 반응이 모이고 있습니다.`,
-    summaryEn: `Community reactions are clustering around keywords: ${joined}.`,
+    summaryKo: sanitizeTopicSummaryText(`\ud604\uc7ac \uac8c\uc2dc\uae00\uc5d0\uc11c\ub294 ${joined} \ud0a4\uc6cc\ub4dc\uac00 \ud568\uaed8 \uc5b8\uae09\ub41c\ub2e4.`, "ko"),
+    summaryEn: sanitizeTopicSummaryText(`Current posts mention the keywords ${joined} together.`, "en"),
   };
 }
 
@@ -65,19 +66,19 @@ function pickSampleTitleSummary(topic: Topic): SummaryPair | null {
     return null;
   }
 
-  const clipped = sampleTitle.length > 96 ? `${sampleTitle.slice(0, 95).trimEnd()}…` : sampleTitle;
+  const clipped = sampleTitle.length > 96 ? `${sampleTitle.slice(0, 95).trimEnd()}\u2026` : sampleTitle;
   return {
-    summaryKo: `대표 게시글 "${clipped}"을 중심으로 관련 반응이 확산되고 있습니다.`,
-    summaryEn: `The thread is expanding around "${clipped}".`,
+    summaryKo: sanitizeTopicSummaryText(`\ub300\ud45c \uc81c\ubaa9\uc5d0\uc11c\ub294 "${clipped}" \ub0b4\uc6a9\uc774 \uc5b8\uae09\ub41c\ub2e4.`, "ko"),
+    summaryEn: sanitizeTopicSummaryText(`A representative title references "${clipped}".`, "en"),
   };
 }
 
 function safeFallbackSummary(topic: Topic): SummaryPair {
-  const koLabel = normalize(topic.nameKo) || normalize(topic.nameEn) || "해당 토픽";
+  const koLabel = normalize(topic.nameKo) || normalize(topic.nameEn) || "\ud574\ub2f9 \ud1a0\ud53d";
   const enLabel = normalize(topic.nameEn) || normalize(topic.nameKo) || "this topic";
   return {
-    summaryKo: `${koLabel} 관련 반응을 집계하고 있습니다.`,
-    summaryEn: `Signals for ${enLabel} are being aggregated.`,
+    summaryKo: sanitizeTopicSummaryText(`${koLabel}\uacfc \uad00\ub828\ub41c \uac8c\uc2dc\uae00\uc744 \uae30\ubc18\uc73c\ub85c \uc694\uc57d\uc744 \uad6c\uc131 \uc911\uc774\ub2e4.`, "ko"),
+    summaryEn: sanitizeTopicSummaryText(`A summary is being prepared from collected posts related to ${enLabel}.`, "en"),
   };
 }
 

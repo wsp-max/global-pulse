@@ -7,11 +7,11 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "test": "node scripts/run-analyzer-tests.mjs",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "health": "tsx scripts/health-check.ts",
     "db:init": "tsx scripts/init-db.ts",
     "verify:postgres": "tsx scripts/verify-postgres-e2e.ts",

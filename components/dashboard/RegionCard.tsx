@@ -6,6 +6,7 @@ import { HeatBadge } from "@/components/shared/HeatBadge";
 import { useLanguage } from "@/lib/i18n/use-language";
 import type { DashboardScope, RegionDashboardRow } from "@/lib/types/api";
 import { toHeatPercent } from "@/lib/utils/heat";
+import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 interface RegionCardProps {
   region: RegionDashboardRow;
@@ -158,6 +159,17 @@ export function RegionCard({
           topTopics.map((topic) => {
             const sparkline = buildMiniSparkline(topic.miniTrend ?? null);
             const watched = isTopicWatched?.(topic.id) ?? false;
+            const title = getDisplayTopicName({
+              id: topic.id,
+              regionId: topic.regionId,
+              nameKo: topic.nameKo,
+              nameEn: topic.nameEn,
+              summaryKo: topic.summaryKo,
+              summaryEn: topic.summaryEn,
+              sampleTitles: topic.sampleTitles,
+              keywords: topic.keywords,
+              entities: topic.entities ?? [],
+            });
 
             if (typeof topic.id === "number") {
               return (
@@ -169,10 +181,10 @@ export function RegionCard({
                       event.stopPropagation();
                       onTopicSelect?.(topic.id!);
                     }}
-                    aria-label={`${topic.nameKo || topic.nameEn} 상세 열기`}
+                    aria-label={`${title} 상세 열기`}
                   >
                     <span title={extractFirstSentence(topic.summaryKo ?? null) || undefined}>
-                      {topic.nameKo || topic.nameEn}
+                      {title}
                     </span>
                     <span
                       className="inline-block h-1.5 w-1.5 rounded-full"
@@ -198,7 +210,7 @@ export function RegionCard({
                         ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
                         : "border-[var(--border-default)] text-[var(--text-secondary)]"
                     }`}
-                    aria-label={`${topic.nameKo || topic.nameEn} 워치리스트 토글`}
+                    aria-label={`${title} 워치리스트 토글`}
                     onClick={(event) => {
                       event.stopPropagation();
                       onToggleWatch?.(topic);
@@ -213,7 +225,7 @@ export function RegionCard({
             return (
               <span key={topic.nameEn} className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] px-2 py-0.5">
                 <span title={extractFirstSentence(topic.summaryKo ?? null) || undefined}>
-                  {topic.nameKo || topic.nameEn}
+                  {title}
                 </span>
                 <span
                   className="inline-block h-1.5 w-1.5 rounded-full"

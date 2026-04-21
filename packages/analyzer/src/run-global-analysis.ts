@@ -1,4 +1,4 @@
-﻿import { SOURCES, type GlobalTopic, type Topic } from "@global-pulse/shared";
+﻿import { SOURCES, isLowInfoTopicName, resolveMeaningfulTopicNames, type GlobalTopic, type Topic } from "@global-pulse/shared";
 import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
 import { getLogger } from "@global-pulse/shared/server-logger";
 import type { Pool } from "pg";
@@ -201,59 +201,8 @@ function hasRegionSourceOverlap(regionId: string, sourceIds: string[] | null): b
 
 const GLOBAL_PLACEHOLDER_NAME_REGEX = /^(🌐|🇰🇷|🇺🇸|🇯🇵|🇨🇳|🇪🇺|🇮🇳|🇧🇷|🇷🇺)\s*토픽\s*#\d+/u;
 
-const GLOBAL_NAME_LOW_SIGNAL_TOKENS = new Set([
-  "topic",
-  "topics",
-  "signal",
-  "signals",
-  "summary",
-  "pending",
-  "someone",
-  "know",
-  "lots",
-  "maybe",
-  "unknown",
-  "global",
-  "issue",
-  "news",
-  "trend",
-  "trending",
-  "요약",
-  "준비",
-  "토픽",
-  "글로벌",
-  "이슈",
-  "반응",
-  "住民",
-  "たちの",
-]);
-
 function normalizeName(value: string | null | undefined): string {
   return (value ?? "").normalize("NFKC").replace(/\s+/g, " ").trim();
-}
-
-function tokenizeName(value: string): string[] {
-  return value
-    .toLowerCase()
-    .split(/[\s/|,:;()[\]{}'"`~!@#$%^&*+=?.-]+/u)
-    .map((token) => token.trim())
-    .filter(Boolean);
-}
-
-function isLowSignalName(value: string): boolean {
-  const normalized = normalizeName(value);
-  if (!normalized) {
-    return true;
-  }
-  if (/^🌐\s*토픽\s*#\d+$/u.test(normalized) || /^global\s+topic\s*#?\d+$/iu.test(normalized)) {
-    return true;
-  }
-  const tokens = tokenizeName(normalized);
-  if (tokens.length < 2) {
-    return true;
-  }
-  const meaningfulCount = tokens.filter((token) => !GLOBAL_NAME_LOW_SIGNAL_TOKENS.has(token)).length;
-  return meaningfulCount < 1;
 }
 
 function buildKeywordLabel(topics: Topic[]): string | null {
@@ -290,32 +239,47 @@ function pickBestGlobalName(globalTopic: GlobalTopic, topicMap: Map<number, Topi
     .sort((left, right) => right.heatScore - left.heatScore);
 
   for (const candidate of underlyingTopics) {
-    const candidateKo = normalizeName(candidate.nameKo);
-    const candidateEn = normalizeName(candidate.nameEn);
-    if (!isLowSignalName(candidateKo) && !isLowSignalName(candidateEn)) {
-      return { nameKo: candidateKo, nameEn: candidateEn };
+    const resolved = resolveMeaningfulTopicNames({
+      nameKo: candidate.nameKo,
+      nameEn: candidate.nameEn,
+      summaryKo: candidate.summaryKo,
+      summaryEn: candidate.summaryEn,
+      keywords: candidate.keywords,
+    });
+    const candidateKo = normalizeName(resolved.nameKo);
+    const candidateEn = normalizeName(resolved.nameEn);
+    if (!isLowInfoTopicName(candidateKo, "ko") || !isLowInfoTopicName(candidateEn, "en")) {
+      return {
+        nameKo: candidateKo || candidateEn,
+        nameEn: candidateEn || candidateKo,
+      };
     }
   }
 
-  for (const candidate of underlyingTopics) {
-    const candidateKo = normalizeName(candidate.nameKo);
-    const candidateEn = normalizeName(candidate.nameEn);
-    if (!isLowSignalName(candidateKo)) {
-      return { nameKo: candidateKo, nameEn: candidateEn || candidateKo };
-    }
-    if (!isLowSignalName(candidateEn)) {
-      return { nameKo: candidateKo || candidateEn, nameEn: candidateEn };
-    }
-  }
-
-  const keywordLabel = buildKeywordLabel(underlyingTopics);
-  if (keywordLabel) {
-    return { nameKo: keywordLabel, nameEn: keywordLabel };
-  }
+  const fallbackResolved = resolveMeaningfulTopicNames({
+    nameKo: sanitizePersistedGlobalName(globalTopic.nameKo, ""),
+    nameEn: sanitizePersistedGlobalName(globalTopic.nameEn, ""),
+    summaryKo: globalTopic.summaryKo,
+    summaryEn: globalTopic.summaryEn,
+    keywords: [
+      ...new Set(
+        underlyingTopics.flatMap((topic) =>
+          (topic.keywords ?? [])
+            .map((keyword) => normalizeName(keyword))
+            .filter(Boolean),
+        ),
+      ),
+    ],
+  });
 
   return {
-    nameKo: normalizeName(globalTopic.nameKo) || `Global Topic ${globalTopic.id ?? "?"}`,
-    nameEn: normalizeName(globalTopic.nameEn) || normalizeName(globalTopic.nameKo) || `Global Topic ${globalTopic.id ?? "?"}`,
+    nameKo: fallbackResolved.nameKo || normalizeName(globalTopic.nameKo) || `Global Topic ${globalTopic.id ?? "?"}`,
+    nameEn:
+      fallbackResolved.nameEn ||
+      normalizeName(globalTopic.nameEn) ||
+      fallbackResolved.nameKo ||
+      normalizeName(globalTopic.nameKo) ||
+      `Global Topic ${globalTopic.id ?? "?"}`,
   };
 }
 

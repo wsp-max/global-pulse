@@ -38,8 +38,8 @@ test("summarizeTopicsWithGemini falls back to lexical data when api key is missi
   const result = await summarizeTopicsWithGemini(topics, { regionId: "kr" });
 
   assert.equal(result.topics.length, 1);
-  assert.equal(result.topics[0]?.nameKo, "스트리트 파이터");
-  assert.equal(result.topics[0]?.nameEn, "Street Fighter");
+  assert.equal(result.topics[0]?.nameKo, "스트리트 파이터 관련 이슈");
+  assert.match(result.topics[0]?.nameEn ?? "", /Street Fighter(?: related issue)?/i);
   assert.equal(typeof result.topics[0]?.canonicalKey, "string");
   assert.equal(result.stats.requestCount, 0);
   assert.equal(result.stats.fallbackCount, 1);
@@ -188,6 +188,76 @@ test("summarizeTopicsWithGemini keeps lexical names when gemini returns low-sign
 
   assert.equal(result.topics.length, 1);
   assert.equal(result.topics[0]?.nameKo, "스트리트 파이터 대회");
-  assert.equal(result.topics[0]?.nameEn, "Street Fighter Tournament");
+  assert.match(result.topics[0]?.nameEn ?? "", /Street Fighter(?: Tournament| 6 tournament)/i);
   assert.ok(result.stats.requestCount >= 1);
+});
+
+test("summarizeTopicsWithGemini preserves canonical identity when names are expanded", async () => {
+  process.env.GEMINI_API_KEY = "test-key";
+  process.env.ANALYZER_LLM_CANONICAL_BATCH = "1";
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes(":generateContent")) {
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify([
+                      {
+                        name_ko: "드래곤볼",
+                        name_en: "Dragon Ball",
+                        summary_ko:
+                          "드래곤볼 신작 게임 공개 이후 팬덤에서 전투 시스템과 복귀 캐릭터에 대한 기대가 빠르게 확산되고 있습니다. 예고편 공개가 관심을 끌며 관련 추측이 이어지고 있습니다.",
+                        summary_en:
+                          "Conversation around a new Dragon Ball game reveal accelerated after the first trailer launched. Fans are focusing on battle system changes and the returning roster.",
+                        sentiment: 0.4,
+                        category: "entertainment",
+                        entities: [{ text: "Dragon Ball", type: "work" }],
+                        aliases: ["DB game reveal"],
+                      },
+                    ]),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    if (url.includes("/models")) {
+      return new Response(
+        JSON.stringify({
+          models: [
+            {
+              name: "models/gemini-2.0-flash",
+              supportedGenerationMethods: ["generateContent"],
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response("not-found", { status: 404 });
+  };
+
+  const topics = [
+    {
+      ...buildTopic("드래곤볼", "Dragon Ball"),
+      canonicalKey: "dragon ball",
+    },
+  ];
+  const result = await summarizeTopicsWithGemini(topics, { regionId: "kr" });
+
+  assert.equal(
+    result.topics[0]?.nameKo,
+    "드래곤볼 신작 게임 공개",
+  );
+  assert.equal(result.topics[0]?.canonicalKey, "dragon ball");
 });

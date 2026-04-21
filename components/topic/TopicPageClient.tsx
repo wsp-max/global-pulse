@@ -8,6 +8,7 @@ import { KeywordCloud } from "@/components/topic/KeywordCloud";
 import { RelatedTopics, type RelatedTopicItem } from "@/components/topic/RelatedTopics";
 import { TopicTimeline } from "@/components/topic/TopicTimeline";
 import { useTopicDetail } from "@/lib/hooks/useTopicDetail";
+import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 interface TopicPageClientProps {
   topicId: string;
@@ -30,7 +31,13 @@ function toGlobalRelatedItems(topics: GlobalTopic[]): RelatedTopicItem[] {
     .slice(0, 8)
     .map((topic) => ({
       id: topic.id,
-      title: topic.nameKo || topic.nameEn,
+      title: getDisplayTopicName({
+        id: topic.id,
+        nameKo: topic.nameKo,
+        nameEn: topic.nameEn,
+        summaryKo: topic.summaryKo,
+        summaryEn: topic.summaryEn,
+      }),
       subtitle: topic.regions.map((regionId) => regionId.toUpperCase()).join(" · "),
       href: `/topic/${topic.id}`,
       heatScore: topic.totalHeatScore,
@@ -43,7 +50,17 @@ function toRegionalRelatedItems(topics: Topic[]): RelatedTopicItem[] {
     .slice(0, 8)
     .map((topic) => ({
       id: topic.id,
-      title: topic.nameKo || topic.nameEn,
+      title: getDisplayTopicName({
+        id: topic.id,
+        regionId: topic.regionId,
+        nameKo: topic.nameKo,
+        nameEn: topic.nameEn,
+        summaryKo: topic.summaryKo,
+        summaryEn: topic.summaryEn,
+        sampleTitles: topic.sampleTitles,
+        keywords: topic.keywords,
+        entities: topic.entities ?? [],
+      }),
       subtitle: topic.regionId.toUpperCase(),
       href: `/topic/${topic.id}`,
       heatScore: topic.heatScore,
@@ -85,8 +102,28 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
   const topic = data.topic;
 
   const title = isGlobal
-    ? (globalTopic?.nameKo ?? globalTopic?.nameEn ?? "Global Topic")
-    : (topic?.nameKo ?? topic?.nameEn ?? "Regional Topic");
+    ? (globalTopic
+        ? getDisplayTopicName({
+            id: globalTopic.id,
+            nameKo: globalTopic.nameKo,
+            nameEn: globalTopic.nameEn,
+            summaryKo: globalTopic.summaryKo,
+            summaryEn: globalTopic.summaryEn,
+          })
+        : "Global Topic")
+    : (topic
+        ? getDisplayTopicName({
+            id: topic.id,
+            regionId: topic.regionId,
+            nameKo: topic.nameKo,
+            nameEn: topic.nameEn,
+            summaryKo: topic.summaryKo,
+            summaryEn: topic.summaryEn,
+            sampleTitles: topic.sampleTitles,
+            keywords: topic.keywords,
+            entities: topic.entities ?? [],
+          })
+        : "Regional Topic");
 
   const subtitle = isGlobal
     ? (globalTopic?.summaryKo ?? globalTopic?.summaryEn ?? "요약 준비 중")

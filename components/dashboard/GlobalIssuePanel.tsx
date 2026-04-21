@@ -8,6 +8,7 @@ import { cleanupTopicName } from "@/lib/utils/topic-name";
 interface GlobalIssuePanelProps {
   topics: GlobalTopic[];
   maxItems?: number;
+  onTopicSelect?: (topicId: number) => void;
 }
 
 function firstSentence(value: string | null | undefined): string | null {
@@ -41,7 +42,7 @@ function toSentimentLabel(value: number): string {
   return "매우 긍정";
 }
 
-export function GlobalIssuePanel({ topics, maxItems = 8 }: GlobalIssuePanelProps) {
+export function GlobalIssuePanel({ topics, maxItems = 8, onTopicSelect }: GlobalIssuePanelProps) {
   const { t } = useLanguage("ko");
   const rows = topics.slice(0, maxItems);
 
@@ -60,6 +61,8 @@ export function GlobalIssuePanel({ topics, maxItems = 8 }: GlobalIssuePanelProps
               id: topic.id,
               nameKo: topic.nameKo,
               nameEn: topic.nameEn,
+              summaryKo: topic.summaryKo,
+              summaryEn: topic.summaryEn,
               keywords: [],
               entities: null,
             });
@@ -116,6 +119,26 @@ export function GlobalIssuePanel({ topics, maxItems = 8 }: GlobalIssuePanelProps
                 </div>
               </article>
             );
+
+            if (typeof topic.id === "number" && onTopicSelect) {
+              return (
+                <div
+                  key={topic.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onTopicSelect(topic.id!)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onTopicSelect(topic.id!);
+                    }
+                  }}
+                  className="block cursor-pointer text-left"
+                >
+                  {card}
+                </div>
+              );
+            }
 
             if (typeof topic.id === "number") {
               return (

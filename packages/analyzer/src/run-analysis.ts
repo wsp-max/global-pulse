@@ -220,37 +220,22 @@ function buildTopicMergeKey(topic: Topic): string {
   return `generated:${fallback}`;
 }
 
-function isSingleShortTokenLabel(value: string): boolean {
-  const tokens = value
-    .split(/\s+/u)
-    .map((token) => token.trim())
-    .filter(Boolean);
-  return tokens.length === 1 && tokens[0]!.length <= 4;
-}
-
-function buildKeywordLabel(topic: Topic): string | null {
-  const labels = [...new Set((topic.keywords ?? []).map((keyword) => keyword.trim()).filter(Boolean))];
-  if (labels.length < 2) {
-    return null;
-  }
-  return `${labels[0]} · ${labels[1]}`;
-}
-
 function applyPhraseFallback(topic: Topic): Topic {
-  const keywordLabel = buildKeywordLabel(topic);
   const fallbackSummary = buildTopicSummaryFallback(topic);
-  const normalizedNames = normalizeTopicNamesForStorage(topic);
+  const normalizedNames = normalizeTopicNamesForStorage({
+    ...topic,
+    summaryKo: fallbackSummary.summaryKo,
+    summaryEn: fallbackSummary.summaryEn,
+  });
+  const canonicalKey = topic.canonicalKey ?? normalizeCanonicalKey(topic.nameEn);
 
   return {
     ...topic,
-    nameKo: isSingleShortTokenLabel(normalizedNames.nameKo)
-      ? keywordLabel ?? normalizedNames.nameKo
-      : normalizedNames.nameKo,
-    nameEn: isSingleShortTokenLabel(normalizedNames.nameEn)
-      ? keywordLabel ?? normalizedNames.nameEn
-      : normalizedNames.nameEn,
+    nameKo: normalizedNames.nameKo,
+    nameEn: normalizedNames.nameEn,
     summaryKo: fallbackSummary.summaryKo,
     summaryEn: fallbackSummary.summaryEn,
+    canonicalKey,
   };
 }
 
@@ -971,7 +956,6 @@ runAnalysis().catch((error) => {
   logger.error(`Analysis failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });
-
 
 
 

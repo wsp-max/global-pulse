@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Topic } from "@global-pulse/shared";
+import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 interface TimelineBucket {
   bucketAt: string;
@@ -213,6 +214,17 @@ export function CompareDrawer({
         <div className="mt-2 space-y-1">
           {pinnedTopics.map((topic, index) => {
             const isLoading = !timelineMap[topic.id as number];
+            const title = getDisplayTopicName({
+              id: topic.id,
+              regionId: topic.regionId,
+              nameKo: topic.nameKo,
+              nameEn: topic.nameEn,
+              summaryKo: topic.summaryKo,
+              summaryEn: topic.summaryEn,
+              sampleTitles: topic.sampleTitles,
+              keywords: topic.keywords,
+              entities: topic.entities ?? [],
+            });
             return (
               <div key={`legend-${topic.id}`} className="flex items-center justify-between gap-2 text-xs">
                 <button
@@ -225,7 +237,7 @@ export function CompareDrawer({
                     style={{ backgroundColor: LINE_COLORS[index % LINE_COLORS.length] }}
                     aria-hidden
                   />
-                  <span className="truncate">{topic.nameKo || topic.nameEn}</span>
+                  <span className="truncate">{title}</span>
                 </button>
                 <div className="flex items-center gap-2">
                   <span className="text-[var(--text-tertiary)]">{isLoading ? "loading" : `heat ${Math.round(topic.heatScore)}`}</span>
@@ -252,6 +264,17 @@ export function CompareDrawer({
             }
             const pinned = pinnedTopicIds.includes(topic.id);
             const disabled = !pinned && pinnedTopicIds.length >= 3;
+            const title = getDisplayTopicName({
+              id: topic.id,
+              regionId: topic.regionId,
+              nameKo: topic.nameKo,
+              nameEn: topic.nameEn,
+              summaryKo: topic.summaryKo,
+              summaryEn: topic.summaryEn,
+              sampleTitles: topic.sampleTitles,
+              keywords: topic.keywords,
+              entities: topic.entities ?? [],
+            });
 
             return (
               <div
@@ -263,7 +286,7 @@ export function CompareDrawer({
                   className="min-w-0 flex-1 text-left text-xs text-[var(--text-primary)] hover:text-[var(--text-accent)]"
                   onClick={() => onTopicSelect?.(topic.id!)}
                 >
-                  <p className="truncate">{topic.nameKo || topic.nameEn}</p>
+                  <p className="truncate">{title}</p>
                   <p className="truncate text-[10px] text-[var(--text-tertiary)]">
                     {topic.regionId.toUpperCase()} · heat {Math.round(topic.heatScore)}
                   </p>
@@ -272,7 +295,7 @@ export function CompareDrawer({
                   type="button"
                   onClick={() => onTogglePin(topic.id!)}
                   disabled={disabled}
-                  aria-label={`${topic.nameKo || topic.nameEn} 비교 고정`}
+                  aria-label={`${title} 비교 고정`}
                   className="rounded border border-[var(--border-default)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {pinned ? "해제" : "비교"}

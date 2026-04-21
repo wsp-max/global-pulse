@@ -12,6 +12,7 @@ import { useGlobalTopics } from "@/lib/hooks/useGlobalTopics";
 import { useRegions } from "@/lib/hooks/useRegions";
 import { useLanguage } from "@/lib/i18n/use-language";
 import type { DashboardScope, GlobalTopicsApiResponse, RegionsApiResponse } from "@/lib/types/api";
+import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 const WorldHeatMap = dynamic(() => import("./WorldHeatMap").then((mod) => mod.WorldHeatMap), {
   ssr: false,
@@ -129,6 +130,19 @@ export function DashboardClient({
   );
 
   const hottestTopic = filteredRegions.find((region) => region.topTopics.length > 0)?.topTopics[0] ?? null;
+  const hottestTopicTitle = hottestTopic
+    ? getDisplayTopicName({
+        id: hottestTopic.id,
+        regionId: hottestTopic.regionId,
+        nameKo: hottestTopic.nameKo,
+        nameEn: hottestTopic.nameEn,
+        summaryKo: hottestTopic.summaryKo,
+        summaryEn: hottestTopic.summaryEn,
+        sampleTitles: hottestTopic.sampleTitles,
+        keywords: hottestTopic.keywords,
+        entities: hottestTopic.entities ?? [],
+      })
+    : null;
 
   const applyQuery = (next: { period?: DashboardPeriod; scope?: DashboardScope }) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -153,7 +167,7 @@ export function DashboardClient({
 
           {hottestTopic ? (
             <span className="truncate">
-              가장 뜨거운 이슈: <span className="text-[var(--text-primary)]">{hottestTopic.nameKo || hottestTopic.nameEn}</span> · heat {Math.round(hottestTopic.heatScore)}
+              가장 뜨거운 이슈: <span className="text-[var(--text-primary)]">{hottestTopicTitle}</span> · heat {Math.round(hottestTopic.heatScore)}
             </span>
           ) : null}
 
@@ -213,6 +227,7 @@ export function DashboardClient({
               regions={filteredRegions}
               topGlobalTopicIds={topGlobalTopicIds}
               onTopicSelect={(topicId) => setSelectedTopicId(topicId)}
+              exploreHref={`/global-issues?view=regions&scope=${activeScope}&period=${period}`}
             />
           </section>
         </>

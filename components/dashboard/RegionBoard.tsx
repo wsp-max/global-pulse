@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { RegionDashboardRow } from "@/lib/types/api";
+import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 const MAIN_REGION_ORDER = ["us", "cn", "jp", "kr", "eu", "in", "br", "ru"] as const;
 const TOPICS_PER_REGION = 3;
@@ -10,9 +11,10 @@ interface RegionBoardProps {
   regions: RegionDashboardRow[];
   topGlobalTopicIds: Set<number>;
   onTopicSelect: (topicId: number) => void;
+  exploreHref?: string;
 }
 
-export function RegionBoard({ regions, topGlobalTopicIds, onTopicSelect }: RegionBoardProps) {
+export function RegionBoard({ regions, topGlobalTopicIds, onTopicSelect, exploreHref }: RegionBoardProps) {
   const sorted = [...regions].sort((left, right) => {
     const leftIndex = MAIN_REGION_ORDER.indexOf(left.id as (typeof MAIN_REGION_ORDER)[number]);
     const rightIndex = MAIN_REGION_ORDER.indexOf(right.id as (typeof MAIN_REGION_ORDER)[number]);
@@ -30,7 +32,14 @@ export function RegionBoard({ regions, topGlobalTopicIds, onTopicSelect }: Regio
     <section className="card-panel p-0">
       <header className="flex items-center justify-between border-b border-[var(--border-default)] px-4 py-3">
         <h2 className="section-title">REGION BOARD</h2>
-        <span className="text-[11px] text-[var(--text-secondary)]">각 지역 상위 {TOPICS_PER_REGION}개 토픽</span>
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] text-[var(--text-secondary)]">각 지역 상위 {TOPICS_PER_REGION}개 토픽</span>
+          {exploreHref ? (
+            <Link href={exploreHref} className="text-[11px] text-[var(--text-accent)] hover:underline">
+              Region Explorer →
+            </Link>
+          ) : null}
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-px bg-[var(--border-default)] sm:grid-cols-2 xl:grid-cols-4">
@@ -53,6 +62,17 @@ export function RegionBoard({ regions, topGlobalTopicIds, onTopicSelect }: Regio
               {region.topTopics.slice(0, TOPICS_PER_REGION).map((topic, index) => {
                 const topicId = typeof topic.id === "number" ? topic.id : null;
                 const isGlobal = topicId !== null && topGlobalTopicIds.has(topicId);
+                const title = getDisplayTopicName({
+                  id: topic.id,
+                  regionId: topic.regionId,
+                  nameKo: topic.nameKo,
+                  nameEn: topic.nameEn,
+                  summaryKo: topic.summaryKo,
+                  summaryEn: topic.summaryEn,
+                  sampleTitles: topic.sampleTitles,
+                  keywords: topic.keywords,
+                  entities: topic.entities ?? [],
+                });
 
                 return (
                   <li key={topic.id ?? `${region.id}-${index}`}>
@@ -68,7 +88,7 @@ export function RegionBoard({ regions, topGlobalTopicIds, onTopicSelect }: Regio
                       <span className="flex items-baseline justify-between gap-2">
                         <span className="truncate">
                           <span className="mr-1 text-[var(--text-secondary)]">#{index + 1}</span>
-                          <span className="text-[var(--text-primary)]">{topic.nameKo || topic.nameEn}</span>
+                          <span className="text-[var(--text-primary)]">{title}</span>
                           {isGlobal ? (
                             <span className="ml-1 rounded border border-[var(--border-default)] px-1 py-0.5 text-[9px] text-[var(--text-accent)]">
                               GLOBAL

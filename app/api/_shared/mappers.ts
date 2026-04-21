@@ -217,6 +217,9 @@ export function mapTopicRow(row: TopicRow): Topic {
     regionId: row.region_id,
     nameKo: row.name_ko,
     nameEn: row.name_en,
+    summaryKo: row.summary_ko,
+    summaryEn: row.summary_en,
+    sampleTitles: row.sample_titles ?? [],
     keywords: row.keywords ?? [],
     entities: row.entities ?? [],
   });
@@ -288,13 +291,11 @@ export function mapGlobalTopicRow(row: GlobalTopicRow): GlobalTopic {
     id: row.id,
     nameKo: safeRawKo,
     nameEn: safeRawEn,
+    summaryKo: row.summary_ko,
+    summaryEn: row.summary_en,
   });
-  const displayKo = cleaned.isFallback
-    ? safeRawKo || safeRawEn || `Global Topic ${row.id ?? "?"}`
-    : cleaned.displayKo;
-  const displayEn = cleaned.isFallback
-    ? safeRawEn || safeRawKo || `Global Topic ${row.id ?? "?"}`
-    : cleaned.displayEn;
+  const displayKo = cleaned.displayKo || safeRawKo || safeRawEn || `Global Topic ${row.id ?? "?"}`;
+  const displayEn = cleaned.displayEn || safeRawEn || safeRawKo || `Global Topic ${row.id ?? "?"}`;
   const summaries = buildTopicSummaries({
     summaryKo: row.summary_ko,
     summaryEn: row.summary_en,
