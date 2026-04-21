@@ -633,7 +633,7 @@ const CORE_SOURCES = [
     type: "community" as const,
     scrapeUrl: "https://rss.metafilter.com/metafilter.rss",
     scrapeIntervalMinutes: 60,
-    isActive: false,
+    isActive: true,
   },
   {
     id: "lobsters_rss",
@@ -644,7 +644,7 @@ const CORE_SOURCES = [
     type: "community" as const,
     scrapeUrl: "https://lobste.rs/rss",
     scrapeIntervalMinutes: 60,
-    isActive: false,
+    isActive: true,
   },
   {
     id: "neogaf_gaming_rss",
@@ -655,7 +655,7 @@ const CORE_SOURCES = [
     type: "community" as const,
     scrapeUrl: "https://www.neogaf.com/forums/gaming-discussion.2/index.rss",
     scrapeIntervalMinutes: 60,
-    isActive: false,
+    isActive: true,
   },
 
   // EU
@@ -698,7 +698,7 @@ const CORE_SOURCES = [
     type: "community" as const,
     scrapeUrl: "https://forum.hardware.fr/rss.php?config=hfr.inc&cat=13&subcat=0&num=10",
     scrapeIntervalMinutes: 60,
-    isActive: false,
+    isActive: true,
   },
   {
     id: "reddit_askuk",
@@ -851,7 +851,7 @@ const CORE_SOURCES = [
     type: "community" as const,
     scrapeUrl: "https://www.expat.com/en/forum/middle-east/",
     scrapeIntervalMinutes: 60,
-    isActive: false,
+    isActive: true,
   },
   {
     id: "reddit_russia",
@@ -913,7 +913,7 @@ const CORE_SOURCES = [
     type: "community" as const,
     scrapeUrl: "https://dtf.ru/rss/all",
     scrapeIntervalMinutes: 60,
-    isActive: false,
+    isActive: true,
   },
   {
     id: "vc_ru_rss",
@@ -924,7 +924,7 @@ const CORE_SOURCES = [
     type: "community" as const,
     scrapeUrl: "https://vc.ru/rss/all",
     scrapeIntervalMinutes: 60,
-    isActive: false,
+    isActive: true,
   },
   {
     id: "reddit_brasil",
@@ -1288,13 +1288,6 @@ export type SourceId = (typeof SOURCES)[number]["id"];
 // Cost-control policy: keep high-friction sources disabled by default.
 // They can still be run explicitly via --source <id> for ad-hoc diagnostics.
 export const DISABLED_SOURCE_ID_SET = new Set<string>([
-  "metafilter_rss",
-  "lobsters_rss",
-  "neogaf_gaming_rss",
-  "hardware_fr_rss",
-  "expat_mideast",
-  "dtf_rss",
-  "vc_ru_rss",
 ]);
 
 
