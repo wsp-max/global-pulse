@@ -535,26 +535,44 @@ function truncateText(value: string, maxLength: number) {
   return `${value.slice(0, maxLength - 3)}...`;
 }
 
-function padRight(value: string, width: number) {
-  return value.length >= width ? value : `${value}${" ".repeat(width - value.length)}`;
+function hasHangul(value: string) {
+  return /[\uAC00-\uD7A3]/.test(value);
 }
 
-function renderTable(headers: string[], rows: string[][]) {
-  if (headers.length === 0) return [];
-  const normalizedRows = rows.map((row) => headers.map((_, index) => row[index] ?? "-"));
-  const widths = headers.map((header, index) =>
-    Math.max(
-      header.length,
-      ...normalizedRows.map((row) => row[index].length)
-    )
-  );
+function isKoreanOrEnglishLike(value: string) {
+  const letters = [...value].filter((char) => /\p{L}/u.test(char));
+  if (letters.length === 0) return true;
+  if (hasHangul(value)) return true;
+  return letters.every((char) => /[A-Za-z]/.test(char));
+}
 
-  const separator = `+${widths.map((width) => "-".repeat(width + 2)).join("+")}+`;
-  const headerLine = `| ${headers.map((header, index) => padRight(header, widths[index])).join(" | ")} |`;
-  const bodyLines = normalizedRows.map(
-    (row) => `| ${row.map((cell, index) => padRight(cell, widths[index])).join(" | ")} |`
-  );
-  return [separator, headerLine, separator, ...bodyLines, separator];
+function pickKoreanTranslation(row: Pick<PropagationTopRow, "nameKo" | "nameEn">) {
+  if (row.nameKo && hasHangul(row.nameKo)) return row.nameKo;
+  if (row.nameEn && hasHangul(row.nameEn)) return row.nameEn;
+  return null;
+}
+
+function formatTopicHeadline(row: PropagationTopRow) {
+  const ko = row.nameKo?.trim() ?? "";
+  const en = row.nameEn?.trim() ?? "";
+  const original = !isKoreanOrEnglishLike(en)
+    ? en
+    : !isKoreanOrEnglishLike(ko)
+      ? ko
+      : buildTopicLabel(row);
+
+  if (!isKoreanOrEnglishLike(original)) {
+    const korean = pickKoreanTranslation(row);
+    if (korean && korean !== original) return `${original} (${korean})`;
+    return `${original} (\uD55C\uAD6D\uC5B4 \uBC88\uC5ED \uC5C6\uC74C)`;
+  }
+
+  if (ko && en && ko !== en) {
+    if (hasHangul(ko)) return `${ko} (${en})`;
+    return `${en} (${ko})`;
+  }
+
+  return original;
 }
 
 function enforceTelegramLimit(message: string) {
@@ -574,72 +592,48 @@ function buildMessage(args: {
   topRows: PropagationTopRow[];
 }) {
   const { mode, generatedAt, sinceIso, collection24h, sourceHealth, retentionRows, topRows } = args;
-  const degradedCodeCell =
-    sourceHealth.degradedTopCodes.length > 0
-      ? sourceHealth.degradedTopCodes.map((item) => `${item.code}(${item.count})`).join(", ")
-      : "-";
-
-  const collectionRows = [
-    ["healthy / degraded / total", `${formatCount(sourceHealth.healthySources)} / ${formatCount(sourceHealth.degradedSources)} / ${formatCount(sourceHealth.totalSources)}`],
-    ["auto-disabled (24h)", formatCount(sourceHealth.autoDisabledSources24h)],
-    ["degraded top codes", truncateText(degradedCodeCell, 72)],
-    [
-      "collector_runs (24h)",
-      `${formatCount(sourceHealth.collectorRuns24h.totalRuns)} total / ${formatCount(sourceHealth.collectorRuns24h.successRuns)} success`,
-    ],
-    ["collector success rate", formatRatio(sourceHealth.collectorRuns24h.successRate)],
-    ["collector p95 latency", sourceHealth.collectorRuns24h.p95LatencyMs == null ? "-" : `${formatCount(sourceHealth.collectorRuns24h.p95LatencyMs)} ms`],
-    ["raw_posts (24h)", formatCount(collection24h.rawPosts)],
-    ["topics (24h)", formatCount(collection24h.topics)],
-    ["global_topics (24h)", formatCount(collection24h.globalTopics)],
-    ["issue_overlaps (24h)", formatCount(collection24h.issueOverlaps)],
-  ];
-
-  const retentionDisplayRows = mode === "full" ? retentionRows : retentionRows.slice(0, 4);
-  const retentionTableRows = retentionDisplayRows.map((row) => [
-    row.table,
-    formatCount(row.rowCount),
-    formatTableSize(row.sizeBytes),
-    formatIsoKstShort(row.oldestAt),
-    formatIsoKstShort(row.newestAt),
-  ]);
-  if (mode === "snap" && retentionRows.length > retentionDisplayRows.length) {
-    retentionTableRows.push(["...", `${formatCount(retentionRows.length - retentionDisplayRows.length)} more`, "-", "-", "-"]);
-  }
-
-  const propagationTableRows =
-    topRows.length > 0
-      ? topRows.map((row, index) => [
-          `${index + 1}`,
-          truncateText(buildTopicLabel(row), 28),
-          `${(row.firstSeenRegion ?? "-").toUpperCase()} ${formatIsoKstShort(row.firstSeenAt)}`,
-          formatCount(row.regionCount),
-          row.lagSummary,
-          `${row.confidencePct}%`,
-          row.crossChecked ? "Y" : "N",
-        ])
-      : [["-", "no qualified propagation topics", "-", "-", "-", "-", "-"]];
 
   const lines = [
     `[GlobalPulse][PULSE][${mode.toUpperCase()}]`,
-    `Generated(KST): ${formatIsoKst(generatedAt)}`,
-    `Window(KST): ${formatIsoKst(sinceIso)} ~ ${formatIsoKst(generatedAt)} (last 24h)`,
+    `\uC0DD\uC131 \uC2DC\uAC01(KST): ${formatIsoKst(generatedAt)}`,
+    `\uC9D1\uACC4 \uAD6C\uAC04(KST): ${formatIsoKst(sinceIso)} ~ ${formatIsoKst(generatedAt)} (\uCD5C\uADFC 24\uC2DC\uAC04)`,
     "",
-    "[수집 상태]",
-    ...renderTable(["Metric", "Value"], collectionRows),
+    "1) \uC218\uC9D1 \uC0C1\uD0DC",
+    `- \uC18C\uC2A4 \uC0C1\uD0DC: \uC815\uC0C1 ${formatCount(sourceHealth.healthySources)} / \uC800\uD558 ${formatCount(sourceHealth.degradedSources)} / \uC804\uCCB4 ${formatCount(sourceHealth.totalSources)}`,
+    `- \uC790\uB3D9 \uBE44\uD65C\uC131(24h): ${formatCount(sourceHealth.autoDisabledSources24h)}`,
+    `- \uC624\uB958 \uC0C1\uC704: ${truncateText(sourceHealth.degradedTopCodes.map((item) => `${item.code}(${item.count})`).join(", ") || "-", 84)}`,
+    `- \uC218\uC9D1 \uC2E4\uD589(24h): \uCD1D ${formatCount(sourceHealth.collectorRuns24h.totalRuns)}\uD68C, \uC131\uACF5 ${formatCount(sourceHealth.collectorRuns24h.successRuns)}\uD68C (${formatRatio(sourceHealth.collectorRuns24h.successRate)}), p95 ${sourceHealth.collectorRuns24h.p95LatencyMs == null ? "-" : `${formatCount(sourceHealth.collectorRuns24h.p95LatencyMs)}ms`}`,
+    `- \uC720\uC785 \uB370\uC774\uD130(24h): raw_posts ${formatCount(collection24h.rawPosts)} | topics ${formatCount(collection24h.topics)} | global_topics ${formatCount(collection24h.globalTopics)} | overlaps ${formatCount(collection24h.issueOverlaps)}`,
     "",
-    "[보유 상태]",
-    ...renderTable(["Table", "Rows", "Size", "Oldest(KST)", "Newest(KST)"], retentionTableRows),
-    "",
-    "[Propagation TOP5]",
-    ...renderTable(["#", "Topic", "First Seen", "Regions", "Lag", "Conf", "XChk"], propagationTableRows),
-    "",
-    "Legend: XChk=community+news cross-check",
+    "2) \uBCF4\uC720 \uC0C1\uD0DC",
   ];
 
+  const retentionDisplayRows = mode === "full" ? retentionRows : retentionRows.slice(0, 4);
+  for (const row of retentionDisplayRows) {
+    lines.push(
+      `- ${row.table}: ${formatCount(row.rowCount)} rows, ${formatTableSize(row.sizeBytes)} (\uBCF4\uC720 ${formatIsoKstShort(row.oldestAt)} ~ ${formatIsoKstShort(row.newestAt)})`
+    );
+  }
+  if (mode === "snap" && retentionRows.length > retentionDisplayRows.length) {
+    lines.push(`- \uAE30\uD0C0 ${formatCount(retentionRows.length - retentionDisplayRows.length)}\uAC1C \uD14C\uC774\uBE14\uC740 full \uB9AC\uD3EC\uD2B8\uC5D0\uC11C \uC81C\uACF5`);
+  }
+
+  lines.push("", "3) Propagation TOP5");
+  if (topRows.length === 0) {
+    lines.push("- \uC870\uAC74\uC744 \uD1B5\uACFC\uD55C \uD655\uC0B0 \uC774\uC288\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+  } else {
+    topRows.forEach((row, index) => {
+      lines.push(`[${index + 1}] ${formatTopicHeadline(row)}`);
+      lines.push(`  - \uCD5C\uCD08 \uAD00\uCE21: ${(row.firstSeenRegion ?? "-").toUpperCase()} ${formatIsoKstShort(row.firstSeenAt)}`);
+      lines.push(
+        `  - \uD655\uC0B0 \uB9AC\uC804: ${formatCount(row.regionCount)} | \uD3C9\uADE0 \uC2DC\uCC28: ${row.lagSummary} | \uC2E0\uB8B0\uB3C4: ${row.confidencePct}% | \uAD50\uCC28\uAC80\uC99D: ${row.crossChecked ? "\uC608" : "\uC544\uB2C8\uC624"}`
+      );
+    });
+  }
+
+  lines.push("", "* \uAD50\uCC28\uAC80\uC99D: community + news \uB3D9\uC2DC \uD3EC\uCC29 \uC5EC\uBD80");
   return enforceTelegramLimit(lines.join("\n"));
 }
-
 async function writeReportSnapshot(args: {
   mode: ReportMode;
   generatedAt: string;
@@ -670,19 +664,19 @@ async function main() {
   if (!hasPostgresConfig()) {
     const generatedAt = nowIso();
     const mode = parseReportMode();
-    const fallbackMessage = enforceTelegramLimit(
+            const fallbackMessage = enforceTelegramLimit(
       [
         `[GlobalPulse][PULSE][${mode.toUpperCase()}]`,
-        `Generated(KST): ${formatIsoKst(generatedAt)}`,
+        `\uC0DD\uC131 \uC2DC\uAC01(KST): ${formatIsoKst(generatedAt)}`,
         "",
-        "[수집 상태]",
-        ...renderTable(["Metric", "Value"], [["postgres", "not configured"]]),
+        "1) \uC218\uC9D1 \uC0C1\uD0DC",
+        "- postgres not configured",
         "",
-        "[보유 상태]",
-        ...renderTable(["Table", "Rows", "Size", "Oldest(KST)", "Newest(KST)"], [["-", "-", "-", "-", "-"]]),
+        "2) \uBCF4\uC720 \uC0C1\uD0DC",
+        "- postgres not configured",
         "",
-        "[Propagation TOP5]",
-        ...renderTable(["#", "Topic", "First Seen", "Regions", "Lag", "Conf", "XChk"], [["-", "postgres not configured", "-", "-", "-", "-", "-"]]),
+        "3) Propagation TOP5",
+        "- postgres not configured",
       ].join("\n")
     );
     await writeReportSnapshot({
