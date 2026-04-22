@@ -194,6 +194,11 @@ export interface PropagationMatrixApiResponse {
   regions: string[];
   cells: PropagationMatrixCell[];
   insight: PropagationMatrixInsight | null;
+  meta?: {
+    qualifiedCellCount: number;
+    hiddenCellCount: number;
+    lagCapHours: number;
+  };
   configured?: boolean;
   provider?: "postgres" | "none";
   lastUpdated?: string;

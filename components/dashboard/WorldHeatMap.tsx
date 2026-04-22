@@ -1,32 +1,60 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { geoEqualEarth, type GeoProjection } from "d3-geo";
 import type { GlobalTopic } from "@global-pulse/shared";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { MapControls } from "@/components/dashboard/MapControls";
 import type { RegionDashboardRow } from "@/lib/types/api";
 import { aggregateFlowEdges, getFlowStrokeColor, toVolumeBand } from "@/lib/utils/propagation-flow";
 import { getHeatTier, toHeatBand } from "@/lib/utils/heat";
+import {
+  countQualifiedRoutes,
+  getGlobalTopicIdentity,
+  getScopeShortLabel,
+  prepareQualifiedGlobalTopics,
+} from "@/lib/utils/signal-quality";
 import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 interface WorldHeatMapProps {
   regions: RegionDashboardRow[];
   globalTopics?: GlobalTopic[];
+  comparisonGlobalTopics?: GlobalTopic[];
+  comparisonScope?: "community" | "news";
   variant?: "community" | "news";
   compact?: boolean;
   onTopicSelect?: (topicId: number) => void;
 }
 
-interface ClusterMarker {
+interface ProjectedEdge {
   key: string;
+  from: string;
+  to: string;
+  path: string;
+  mx: number;
+  my: number;
+  volumeBand: number;
+  lagMinutes: number;
+  confidence: number;
+  edgeCount: number;
+  velocity: number;
+}
+
+interface ProjectedMarker {
+  key: string;
+  region: RegionDashboardRow;
   x: number;
   y: number;
-  regions: RegionDashboardRow[];
-  totalHeat: number;
-  representativeColor: string;
+  radius: number;
+  fill: string;
+  band: number;
+  isFlowActive: boolean;
+  targetTopicId: number | null;
 }
 
 const GEO_URL = "/pulse/geo/countries-110m.json";
+const MAP_WIDTH = 1000;
+const MAP_HEIGHT = 560;
 const MIN_ZOOM = 0.8;
 const MAX_ZOOM = 6;
 
@@ -122,12 +150,6 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function toMapPercent([lon, lat]: [number, number]): { x: number; y: number } {
-  const x = ((lon + 180) / 360) * 100;
-  const y = ((90 - lat) / 180) * 100;
-  return { x, y };
-}
-
 function toLagText(lagMinutes: number): string {
   if (lagMinutes < 60) {
     return `+${Math.max(1, Math.round(lagMinutes))}m`;
@@ -144,7 +166,7 @@ function getTierColorByBand(band: number): string {
 
 function curvePath(from: { x: number; y: number }, to: { x: number; y: number }): { d: string; mx: number; my: number } {
   const mx = (from.x + to.x) / 2;
-  const arcOffset = Math.max(6, Math.abs(to.x - from.x) * 0.18);
+  const arcOffset = Math.max(24, Math.abs(to.x - from.x) * 0.16);
   const my = (from.y + to.y) / 2 - arcOffset;
   return {
     d: `M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`,
@@ -156,97 +178,303 @@ function curvePath(from: { x: number; y: number }, to: { x: number; y: number })
 function isSurging(topic: GlobalTopic, velocityThreshold: number): boolean {
   const velocity = topic.velocityPerHour ?? 0;
   const acceleration = topic.acceleration ?? 0;
-  const burst = (topic as { burstZ?: number | null }).burstZ ?? null;
-  return burst !== null ? burst >= 2.5 : acceleration > 0 && velocity >= velocityThreshold;
+  return acceleration > 0 && velocity >= velocityThreshold;
 }
 
-function buildClusterMarkers(regions: RegionDashboardRow[], zoom: number): ClusterMarker[] {
-  const markers = regions
-    .map((region) => {
-      if (region.totalHeatScore <= 0) {
-        return null;
-      }
-      const coord = REGION_COORDINATES[region.id];
-      if (!coord) {
-        return null;
-      }
-      const pos = toMapPercent(coord);
-      return {
-        region,
-        x: pos.x,
-        y: pos.y,
-      };
-    })
-    .filter((item): item is { region: RegionDashboardRow; x: number; y: number } => Boolean(item));
+function buildSharedTopicCount(primaryTopics: GlobalTopic[], secondaryTopics: GlobalTopic[]): number {
+  const secondaryLookup = new Set(
+    secondaryTopics.map((topic) => getGlobalTopicIdentity(topic)).filter((value): value is string => Boolean(value)),
+  );
 
-  if (zoom >= 1.5) {
-    return markers.map((marker) => ({
-      key: marker.region.id,
-      x: marker.x,
-      y: marker.y,
-      regions: [marker.region],
-      totalHeat: marker.region.totalHeatScore,
-      representativeColor: marker.region.color,
-    }));
-  }
+  return primaryTopics.reduce((sum, topic) => {
+    const identity = getGlobalTopicIdentity(topic);
+    return identity && secondaryLookup.has(identity) ? sum + 1 : sum;
+  }, 0);
+}
 
-  const gridSize = 6;
-  const buckets = new Map<string, ClusterMarker>();
+interface FlowOverlayProps {
+  regions: RegionDashboardRow[];
+  edges: ReturnType<typeof aggregateFlowEdges>;
+  maxVolume: number;
+  maxHeat: number;
+  variant: "community" | "news";
+  projection: GeoProjection;
+  showFlowLabels: boolean;
+  reducedMotion: boolean;
+  hoveredRegion: string | null;
+  onHoveredRegionChange: (regionId: string | null) => void;
+  onTopicSelect?: (topicId: number) => void;
+}
 
-  for (const marker of markers) {
-    const gridX = Math.floor(marker.x / gridSize);
-    const gridY = Math.floor(marker.y / gridSize);
-    const key = `${gridX}:${gridY}`;
-    const current = buckets.get(key);
+function FlowOverlay({
+  regions,
+  edges,
+  maxVolume,
+  maxHeat,
+  variant,
+  projection,
+  showFlowLabels,
+  reducedMotion,
+  hoveredRegion,
+  onHoveredRegionChange,
+  onTopicSelect,
+}: FlowOverlayProps) {
+  const activeFlowRegionIds = useMemo(() => new Set(edges.flatMap((edge) => [edge.from, edge.to])), [edges]);
 
-    if (!current) {
-      buckets.set(key, {
-        key,
-        x: marker.x,
-        y: marker.y,
-        regions: [marker.region],
-        totalHeat: marker.region.totalHeatScore,
-        representativeColor: marker.region.color,
-      });
-      continue;
-    }
+  const projectedEdges = useMemo<ProjectedEdge[]>(() => {
+    return edges
+      .map((edge, index) => {
+        const fromCoord = REGION_COORDINATES[edge.from];
+        const toCoord = REGION_COORDINATES[edge.to];
+        if (!fromCoord || !toCoord) {
+          return null;
+        }
 
-    const totalCount = current.regions.length + 1;
-    current.x = (current.x * current.regions.length + marker.x) / totalCount;
-    current.y = (current.y * current.regions.length + marker.y) / totalCount;
-    current.regions.push(marker.region);
-    current.totalHeat += marker.region.totalHeatScore;
-  }
+        const fromPoint = projection(fromCoord);
+        const toPoint = projection(toCoord);
+        if (!fromPoint || !toPoint) {
+          return null;
+        }
 
-  return [...buckets.values()];
+        const [fromX, fromY] = fromPoint;
+        const [toX, toY] = toPoint;
+        const curve = curvePath({ x: fromX, y: fromY }, { x: toX, y: toY });
+
+        return {
+          key: `${edge.from}-${edge.to}-${index}`,
+          from: edge.from,
+          to: edge.to,
+          path: curve.d,
+          mx: curve.mx,
+          my: curve.my,
+          volumeBand: toVolumeBand(edge.volumeHeatSum, maxVolume),
+          lagMinutes: edge.lagMinutes,
+          confidence: edge.confidence,
+          edgeCount: edge.edgeCount,
+          velocity: edge.velocity,
+        };
+      })
+      .filter((edge): edge is ProjectedEdge => Boolean(edge));
+  }, [edges, maxVolume, projection]);
+
+  const markers = useMemo<ProjectedMarker[]>(() => {
+    return regions
+      .map((region) => {
+        if (region.totalHeatScore <= 0) {
+          return null;
+        }
+
+        const coord = REGION_COORDINATES[region.id];
+        if (!coord) {
+          return null;
+        }
+
+        const point = projection(coord);
+        if (!point) {
+          return null;
+        }
+
+        const [x, y] = point;
+        const band = toHeatBand(region.totalHeatScore, maxHeat);
+        const fill = getTierColorByBand(band);
+        const radius = 5 + band * 16;
+        const targetTopicId = region.topTopics
+          .map((topic) => topic.id)
+          .find((topicId): topicId is number => typeof topicId === "number") ?? null;
+
+        return {
+          key: region.id,
+          region,
+          x,
+          y,
+          radius,
+          fill,
+          band,
+          isFlowActive: activeFlowRegionIds.has(region.id),
+          targetTopicId,
+        };
+      })
+      .filter((marker): marker is ProjectedMarker => Boolean(marker));
+  }, [activeFlowRegionIds, maxHeat, projection, regions]);
+
+  return (
+    <g>
+      <defs>
+        {projectedEdges.map((edge) => {
+          const flowColor = getFlowStrokeColor(variant, edge.volumeBand);
+          return (
+            <marker
+              key={`arrow-${edge.key}`}
+              id={`arrow-${variant}-${edge.key}`}
+              markerWidth="8"
+              markerHeight="8"
+              refX="6.5"
+              refY="4"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <path d={variant === "news" ? "M 0 0 L 8 4 L 0 8 L 2.8 4 z" : "M 0 0 L 8 4 L 0 8 z"} fill={flowColor} />
+            </marker>
+          );
+        })}
+        <filter id={`particle-glow-${variant}`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="1.2" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      {projectedEdges.map((edge) => {
+        const flowColor = getFlowStrokeColor(variant, edge.volumeBand);
+        const strokeOpacity = Math.max(0.24, Math.min(0.68, edge.confidence * 0.7));
+        const strokeWidth = 1.2 + Math.max(0, Math.min(2.5, edge.volumeBand * 2.5));
+        const isFast = edge.velocity > 0;
+        const isHoveredFlow = hoveredRegion ? edge.from === hoveredRegion || edge.to === hoveredRegion : false;
+        const resolvedOpacity = hoveredRegion
+          ? isHoveredFlow
+            ? Math.min(0.95, strokeOpacity * 1.45)
+            : Math.max(0.09, strokeOpacity * 0.35)
+          : strokeOpacity;
+        const durationSec = Math.max(3.2, Math.min(5.5, 5.7 - edge.volumeBand * 2.5));
+        const particleCount = edge.confidence >= 0.85 ? 2 : edge.confidence >= 0.55 ? 1 : 0;
+
+        return (
+          <g key={edge.key}>
+            <path
+              d={edge.path}
+              stroke={flowColor}
+              strokeWidth={strokeWidth}
+              fill="none"
+              opacity={resolvedOpacity}
+              markerEnd={`url(#arrow-${variant}-${edge.key})`}
+              style={{ pointerEvents: "none" }}
+            >
+              <title>{`From ${edge.from.toUpperCase()} to ${edge.to.toUpperCase()}, lag ${toLagText(edge.lagMinutes)}, confidence ${edge.confidence.toFixed(2)}, edges ${edge.edgeCount}`}</title>
+            </path>
+
+            {(showFlowLabels || isHoveredFlow) && (
+              <g transform={`translate(${edge.mx} ${edge.my})`} style={{ pointerEvents: "none" }}>
+                <rect x={-34} y={-14} width={68} height={20} rx={10} fill="rgba(10,14,23,0.72)" stroke="none" />
+                <text textAnchor="middle" y={0} fontSize="10" fill={flowColor} className="font-mono">
+                  {`${toLagText(edge.lagMinutes)}${isFast ? " • active" : ""}`}
+                </text>
+              </g>
+            )}
+
+            {!reducedMotion &&
+              Array.from({ length: particleCount }).map((_, particleIndex) => (
+                <circle
+                  key={`particle-${edge.key}-${particleIndex}`}
+                  r="3"
+                  fill={flowColor}
+                  opacity="0.7"
+                  filter={`url(#particle-glow-${variant})`}
+                >
+                  <animateMotion
+                    dur={`${durationSec}s`}
+                    begin={`${particleIndex * 0.6}s`}
+                    repeatCount="indefinite"
+                    rotate="auto"
+                    path={edge.path}
+                  />
+                </circle>
+              ))}
+          </g>
+        );
+      })}
+
+      {markers.map((marker) => {
+        const canOpenTopic = Boolean(onTopicSelect && marker.targetTopicId);
+
+        return (
+          <g
+            key={marker.key}
+            transform={`translate(${marker.x} ${marker.y})`}
+            className={canOpenTopic ? "cursor-pointer" : undefined}
+            onPointerDown={(event) => {
+              if (!canOpenTopic) {
+                return;
+              }
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              if (!canOpenTopic || !marker.targetTopicId) {
+                return;
+              }
+              event.stopPropagation();
+              onTopicSelect?.(marker.targetTopicId);
+            }}
+            onMouseEnter={() => onHoveredRegionChange(marker.region.id)}
+            onMouseLeave={() => onHoveredRegionChange(null)}
+          >
+            <circle
+              r={marker.radius}
+              fill={marker.fill}
+              fillOpacity={0.18 + marker.band * 0.32}
+              stroke={marker.region.color}
+              strokeWidth={marker.isFlowActive ? 2.2 : 1.4}
+            />
+            <circle r={marker.isFlowActive ? 4.2 : 3.4} fill={marker.fill} />
+            <text y={-(marker.radius + 10)} textAnchor="middle" fontSize="11" fontWeight="600" fill="#e2e8f0">
+              {marker.region.flagEmoji} {Math.round(marker.region.totalHeatScore)}
+            </text>
+          </g>
+        );
+      })}
+    </g>
+  );
 }
 
 export function WorldHeatMap({
   regions,
   globalTopics = [],
+  comparisonGlobalTopics = [],
+  comparisonScope,
   variant = "community",
   compact = false,
   onTopicSelect,
 }: WorldHeatMapProps) {
+  const resolvedComparisonScope = comparisonScope ?? (variant === "community" ? "news" : "community");
   const maxHeat = Math.max(...regions.map((region) => region.totalHeatScore), 1);
+  const primaryQualifiedTopics = useMemo(() => prepareQualifiedGlobalTopics(globalTopics, variant), [globalTopics, variant]);
+  const comparisonQualifiedTopics = useMemo(
+    () => prepareQualifiedGlobalTopics(comparisonGlobalTopics, resolvedComparisonScope),
+    [comparisonGlobalTopics, resolvedComparisonScope],
+  );
   const flowEdges = useMemo(
     () =>
-      aggregateFlowEdges(globalTopics, {
+      aggregateFlowEdges(primaryQualifiedTopics, {
         limit: 20,
         maxTopics: 64,
         isValidRegion: (regionId) => Boolean(REGION_COORDINATES[regionId]),
       }),
-    [globalTopics],
+    [primaryQualifiedTopics],
   );
   const maxVolume = Math.max(...flowEdges.map((edge) => edge.volumeHeatSum), 1);
-  const activeFlowRegionIds = new Set(flowEdges.flatMap((edge) => [edge.from, edge.to]));
   const radialGlow =
     variant === "news"
       ? "bg-[radial-gradient(circle_at_center,rgba(251,146,60,0.18),transparent_50%)]"
       : "bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.14),transparent_50%)]";
 
-  const maxVelocity = Math.max(...globalTopics.map((topic) => topic.velocityPerHour ?? 0), 1);
+  const maxVelocity = Math.max(...primaryQualifiedTopics.map((topic) => topic.velocityPerHour ?? 0), 1);
   const surgingVelocityCutoff = maxVelocity * 0.9;
+  const primaryRouteCount = useMemo(() => countQualifiedRoutes(globalTopics, variant), [globalTopics, variant]);
+  const comparisonRouteCount = useMemo(
+    () => countQualifiedRoutes(comparisonGlobalTopics, resolvedComparisonScope),
+    [comparisonGlobalTopics, resolvedComparisonScope],
+  );
+  const sharedTopicCount = useMemo(
+    () => buildSharedTopicCount(primaryQualifiedTopics, comparisonQualifiedTopics),
+    [comparisonQualifiedTopics, primaryQualifiedTopics],
+  );
+
+  const regionHeatMap = useMemo(() => new Map(regions.map((region) => [region.id, region])), [regions]);
+  const projection = useMemo(
+    () => geoEqualEarth().translate([MAP_WIDTH / 2, MAP_HEIGHT / 2]).scale(175),
+    [],
+  );
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
@@ -287,14 +515,15 @@ export function WorldHeatMap({
     setOffset((prev) => clampOffset(prev.x, prev.y, clamped));
   };
 
-  const markers = useMemo(() => buildClusterMarkers(regions, zoom), [regions, zoom]);
-
   return (
     <div className="panel-grid relative overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-2">
       <div className={`absolute inset-0 ${radialGlow}`} />
       <div className="relative">
         <div className="flex items-center justify-between gap-2">
-          <p className="font-display text-lg text-[var(--text-accent)]">WORLD HEAT MAP</p>
+          <div>
+            <p className="font-display text-lg text-[var(--text-accent)]">WORLD HEAT MAP</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">선택 source의 지역 heat와 confirmed propagation만 표시합니다.</p>
+          </div>
           <label className="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
             <input
               type="checkbox"
@@ -305,7 +534,16 @@ export function WorldHeatMap({
             Flow labels
           </label>
         </div>
-        <p className="mt-1 text-xs text-[var(--text-secondary)]">Regional heat and cross-region signal routes.</p>
+
+        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[var(--text-secondary)]">
+          <span className="rounded-full border border-[var(--border-default)] px-2 py-1">
+            {getScopeShortLabel(variant)} routes {flowEdges.length} / confirmed {primaryRouteCount}
+          </span>
+          <span className="rounded-full border border-[var(--border-default)] px-2 py-1">
+            {getScopeShortLabel(resolvedComparisonScope)} confirmed routes {comparisonRouteCount}
+          </span>
+          <span className="rounded-full border border-[var(--border-default)] px-2 py-1">양측 공통 이슈 {sharedTopicCount}</span>
+        </div>
 
         <div className="mt-4 rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-2">
           <div
@@ -356,176 +594,55 @@ export function WorldHeatMap({
                 transition: reducedMotion || isDragging ? "none" : "transform 180ms cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             >
-              <ComposableMap projectionConfig={{ scale: 175 }} style={{ width: "100%", height: "100%" }}>
+              <ComposableMap
+                width={MAP_WIDTH}
+                height={MAP_HEIGHT}
+                projectionConfig={{ scale: 175 }}
+                style={{ width: "100%", height: "100%" }}
+              >
                 <Geographies geography={GEO_URL}>
                   {({ geographies }) =>
-                    geographies.map((geo) => (
-                      <Geography
-                        key={geo.rsmKey}
-                        geography={geo}
-                        fill="#0f172a"
-                        stroke="#334155"
-                        strokeWidth={0.45}
-                        onMouseEnter={() => {
-                          const regionId = resolveRegionIdFromGeography(
-                            geo as unknown as { properties?: Record<string, unknown> },
-                          );
-                          if (regionId) {
-                            setHoveredRegion(regionId);
-                          }
-                        }}
-                        onMouseLeave={() => setHoveredRegion(null)}
-                      />
-                    ))
+                    geographies.map((geo) => {
+                      const regionId = resolveRegionIdFromGeography(geo as unknown as { properties?: Record<string, unknown> });
+                      const region = regionId ? regionHeatMap.get(regionId) : null;
+                      const band = region ? toHeatBand(region.totalHeatScore, maxHeat) : 0;
+                      const fillOpacity = region ? 0.16 + band * 0.38 : 1;
+                      const strokeWidth = hoveredRegion && regionId === hoveredRegion ? 1.2 : 0.45;
+
+                      return (
+                        <Geography
+                          key={geo.rsmKey}
+                          geography={geo}
+                          fill={region ? region.color : "#0f172a"}
+                          fillOpacity={fillOpacity}
+                          stroke={hoveredRegion && regionId === hoveredRegion ? "#f8fafc" : "#334155"}
+                          strokeWidth={strokeWidth}
+                          onMouseEnter={() => {
+                            if (regionId) {
+                              setHoveredRegion(regionId);
+                            }
+                          }}
+                          onMouseLeave={() => setHoveredRegion(null)}
+                        />
+                      );
+                    })
                   }
                 </Geographies>
+
+                <FlowOverlay
+                  regions={regions}
+                  edges={flowEdges}
+                  maxVolume={maxVolume}
+                  maxHeat={maxHeat}
+                  variant={variant}
+                  projection={projection}
+                  showFlowLabels={showFlowLabels}
+                  reducedMotion={reducedMotion}
+                  hoveredRegion={hoveredRegion}
+                  onHoveredRegionChange={setHoveredRegion}
+                  onTopicSelect={onTopicSelect}
+                />
               </ComposableMap>
-
-              <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <defs>
-                  {flowEdges.map((edge, index) => {
-                    const volumeBand = toVolumeBand(edge.volumeHeatSum, maxVolume);
-                    const flowColor = getFlowStrokeColor(variant, volumeBand);
-                    return (
-                      <marker
-                        key={`arrow-${edge.from}-${edge.to}-${index}`}
-                        id={`arrow-${variant}-${index}`}
-                        markerWidth="2.6"
-                        markerHeight="2.6"
-                        refX="2.2"
-                        refY="1.3"
-                        orient="auto"
-                        markerUnits="strokeWidth"
-                      >
-                        <path d={variant === "news" ? "M 0 0 L 5 2.5 L 0 5 L 1.6 2.5 z" : "M 0 0 L 5 2.5 L 0 5 z"} fill={flowColor} />
-                      </marker>
-                    );
-                  })}
-                  <filter id={`particle-glow-${variant}`} x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="0.6" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
-
-                {flowEdges.map((edge, index) => {
-                  const from = toMapPercent(REGION_COORDINATES[edge.from]!);
-                  const to = toMapPercent(REGION_COORDINATES[edge.to]!);
-                  const curve = curvePath(from, to);
-                  const volumeBand = toVolumeBand(edge.volumeHeatSum, maxVolume);
-                  const durationSec = Math.max(3.2, Math.min(5.5, 5.7 - volumeBand * 2.5));
-                  const flowColor = getFlowStrokeColor(variant, volumeBand);
-                  const strokeOpacity = Math.max(0.22, Math.min(0.55, edge.confidence * 0.6));
-                  const strokeWidth = 0.35 + Math.max(0, Math.min(0.6, volumeBand * 0.6));
-                  const isFast = edge.velocity >= surgingVelocityCutoff;
-                  const particleCount = edge.confidence >= 0.85 ? 2 : edge.confidence >= 0.55 ? 1 : 0;
-                  const isHoveredFlow = hoveredRegion ? edge.from === hoveredRegion || edge.to === hoveredRegion : false;
-                  const resolvedOpacity = hoveredRegion
-                    ? isHoveredFlow
-                      ? Math.min(0.9, strokeOpacity * 1.6)
-                      : Math.max(0.08, strokeOpacity * 0.4)
-                    : strokeOpacity;
-                  const lagText = `${toLagText(edge.lagMinutes)}${isFast ? " ⚡" : ""}`;
-
-                  return (
-                    <g key={`${edge.from}-${edge.to}-${index}`}>
-                      <path
-                        className="map-flow-path"
-                        d={curve.d}
-                        stroke={flowColor}
-                        strokeWidth={strokeWidth}
-                        fill="none"
-                        opacity={resolvedOpacity}
-                        markerEnd={`url(#arrow-${variant}-${index})`}
-                        style={{ pointerEvents: "none" }}
-                      >
-                        <title>{`From ${edge.from.toUpperCase()} to ${edge.to.toUpperCase()}, lag ${toLagText(edge.lagMinutes)}, confidence ${edge.confidence.toFixed(2)}, volume ${Math.round(edge.volumeHeatSum)}, edges ${edge.edgeCount}`}</title>
-                      </path>
-
-                      <g
-                        transform={`translate(${curve.mx} ${curve.my})`}
-                        style={{
-                          pointerEvents: "none",
-                          opacity: showFlowLabels || isHoveredFlow ? 1 : 0,
-                        }}
-                      >
-                        <rect x={-4} y={-2.4} width={8} height={3.2} rx={1.6} fill="rgba(10,14,23,0.6)" stroke="none" />
-                        <text textAnchor="middle" y={0.1} className="font-mono text-[2px]" fill={flowColor}>
-                          {lagText}
-                        </text>
-                      </g>
-
-                      {!reducedMotion &&
-                        Array.from({ length: particleCount }).map((_, particleIndex) => (
-                          <circle
-                            key={`particle-${index}-${particleIndex}`}
-                            r="0.35"
-                            fill={flowColor}
-                            opacity={0.75}
-                            filter={`url(#particle-glow-${variant})`}
-                            className="map-particle"
-                          >
-                            <animateMotion
-                              dur={`${durationSec}s`}
-                              begin={`${particleIndex * 0.6}s`}
-                              repeatCount="indefinite"
-                              rotate="auto"
-                              path={curve.d}
-                            />
-                          </circle>
-                        ))}
-                    </g>
-                  );
-                })}
-
-                {markers.map((marker) => {
-                  const band = toHeatBand(marker.totalHeat, maxHeat * Math.max(1, marker.regions.length));
-                  const radius = marker.regions.length > 1 ? 1.4 + band * 3.1 : 1.1 + band * 2.6;
-                  const fill = getTierColorByBand(band);
-                  const primaryRegion = marker.regions[0]!;
-                  const targetTopicId = marker.regions
-                    .flatMap((region) => region.topTopics)
-                    .map((topic) => topic.id)
-                    .find((topicId): topicId is number => typeof topicId === "number");
-                  const canOpenTopic = Boolean(onTopicSelect && targetTopicId);
-
-                  return (
-                    <g
-                      key={marker.key}
-                      transform={`translate(${marker.x} ${marker.y})`}
-                      className={canOpenTopic ? "cursor-pointer" : undefined}
-                      onPointerDown={(event) => {
-                        if (!canOpenTopic) return;
-                        event.stopPropagation();
-                      }}
-                      onClick={(event) => {
-                        if (!canOpenTopic || !targetTopicId) return;
-                        event.stopPropagation();
-                        onTopicSelect?.(targetTopicId);
-                      }}
-                      onMouseEnter={() => setHoveredRegion(primaryRegion.id)}
-                      onMouseLeave={() => setHoveredRegion(null)}
-                    >
-                      <circle
-                        r={radius}
-                        fill={fill}
-                        fillOpacity={0.22}
-                        stroke={marker.representativeColor}
-                        strokeWidth={0.35}
-                        aria-label={`${primaryRegion.flagEmoji} ${primaryRegion.nameKo} heat ${Math.round(marker.totalHeat)} tier ${getHeatTier(band)}`}
-                      />
-                      <circle r={activeFlowRegionIds.has(primaryRegion.id) ? 0.62 : 0.5} fill={fill} />
-                      <text y={-(radius + 0.75)} textAnchor="middle" className="text-[2.9px] font-medium" fill="#e2e8f0">
-                        {marker.regions.length > 1
-                          ? `+${marker.regions.length}`
-                          : `${primaryRegion.flagEmoji} ${Math.round(primaryRegion.totalHeatScore)}`}
-                      </text>
-                    </g>
-                  );
-                })}
-              </svg>
             </div>
 
             <MapControls
@@ -539,7 +656,7 @@ export function WorldHeatMap({
 
             {flowEdges.length === 0 && (
               <div className="pointer-events-none absolute inset-x-0 bottom-2 text-center text-[10px] text-[var(--text-tertiary)]">
-                No confirmed cross-region propagation in the current batch.
+                현재 배치에서 확인된 cross-region propagation이 없습니다.
               </div>
             )}
           </div>
@@ -563,19 +680,21 @@ export function WorldHeatMap({
             <p className="mt-2 max-w-sm rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)] p-2 leading-relaxed">
               Heat Score는 게시글/댓글/조회수와 소스 다양성을 반영한 관심도 지표입니다.
               <br />
-              표시 막대와 색상은 heat_score_display(로그 정규화)를 사용합니다.
+              지도 색과 마커 크기는 heat_score_display(로그 정규화)를 기반으로 시각화합니다.
             </p>
           </details>
         </div>
 
-        {globalTopics.some((topic) => isSurging(topic, surgingVelocityCutoff)) && (
+        {primaryQualifiedTopics.some((topic) => isSurging(topic, surgingVelocityCutoff)) && (
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
-            {globalTopics
+            {primaryQualifiedTopics
               .filter((topic) => isSurging(topic, surgingVelocityCutoff))
               .slice(0, 3)
               .map((topic) => (
                 <span key={`surging-${topic.id ?? topic.nameEn}`} className="rounded-full border border-red-500/40 bg-red-500/10 px-2 py-1 text-red-300">
-                  🔥 surging · {getDisplayTopicName({
+                  surging ·
+                  {" "}
+                  {getDisplayTopicName({
                     id: topic.id,
                     nameKo: topic.nameKo,
                     nameEn: topic.nameEn,
@@ -590,4 +709,3 @@ export function WorldHeatMap({
     </div>
   );
 }
-

@@ -47,6 +47,12 @@ export function PropagationMatrix({ scope }: PropagationMatrixProps) {
         {data?.insight?.text ?? "최근 7일 전파 인사이트를 계산하는 중입니다."}
       </div>
 
+      {data?.meta ? (
+        <div className="mt-2 text-[11px] text-[var(--text-tertiary)]">
+          filtered {data.meta.hiddenCellCount} low-confidence cells · lag cap {data.meta.lagCapHours}h · qualified {data.meta.qualifiedCellCount}
+        </div>
+      ) : null}
+
       <div className="mt-3 overflow-x-auto">
         <table className="min-w-[560px] border-collapse text-xs">
           <thead>

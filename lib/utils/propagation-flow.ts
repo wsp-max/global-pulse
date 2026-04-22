@@ -67,6 +67,10 @@ function edgeChoiceComparator(left: AggregatedFlowEdge, right: AggregatedFlowEdg
     return right.volumeHeatSum - left.volumeHeatSum;
   }
 
+  if (right.confidence !== left.confidence) {
+    return right.confidence - left.confidence;
+  }
+
   if (left.lagMinutes !== right.lagMinutes) {
     return left.lagMinutes - right.lagMinutes;
   }

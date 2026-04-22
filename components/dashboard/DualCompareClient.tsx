@@ -5,10 +5,7 @@ import { HotIssueList } from "@/components/dashboard/HotIssueList";
 import { WorldHeatMap } from "@/components/dashboard/WorldHeatMap";
 import { useGlobalTopics } from "@/lib/hooks/useGlobalTopics";
 import { useRegions } from "@/lib/hooks/useRegions";
-import type {
-  GlobalTopicsApiResponse,
-  RegionsApiResponse,
-} from "@/lib/types/api";
+import type { GlobalTopicsApiResponse, RegionsApiResponse } from "@/lib/types/api";
 
 interface DualCompareClientProps {
   initialCommunityRegions?: RegionsApiResponse;
@@ -60,11 +57,18 @@ export function DualCompareClient({
           <WorldHeatMap
             regions={communityRegions}
             globalTopics={communityGlobalData?.globalTopics ?? []}
+            comparisonGlobalTopics={newsGlobalData?.globalTopics ?? []}
+            comparisonScope="news"
             variant="community"
             compact
           />
           <div className="mt-4">
-            <HotIssueList topics={(communityGlobalData?.globalTopics ?? []).slice(0, 5)} />
+            <HotIssueList
+              topics={communityGlobalData?.globalTopics ?? []}
+              scope="community"
+              comparisonTopics={newsGlobalData?.globalTopics ?? []}
+              comparisonScope="news"
+            />
           </div>
         </article>
 
@@ -76,11 +80,18 @@ export function DualCompareClient({
           <WorldHeatMap
             regions={newsRegions}
             globalTopics={newsGlobalData?.globalTopics ?? []}
+            comparisonGlobalTopics={communityGlobalData?.globalTopics ?? []}
+            comparisonScope="community"
             variant="news"
             compact
           />
           <div className="mt-4">
-            <HotIssueList topics={(newsGlobalData?.globalTopics ?? []).slice(0, 5)} />
+            <HotIssueList
+              topics={newsGlobalData?.globalTopics ?? []}
+              scope="news"
+              comparisonTopics={communityGlobalData?.globalTopics ?? []}
+              comparisonScope="community"
+            />
           </div>
         </article>
       </section>
