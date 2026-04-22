@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useTopicDetail } from "@/lib/hooks/useTopicDetail";
 import { useTopicTimeline } from "@/lib/hooks/useTopicTimeline";
+import { buildNarrativeSummary } from "@/lib/utils/topic-narrative";
 import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 interface TopicDetailSheetProps {
@@ -78,7 +79,12 @@ export function TopicDetailSheet({ topicId, onClose, isWatched = false, onToggle
           summaryKo: data.globalTopic.summaryKo,
           summaryEn: data.globalTopic.summaryEn,
         }),
-        subtitle: data.globalTopic.summaryKo || data.globalTopic.summaryEn || "요약 준비 중",
+        subtitle: buildNarrativeSummary({
+          summaryKo: data.globalTopic.summaryKo,
+          summaryEn: data.globalTopic.summaryEn,
+          keywords: data.keywords,
+          fallbackText: "이 토픽의 핵심 신호를 정리 중입니다.",
+        }),
         keywords: data.keywords.slice(0, 20),
       };
     }
@@ -96,7 +102,13 @@ export function TopicDetailSheet({ topicId, onClose, isWatched = false, onToggle
           keywords: data.topic.keywords,
           entities: data.topic.entities ?? [],
         }),
-        subtitle: data.topic.summaryKo || data.topic.summaryEn || "요약 준비 중",
+        subtitle: buildNarrativeSummary({
+          summaryKo: data.topic.summaryKo,
+          summaryEn: data.topic.summaryEn,
+          sampleTitles: data.topic.sampleTitles,
+          keywords: data.topic.keywords,
+          fallbackText: "이 토픽의 핵심 신호를 정리 중입니다.",
+        }),
         keywords: data.topic.keywords.slice(0, 20),
       };
     }
@@ -159,11 +171,12 @@ export function TopicDetailSheet({ topicId, onClose, isWatched = false, onToggle
               type="button"
               aria-label="워치리스트 토글"
               onClick={onToggleWatch}
+              disabled={!onToggleWatch}
               className={`rounded-lg border px-2 py-1 text-xs transition ${
                 isWatched
                   ? "border-amber-400/50 bg-amber-400/10 text-amber-300"
                   : "border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
-              }`}
+              } disabled:cursor-not-allowed disabled:opacity-50`}
             >
               🔔 {isWatched ? "Watching" : "Watch"}
             </button>
@@ -309,4 +322,3 @@ export function TopicDetailSheet({ topicId, onClose, isWatched = false, onToggle
     </div>
   );
 }
-

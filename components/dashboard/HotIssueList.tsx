@@ -9,6 +9,7 @@ import {
   type SourceComparisonBadge,
   prepareQualifiedGlobalTopics,
 } from "@/lib/utils/signal-quality";
+import { buildNarrativeSummary } from "@/lib/utils/topic-narrative";
 import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 interface HotIssueListProps {
@@ -17,37 +18,6 @@ interface HotIssueListProps {
   comparisonTopics?: GlobalTopic[];
   comparisonScope?: "community" | "news";
   onTopicSelect?: (topicId: number) => void;
-}
-
-function firstSentence(summary: string | null | undefined): string | null {
-  if (!summary) {
-    return null;
-  }
-
-  const trimmed = summary.trim();
-  if (
-    trimmed.startsWith("요약 준비 중") ||
-    trimmed.startsWith("Summary pending") ||
-    trimmed.startsWith("Signals for") ||
-    trimmed.startsWith("핵심 키워드")
-  ) {
-    return null;
-  }
-
-  const first = trimmed
-    .split(/[.!?。！？]\s|$/u)
-    .map((item) => item.trim())
-    .filter(Boolean)[0];
-
-  if (!first) {
-    return null;
-  }
-
-  if (first.length <= 80) {
-    return first;
-  }
-
-  return `${first.slice(0, 80).trim()}…`;
 }
 
 function badgeToneClass(tone: SourceComparisonBadge["tone"]): string {
@@ -94,7 +64,12 @@ export function HotIssueList({
       ) : (
         <ul className="divide-y divide-[var(--border-default)]">
           {rows.map((topic) => {
-            const summary = firstSentence(topic.summaryKo ?? topic.summaryEn ?? null);
+            const summary = buildNarrativeSummary({
+              summaryKo: topic.summaryKo,
+              summaryEn: topic.summaryEn,
+              fallbackText: "관련 글로벌 이슈를 수집 중입니다.",
+              maxLength: 90,
+            });
             const flags = topic.regions
               .slice(0, 3)
               .map((regionId) => getRegionById(regionId)?.flagEmoji ?? "🌐")
@@ -119,7 +94,7 @@ export function HotIssueList({
                         {badge.label}
                       </span>
                     </div>
-                    {summary ? <p className="card-sub mt-1 line-clamp-1">{summary}</p> : null}
+                    <p className="card-sub mt-1 line-clamp-1">{summary}</p>
                     <p className="meta-xs mt-1">{flags}</p>
                   </div>
                   <div className="shrink-0 text-right">

@@ -3,35 +3,13 @@
 import Link from "next/link";
 import { getRegionById, type GlobalTopic } from "@global-pulse/shared";
 import { useLanguage } from "@/lib/i18n/use-language";
+import { buildNarrativeSummary } from "@/lib/utils/topic-narrative";
 import { cleanupTopicName } from "@/lib/utils/topic-name";
 
 interface GlobalIssuePanelProps {
   topics: GlobalTopic[];
   maxItems?: number;
   onTopicSelect?: (topicId: number) => void;
-}
-
-function firstSentence(value: string | null | undefined): string | null {
-  if (!value) {
-    return null;
-  }
-  const normalized = value.trim();
-  if (
-    normalized.startsWith("요약 준비 중") ||
-    normalized.startsWith("Summary pending") ||
-    normalized.startsWith("Signals for") ||
-    normalized.startsWith("핵심 키워드")
-  ) {
-    return null;
-  }
-  const first = normalized
-    .split(/[.!?。！？]\s|$/u)
-    .map((item) => item.trim())
-    .filter(Boolean)[0];
-  if (!first) {
-    return null;
-  }
-  return first.length > 120 ? `${first.slice(0, 120).trimEnd()}…` : first;
 }
 
 function toSentimentLabel(value: number): string {
@@ -70,7 +48,12 @@ export function GlobalIssuePanel({ topics, maxItems = 8, onTopicSelect }: Global
             const primaryRegion =
               (topic.firstSeenRegion && getRegionById(topic.firstSeenRegion)) ||
               (topic.regions.length > 0 ? getRegionById(topic.regions[0]) : null);
-            const summary = firstSentence(topic.summaryKo ?? null);
+            const summary = buildNarrativeSummary({
+              summaryKo: topic.summaryKo,
+              summaryEn: topic.summaryEn,
+              fallbackText: "관련 글로벌 이슈를 수집 중입니다.",
+              maxLength: 120,
+            });
 
             const card = (
               <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 transition-colors hover:border-[var(--border-hover)]">
@@ -90,7 +73,7 @@ export function GlobalIssuePanel({ topics, maxItems = 8, onTopicSelect }: Global
                     })
                     .join(" · ")}
                 </p>
-                {summary ? <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-[var(--text-secondary)]">{summary}</p> : null}
+                <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-[var(--text-secondary)]">{summary}</p>
 
                 <div className="mt-3 space-y-1.5">
                   {sentimentEntries.slice(0, 3).map(([regionId, value]) => {

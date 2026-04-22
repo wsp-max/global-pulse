@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import type { ReactNode } from "react";
+import { getRegionById } from "@global-pulse/shared";
 import useSWR from "swr";
 import { fetcher } from "@/lib/api";
 
@@ -14,6 +15,17 @@ interface AnalyzerHealthResponse {
   metrics?: {
     geminiSuccessRate?: number;
   };
+}
+
+interface SourceHealthResponse {
+  sourceStats?: Array<{
+    id: string;
+    regionId: string;
+    name: string;
+    lastScrapedAt: string | null;
+    recentErrorCode: string | null;
+    isDegraded: boolean;
+  }>;
 }
 
 interface HealthStripProps {
@@ -45,11 +57,39 @@ function freshnessClass(minutes: number | null): string {
   return "text-red-300";
 }
 
+function pickDelayedSource(data: SourceHealthResponse | undefined): { label: string; delayMinutes: number } | null {
+  const candidates = (data?.sourceStats ?? [])
+    .filter((item) => item.isDegraded)
+    .map((item) => {
+      const minutes = ageMinutes(item.lastScrapedAt);
+      return {
+        item,
+        minutes: minutes ?? 0,
+      };
+    })
+    .filter((entry) => entry.minutes >= 30 || Boolean(entry.item.recentErrorCode))
+    .sort((left, right) => right.minutes - left.minutes);
+
+  const picked = candidates[0];
+  if (!picked) {
+    return null;
+  }
+
+  const region = getRegionById(picked.item.regionId);
+  return {
+    label: `${region ? region.nameEn.toUpperCase() : picked.item.regionId.toUpperCase()} 소스 수집`,
+    delayMinutes: picked.minutes,
+  };
+}
+
 export function HealthStrip({ hottestLabel, hottestHeat }: HealthStripProps) {
   const { data: regions } = useSWR<RegionsHealthResponse>("/regions/health", fetcher, {
     refreshInterval: 60_000,
   });
   const { data: analyzer } = useSWR<AnalyzerHealthResponse>("/analyzer/health", fetcher, {
+    refreshInterval: 60_000,
+  });
+  const { data: sources } = useSWR<SourceHealthResponse>("/sources/health", fetcher, {
     refreshInterval: 60_000,
   });
 
@@ -61,6 +101,7 @@ export function HealthStrip({ hottestLabel, hottestHeat }: HealthStripProps) {
     typeof successRate === "number" && Number.isFinite(successRate) && successRate > 0
       ? `${Math.round(successRate * 100)}%`
       : null;
+  const delayedSource = pickDelayedSource(sources);
 
   const items: ReactNode[] = [];
 
@@ -78,6 +119,14 @@ export function HealthStrip({ hottestLabel, hottestHeat }: HealthStripProps) {
 
   if (summaryCoverage) {
     items.push(<span key="coverage">Coverage {summaryCoverage}</span>);
+  }
+
+  if (delayedSource) {
+    items.push(
+      <span key="delay" className="text-amber-300">
+        {delayedSource.label} {delayedSource.delayMinutes}분 지연
+      </span>,
+    );
   }
 
   if (freshnessMinutes !== null) {
