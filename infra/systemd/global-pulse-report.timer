@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Global Pulse Telegram full report daily at 09:05 KST
+
+[Timer]
+OnCalendar=*-*-* 09:05:00
+RandomizedDelaySec=60
+Persistent=true
+Unit=global-pulse-report.service
+
+[Install]
+WantedBy=timers.target

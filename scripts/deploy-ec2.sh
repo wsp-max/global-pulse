@@ -81,6 +81,10 @@ sudo install -m 644 infra/systemd/global-pulse-backup.service /etc/systemd/syste
 sudo install -m 644 infra/systemd/global-pulse-backup.timer /etc/systemd/system/global-pulse-backup.timer
 sudo install -m 644 infra/systemd/global-pulse-source-verify.service /etc/systemd/system/global-pulse-source-verify.service
 sudo install -m 644 infra/systemd/global-pulse-source-verify.timer /etc/systemd/system/global-pulse-source-verify.timer
+sudo install -m 644 infra/systemd/global-pulse-report.service /etc/systemd/system/global-pulse-report.service
+sudo install -m 644 infra/systemd/global-pulse-report.timer /etc/systemd/system/global-pulse-report.timer
+sudo install -m 644 infra/systemd/global-pulse-report-snapshot.service /etc/systemd/system/global-pulse-report-snapshot.service
+sudo install -m 644 infra/systemd/global-pulse-report-snapshot.timer /etc/systemd/system/global-pulse-report-snapshot.timer
 
 if [[ -f infra/nginx/global-pulse.conf ]]; then
   sudo install -m 644 infra/nginx/global-pulse.conf /etc/nginx/sites-available/global-pulse.conf
@@ -97,6 +101,8 @@ sudo systemctl enable --now global-pulse-snapshot.timer
 sudo systemctl enable --now global-pulse-cleanup.timer
 sudo systemctl enable --now global-pulse-backup.timer
 sudo systemctl enable --now global-pulse-source-verify.timer
+sudo systemctl enable --now global-pulse-report.timer
+sudo systemctl enable --now global-pulse-report-snapshot.timer
 sudo systemctl restart global-pulse-web.service
 
 echo "[DEPLOY] completed."

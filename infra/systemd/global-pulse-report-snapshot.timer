@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Global Pulse Telegram snapshot report every 6 hours at +5 minutes
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:05:00
+RandomizedDelaySec=60
+Persistent=true
+Unit=global-pulse-report-snapshot.service
+
+[Install]
+WantedBy=timers.target

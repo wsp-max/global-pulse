@@ -44,6 +44,7 @@
     "ops:verify:source": "tsx scripts/verify-source-ingest.ts",
     "ops:source:report": "tsx scripts/source-connectivity-report.ts",
     "ops:source:health": "tsx scripts/source-health-report.ts",
+    "report:pulse-job": "tsx scripts/pulse-report-job.ts",
     "ops:source:apply-policy": "tsx scripts/apply-source-policy.ts",
     "ops:source-verify": "tsx scripts/run-source-verify.ts",
     "ops:community:verify-feeds": "tsx scripts/verify-community-feeds.ts",
