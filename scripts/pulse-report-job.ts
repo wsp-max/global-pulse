@@ -127,6 +127,20 @@ function formatIsoKst(value: string | null | undefined) {
   }).format(parsed);
 }
 
+function formatIsoKstShort(value: string | null | undefined) {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  if (!Number.isFinite(parsed.getTime())) return "-";
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(parsed);
+}
+
 function formatTableSize(bytes: number | null | undefined) {
   if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes <= 0) return "-";
   const gib = bytes / (1024 ** 3);
@@ -515,6 +529,34 @@ function buildTopicLabel(row: PropagationTopRow) {
   return row.nameKo || row.nameEn || row.canonicalKey;
 }
 
+function truncateText(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  if (maxLength <= 1) return value.slice(0, maxLength);
+  return `${value.slice(0, maxLength - 3)}...`;
+}
+
+function padRight(value: string, width: number) {
+  return value.length >= width ? value : `${value}${" ".repeat(width - value.length)}`;
+}
+
+function renderTable(headers: string[], rows: string[][]) {
+  if (headers.length === 0) return [];
+  const normalizedRows = rows.map((row) => headers.map((_, index) => row[index] ?? "-"));
+  const widths = headers.map((header, index) =>
+    Math.max(
+      header.length,
+      ...normalizedRows.map((row) => row[index].length)
+    )
+  );
+
+  const separator = `+${widths.map((width) => "-".repeat(width + 2)).join("+")}+`;
+  const headerLine = `| ${headers.map((header, index) => padRight(header, widths[index])).join(" | ")} |`;
+  const bodyLines = normalizedRows.map(
+    (row) => `| ${row.map((cell, index) => padRight(cell, widths[index])).join(" | ")} |`
+  );
+  return [separator, headerLine, separator, ...bodyLines, separator];
+}
+
 function enforceTelegramLimit(message: string) {
   if (message.length <= TELEGRAM_SAFE_LENGTH) return message;
   const suffix = "\n\n...(truncated)";
@@ -532,46 +574,68 @@ function buildMessage(args: {
   topRows: PropagationTopRow[];
 }) {
   const { mode, generatedAt, sinceIso, collection24h, sourceHealth, retentionRows, topRows } = args;
+  const degradedCodeCell =
+    sourceHealth.degradedTopCodes.length > 0
+      ? sourceHealth.degradedTopCodes.map((item) => `${item.code}(${item.count})`).join(", ")
+      : "-";
+
+  const collectionRows = [
+    ["healthy / degraded / total", `${formatCount(sourceHealth.healthySources)} / ${formatCount(sourceHealth.degradedSources)} / ${formatCount(sourceHealth.totalSources)}`],
+    ["auto-disabled (24h)", formatCount(sourceHealth.autoDisabledSources24h)],
+    ["degraded top codes", truncateText(degradedCodeCell, 72)],
+    [
+      "collector_runs (24h)",
+      `${formatCount(sourceHealth.collectorRuns24h.totalRuns)} total / ${formatCount(sourceHealth.collectorRuns24h.successRuns)} success`,
+    ],
+    ["collector success rate", formatRatio(sourceHealth.collectorRuns24h.successRate)],
+    ["collector p95 latency", sourceHealth.collectorRuns24h.p95LatencyMs == null ? "-" : `${formatCount(sourceHealth.collectorRuns24h.p95LatencyMs)} ms`],
+    ["raw_posts (24h)", formatCount(collection24h.rawPosts)],
+    ["topics (24h)", formatCount(collection24h.topics)],
+    ["global_topics (24h)", formatCount(collection24h.globalTopics)],
+    ["issue_overlaps (24h)", formatCount(collection24h.issueOverlaps)],
+  ];
+
+  const retentionDisplayRows = mode === "full" ? retentionRows : retentionRows.slice(0, 4);
+  const retentionTableRows = retentionDisplayRows.map((row) => [
+    row.table,
+    formatCount(row.rowCount),
+    formatTableSize(row.sizeBytes),
+    formatIsoKstShort(row.oldestAt),
+    formatIsoKstShort(row.newestAt),
+  ]);
+  if (mode === "snap" && retentionRows.length > retentionDisplayRows.length) {
+    retentionTableRows.push(["...", `${formatCount(retentionRows.length - retentionDisplayRows.length)} more`, "-", "-", "-"]);
+  }
+
+  const propagationTableRows =
+    topRows.length > 0
+      ? topRows.map((row, index) => [
+          `${index + 1}`,
+          truncateText(buildTopicLabel(row), 28),
+          `${(row.firstSeenRegion ?? "-").toUpperCase()} ${formatIsoKstShort(row.firstSeenAt)}`,
+          formatCount(row.regionCount),
+          row.lagSummary,
+          `${row.confidencePct}%`,
+          row.crossChecked ? "Y" : "N",
+        ])
+      : [["-", "no qualified propagation topics", "-", "-", "-", "-", "-"]];
+
   const lines = [
     `[GlobalPulse][PULSE][${mode.toUpperCase()}]`,
     `Generated(KST): ${formatIsoKst(generatedAt)}`,
     `Window(KST): ${formatIsoKst(sinceIso)} ~ ${formatIsoKst(generatedAt)} (last 24h)`,
     "",
-    "수집 상태",
-    `- healthy/degraded/total: ${formatCount(sourceHealth.healthySources)}/${formatCount(sourceHealth.degradedSources)}/${formatCount(sourceHealth.totalSources)}`,
-    `- auto-disabled(24h): ${formatCount(sourceHealth.autoDisabledSources24h)}`,
-    `- degraded top codes: ${sourceHealth.degradedTopCodes.length > 0 ? sourceHealth.degradedTopCodes.map((item) => `${item.code}(${item.count})`).join(", ") : "-"}`,
-    `- collector_runs 24h: total ${formatCount(sourceHealth.collectorRuns24h.totalRuns)} | success ${formatRatio(sourceHealth.collectorRuns24h.successRate)} (${formatCount(sourceHealth.collectorRuns24h.successRuns)}/${formatCount(sourceHealth.collectorRuns24h.totalRuns)}) | p95 ${sourceHealth.collectorRuns24h.p95LatencyMs == null ? "-" : `${formatCount(sourceHealth.collectorRuns24h.p95LatencyMs)}ms`}`,
-    `- raw_posts 24h: ${formatCount(collection24h.rawPosts)}`,
-    `- topics 24h: ${formatCount(collection24h.topics)}`,
-    `- global_topics 24h: ${formatCount(collection24h.globalTopics)}`,
-    `- issue_overlaps 24h: ${formatCount(collection24h.issueOverlaps)}`,
+    "[수집 상태]",
+    ...renderTable(["Metric", "Value"], collectionRows),
     "",
-    "보유 상태",
+    "[보유 상태]",
+    ...renderTable(["Table", "Rows", "Size", "Oldest(KST)", "Newest(KST)"], retentionTableRows),
+    "",
+    "[Propagation TOP5]",
+    ...renderTable(["#", "Topic", "First Seen", "Regions", "Lag", "Conf", "XChk"], propagationTableRows),
+    "",
+    "Legend: XChk=community+news cross-check",
   ];
-
-  const retentionLines = retentionRows.map(
-    (row) =>
-      `- ${row.table}: rows ${formatCount(row.rowCount)} | size ${formatTableSize(row.sizeBytes)} | oldest ${formatIsoKst(row.oldestAt)} | newest ${formatIsoKst(row.newestAt)}`
-  );
-
-  if (mode === "full") {
-    lines.push(...retentionLines);
-  } else {
-    lines.push(...retentionLines.slice(0, 4));
-    lines.push(`- ... (${retentionRows.length - Math.min(retentionRows.length, 4)} more tables)`);
-  }
-
-  lines.push("", "Propagation TOP5");
-  if (topRows.length === 0) {
-    lines.push("- no qualified propagation topics");
-  } else {
-    for (const row of topRows) {
-      lines.push(
-        `- ${buildTopicLabel(row)} | first ${row.firstSeenRegion ?? "-"} ${formatIsoKst(row.firstSeenAt)} | regions ${formatCount(row.regionCount)} | ${row.lagSummary} | confidence ${row.confidencePct}%${row.crossChecked ? " | cross-check" : ""}`
-      );
-    }
-  }
 
   return enforceTelegramLimit(lines.join("\n"));
 }
@@ -610,14 +674,15 @@ async function main() {
       [
         `[GlobalPulse][PULSE][${mode.toUpperCase()}]`,
         `Generated(KST): ${formatIsoKst(generatedAt)}`,
-        "수집 상태",
-        "- postgres not configured",
         "",
-        "보유 상태",
-        "- postgres not configured",
+        "[수집 상태]",
+        ...renderTable(["Metric", "Value"], [["postgres", "not configured"]]),
         "",
-        "Propagation TOP5",
-        "- postgres not configured",
+        "[보유 상태]",
+        ...renderTable(["Table", "Rows", "Size", "Oldest(KST)", "Newest(KST)"], [["-", "-", "-", "-", "-"]]),
+        "",
+        "[Propagation TOP5]",
+        ...renderTable(["#", "Topic", "First Seen", "Regions", "Lag", "Conf", "XChk"], [["-", "postgres not configured", "-", "-", "-", "-", "-"]]),
       ].join("\n")
     );
     await writeReportSnapshot({
@@ -684,3 +749,4 @@ main().catch((error) => {
   console.error(`[pulse-report] ${error instanceof Error ? error.message : String(error)}`);
   process.exitCode = 1;
 });
+
