@@ -121,6 +121,51 @@ function toTopicEntitiesOrNull(
   return toTopicEntities(value) ?? null;
 }
 
+function uniqueText(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const output: string[] = [];
+
+  for (const value of values) {
+    const normalized = (value ?? "").normalize("NFKC").replace(/\s+/g, " ").trim();
+    if (!normalized) {
+      continue;
+    }
+
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    output.push(normalized);
+  }
+
+  return output;
+}
+
+function deriveSampleTitles(
+  sampleTitles: string[] | null | undefined,
+  representativeExcerpts:
+    | Array<{
+        title: string;
+        snippetFirstSentence: string;
+        url: string | null;
+        sourceId: string;
+        publishedAt: string | null;
+      }>
+    | null
+    | undefined,
+): string[] {
+  const curated = uniqueText(sampleTitles ?? []);
+  if (curated.length > 0) {
+    return curated;
+  }
+
+  return uniqueText(
+    (representativeExcerpts ?? []).flatMap((excerpt) => [excerpt.title, excerpt.snippetFirstSentence]),
+  ).slice(0, 5);
+}
+
 export interface TopicRow {
   id: number;
   region_id: string;
@@ -212,6 +257,7 @@ export interface GlobalTopicRow {
 }
 
 export function mapTopicRow(row: TopicRow): Topic {
+  const sampleTitles = deriveSampleTitles(row.sample_titles ?? [], row.representative_excerpts ?? null);
   const cleaned = cleanupTopicName({
     id: row.id,
     regionId: row.region_id,
@@ -219,7 +265,7 @@ export function mapTopicRow(row: TopicRow): Topic {
     nameEn: row.name_en,
     summaryKo: row.summary_ko,
     summaryEn: row.summary_en,
-    sampleTitles: row.sample_titles ?? [],
+    sampleTitles,
     keywords: row.keywords ?? [],
     entities: row.entities ?? [],
   });
@@ -231,7 +277,7 @@ export function mapTopicRow(row: TopicRow): Topic {
     nameEn: cleaned.displayEn,
     keywords: row.keywords ?? [],
     entities: entities ?? [],
-    sampleTitles: row.sample_titles ?? [],
+    sampleTitles,
   });
 
   const dominantSourceShare = toOptionalNumberOrNull(row.dominant_source_share);
@@ -243,7 +289,7 @@ export function mapTopicRow(row: TopicRow): Topic {
     nameEn: cleaned.displayEn,
     summaryKo: summaries.summaryKo,
     summaryEn: summaries.summaryEn,
-    sampleTitles: row.sample_titles ?? undefined,
+    sampleTitles: sampleTitles.length > 0 ? sampleTitles : undefined,
     keywords: row.keywords ?? [],
     sentiment: toNullableNumber(row.sentiment),
     category: toTopicCategoryOrNull(row.category),

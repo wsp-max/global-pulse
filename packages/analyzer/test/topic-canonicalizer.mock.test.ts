@@ -38,8 +38,8 @@ test("summarizeTopicsWithGemini falls back to lexical data when api key is missi
   const result = await summarizeTopicsWithGemini(topics, { regionId: "kr" });
 
   assert.equal(result.topics.length, 1);
-  assert.equal(result.topics[0]?.nameKo, "스트리트 파이터 관련 이슈");
-  assert.match(result.topics[0]?.nameEn ?? "", /Street Fighter(?: related issue)?/i);
+  assert.equal(result.topics[0]?.nameKo, "Street Fighter 6 tournament");
+  assert.equal(result.topics[0]?.nameEn, "Street Fighter 6 tournament");
   assert.equal(typeof result.topics[0]?.canonicalKey, "string");
   assert.equal(result.stats.requestCount, 0);
   assert.equal(result.stats.fallbackCount, 1);

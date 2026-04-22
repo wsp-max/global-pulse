@@ -67,6 +67,51 @@ const LOW_SIGNAL_TERMS = new Set([
   "\uc624\ub298",
   "\uc8fc\uc694",
   "\uad00\ub828",
+  "current",
+  "posts",
+  "post",
+  "coverage",
+  "mention",
+  "mentions",
+  "keyword",
+  "keywords",
+  "together",
+  "submitted",
+  "provided",
+  "comments",
+  "comment",
+  "read",
+  "reading",
+  "please",
+  "watch",
+  "watching",
+  "listen",
+  "listening",
+  "first",
+  "going",
+  "around",
+  "days",
+  "day",
+  "month",
+  "months",
+  "old",
+  "cost",
+  "years",
+  "year",
+  "experience",
+  "should",
+  "back",
+  "now",
+  "weekend",
+  "sub",
+  "pro",
+  "point",
+  "two",
+  "\ud604\uc7ac",
+  "\uac8c\uc2dc\uae00",
+  "\ud0a4\uc6cc\ub4dc",
+  "\ud568\uaed8",
+  "\uc5b8\uae09",
 ]);
 
 const ENGLISH_STOPWORDS = new Set([
@@ -91,6 +136,7 @@ const ENGLISH_STOPWORDS = new Set([
 const META_SUMMARY_PREFIXES_KO = [
   "\ud604\uc7ac \uc218\uc9d1\ub41c \ubc18\uc751",
   "\ud604\uc7ac \uc218\uc9d1\ub41c \uac8c\uc2dc\uae00",
+  "\ud604\uc7ac \uac8c\uc2dc\uae00",
   "\ub300\ud45c \uc81c\ubaa9",
   "\ud575\uc2ec \ud0a4\uc6cc\ub4dc",
   "\ud575\uc2ec \uc5d4\ud2f0\ud2f0",
@@ -429,17 +475,41 @@ function hasEventCue(value: string, language: TopicNameLanguage): boolean {
   return EN_EVENT_TERMS.some((term) => lowered.includes(term));
 }
 
+function stripGenericSuffix(value: string, language: TopicNameLanguage): string {
+  if (language === "ko") {
+    return value.replace(/\s+관련\s+(?:이슈|논의)$/u, "").trim();
+  }
+
+  return value.replace(/\s+related\s+(?:issue|discussion)$/i, "").trim();
+}
+
+function isGenericRelatedLabel(value: string, language: TopicNameLanguage): boolean {
+  const normalized = normalizeValue(value);
+  if (!normalized) {
+    return false;
+  }
+
+  if (language === "ko") {
+    return /.+\s+관련\s+(?:이슈|논의)$/u.test(normalized);
+  }
+
+  return /.+\s+related\s+(?:issue|discussion)$/i.test(normalized);
+}
+
 function buildGenericTopicLabel(value: string, language: TopicNameLanguage): string | null {
-  const normalized = stripTerminalPunctuation(keepDominantScript(normalizeTopicNameValue(value)));
+  const normalized = stripTerminalPunctuation(
+    stripGenericSuffix(keepDominantScript(normalizeTopicNameValue(value)), language),
+  );
   if (!normalized) {
     return null;
   }
 
-  if (language === "ko") {
-    return `${normalized} \uad00\ub828 \uc774\uc288`;
+  const clipped = clipByTokenWindow(normalized, language);
+  if (!clipped) {
+    return null;
   }
 
-  return `${toEnglishDisplayCase(normalized)} related issue`;
+  return language === "en" ? toEnglishDisplayCase(clipped) : clipped;
 }
 
 function clipByTokenWindow(value: string, language: TopicNameLanguage): string {
@@ -502,7 +572,10 @@ function buildNeutralTopicLabel(
   language: TopicNameLanguage,
   fallbackBase?: string | null,
 ): string | null {
-  const normalized = extractLeadClause(keepDominantScript(normalizeTopicNameValue(value)), language);
+  const normalized = extractLeadClause(
+    stripGenericSuffix(keepDominantScript(normalizeTopicNameValue(value)), language),
+    language,
+  );
   if (!normalized) {
     return fallbackBase ? buildGenericTopicLabel(fallbackBase, language) : null;
   }
@@ -553,13 +626,6 @@ export function isLowInfoTopicName(
     GLOBAL_TOPIC_PLACEHOLDER_REGEX.test(normalized)
   ) {
     return true;
-  }
-
-  if (language === "ko" && /.+\s+\uad00\ub828\s+(?:\uc774\uc288|\ub17c\uc758)$/u.test(normalized)) {
-    return false;
-  }
-  if (language === "en" && /.+\s+related\s+(?:issue|discussion)$/i.test(normalized)) {
-    return false;
   }
 
   const tokens = dedupeAdjacent(tokenize(normalized));
@@ -682,6 +748,10 @@ function shouldPreferCandidate(existing: string, candidate: string | null, langu
   }
   if (normalizedExisting.toLowerCase() === normalizedCandidate.toLowerCase()) {
     return false;
+  }
+
+  if (isGenericRelatedLabel(normalizedExisting, language) && !isLowInfoTopicName(normalizedCandidate, language)) {
+    return true;
   }
 
   const existingHasEvent = hasEventCue(normalizedExisting, language);

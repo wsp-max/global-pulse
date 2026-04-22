@@ -22,6 +22,20 @@ const PENDING_MARKERS = new Set([
   "pending summary",
 ]);
 
+const META_SUMMARY_PREFIXES_KO = [
+  "\ud604\uc7ac \uc218\uc9d1\ub41c \ubc18\uc751",
+  "\ud604\uc7ac \uc218\uc9d1\ub41c \uac8c\uc2dc\uae00",
+  "\ud604\uc7ac \uac8c\uc2dc\uae00",
+  "\ub300\ud45c \uc81c\ubaa9",
+];
+
+const META_SUMMARY_PREFIXES_EN = [
+  "current coverage mentions",
+  "current posts mention",
+  "a representative title references",
+  "a summary is being prepared from collected posts related to",
+];
+
 function normalizeText(value: string | null | undefined): string {
   return (value ?? "").replace(/\s+/g, " ").trim();
 }
@@ -35,7 +49,14 @@ function truncateText(value: string, maxLength: number): string {
 
 function isPendingSummary(value: string | null | undefined): boolean {
   const normalized = normalizeText(value).toLowerCase();
-  return !normalized || PENDING_MARKERS.has(normalized);
+  if (!normalized || PENDING_MARKERS.has(normalized)) {
+    return true;
+  }
+
+  return (
+    META_SUMMARY_PREFIXES_KO.some((prefix) => normalized.startsWith(prefix)) ||
+    META_SUMMARY_PREFIXES_EN.some((prefix) => normalized.startsWith(prefix))
+  );
 }
 
 function uniqueList(values: string[]): string[] {
@@ -75,8 +96,8 @@ function buildFromEntities(entities: TopicEntity[] | null | undefined): TopicSum
 
   const joined = labels.join(", ");
   return {
-    summaryKo: sanitizeTopicSummaryText(`\ud604\uc7ac \uc218\uc9d1\ub41c \ubc18\uc751\uc5d0\uc11c\ub294 ${joined}\uc774(\uac00) \ud568\uaed8 \uc5b8\uae09\ub41c\ub2e4.`, "ko"),
-    summaryEn: sanitizeTopicSummaryText(`Current coverage mentions ${joined} together in this issue.`, "en"),
+    summaryKo: sanitizeTopicSummaryText(joined, "ko"),
+    summaryEn: sanitizeTopicSummaryText(joined, "en"),
   };
 }
 
@@ -92,8 +113,8 @@ function buildFromKeywords(keywords: string[] | null | undefined): TopicSummaryP
 
   const joined = labels.join(" \u00b7 ");
   return {
-    summaryKo: sanitizeTopicSummaryText(`\ud604\uc7ac \uac8c\uc2dc\uae00\uc5d0\uc11c\ub294 ${joined} \ud0a4\uc6cc\ub4dc\uac00 \ud568\uaed8 \uc5b8\uae09\ub41c\ub2e4.`, "ko"),
-    summaryEn: sanitizeTopicSummaryText(`Current posts mention the keywords ${joined} together.`, "en"),
+    summaryKo: sanitizeTopicSummaryText(joined, "ko"),
+    summaryEn: sanitizeTopicSummaryText(joined, "en"),
   };
 }
 
@@ -109,8 +130,8 @@ function buildFromSampleTitle(sampleTitles: string[] | null | undefined): TopicS
 
   const compact = truncateText(first.replace(/^["'\u201C\u201D\u2018\u2019]+|["'\u201C\u201D\u2018\u2019]+$/gu, ""), 100);
   return {
-    summaryKo: sanitizeTopicSummaryText(`\ub300\ud45c \uc81c\ubaa9\uc5d0\uc11c\ub294 "${compact}" \ub0b4\uc6a9\uc774 \uc5b8\uae09\ub41c\ub2e4.`, "ko"),
-    summaryEn: sanitizeTopicSummaryText(`A representative title references "${compact}".`, "en"),
+    summaryKo: sanitizeTopicSummaryText(compact, "ko"),
+    summaryEn: sanitizeTopicSummaryText(compact, "en"),
   };
 }
 
@@ -119,16 +140,16 @@ function buildSafeFallback(nameKo?: string | null, nameEn?: string | null): Topi
   const enLabel = normalizeText(nameEn) || normalizeText(nameKo) || "this topic";
 
   return {
-    summaryKo: sanitizeTopicSummaryText(`${koLabel}\uacfc \uad00\ub828\ub41c \uac8c\uc2dc\uae00\uc744 \uae30\ubc18\uc73c\ub85c \uc694\uc57d\uc744 \uad6c\uc131 \uc911\uc774\ub2e4.`, "ko"),
-    summaryEn: sanitizeTopicSummaryText(`A summary is being prepared from collected posts related to ${enLabel}.`, "en"),
+    summaryKo: sanitizeTopicSummaryText(koLabel, "ko"),
+    summaryEn: sanitizeTopicSummaryText(enLabel, "en"),
   };
 }
 
 function buildFallbackSummaries(input: BuildTopicSummariesInput): TopicSummaryPair {
   return (
     buildFromEntities(input.entities) ??
-    buildFromKeywords(input.keywords) ??
     buildFromSampleTitle(input.sampleTitles) ??
+    buildFromKeywords(input.keywords) ??
     buildSafeFallback(input.nameKo, input.nameEn)
   );
 }
