@@ -117,7 +117,7 @@ export function PropagationPageClient({
   return (
     <main className="page-shell">
       <section>
-        <h1 className="section-title">PROPAGATION</h1>
+        <h1 className="section-title">확산 분석</h1>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">선택 source의 확산 흐름을 보고, 반대 source가 같은 배치에서 이를 확인하는지 함께 봅니다.</p>
       </section>
 
@@ -135,7 +135,7 @@ export function PropagationPageClient({
         <article className="card-panel p-4">
           <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-tertiary)]">routes</p>
           <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{primaryRouteCount.toLocaleString()}</p>
-          <p className="mt-2 text-xs text-[var(--text-secondary)]">선택 source confirmed routes</p>
+          <p className="mt-2 text-xs text-[var(--text-secondary)]">선택 source 확인 경로 수</p>
         </article>
         <article className="card-panel p-4">
           <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-tertiary)]">secondary</p>
@@ -145,7 +145,7 @@ export function PropagationPageClient({
         <article className="card-panel p-4">
           <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-tertiary)]">cross-check</p>
           <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{secondaryRouteCount.toLocaleString()}</p>
-          <p className="mt-2 text-xs text-[var(--text-secondary)]">반대 source confirmed routes</p>
+          <p className="mt-2 text-xs text-[var(--text-secondary)]">반대 source 확인 경로 수</p>
         </article>
       </section>
 

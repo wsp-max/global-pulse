@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import type { Topic } from "@global-pulse/shared";
@@ -167,9 +167,9 @@ export function CompareDrawer({
       aria-label="비교 드로어"
     >
       <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="font-display text-sm tracking-[0.12em] text-[var(--text-accent)]">COMPARE TOPICS</p>
-          <p className="text-xs text-[var(--text-secondary)]">최대 3개 토픽 시계열 오버레이</p>
+        <div className="min-w-0">
+          <p className="font-display text-sm tracking-[0.12em] text-[var(--text-accent)]">토픽 비교</p>
+          <p className="break-words text-xs text-[var(--text-secondary)]">최대 3개 토픽 시계열을 오버레이합니다.</p>
         </div>
         <button
           type="button"
@@ -182,11 +182,11 @@ export function CompareDrawer({
       </div>
 
       <div className="mt-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-        <p className="text-xs text-[var(--text-tertiary)]">Pinned Timelines</p>
+        <p className="text-xs text-[var(--text-tertiary)]">고정 토픽 타임라인</p>
         <div className="mt-2 h-32 rounded-md border border-[var(--border-default)] bg-[rgba(15,23,42,0.6)] p-2">
           {pinnedTopics.length === 0 ? (
             <div className="flex h-full items-center justify-center text-xs text-[var(--text-tertiary)]">
-              비교할 토픽을 선택하세요.
+              비교할 토픽을 선택해 주세요.
             </div>
           ) : (
             <svg viewBox="0 0 280 110" className="h-full w-full" role="img" aria-label="토픽 비교 시계열">
@@ -230,17 +230,17 @@ export function CompareDrawer({
                 <button
                   type="button"
                   onClick={() => topic.id && onTopicSelect?.(topic.id)}
-                  className="flex items-center gap-2 text-left text-[var(--text-primary)] hover:text-[var(--text-accent)]"
+                  className="min-w-0 flex items-center gap-2 text-left text-[var(--text-primary)] hover:text-[var(--text-accent)]"
                 >
                   <span
-                    className="inline-block h-2 w-2 rounded-full"
+                    className="inline-block h-2 w-2 shrink-0 rounded-full"
                     style={{ backgroundColor: LINE_COLORS[index % LINE_COLORS.length] }}
                     aria-hidden
                   />
                   <span className="truncate">{title}</span>
                 </button>
                 <div className="flex items-center gap-2">
-                  <span className="text-[var(--text-tertiary)]">{isLoading ? "loading" : `heat ${Math.round(topic.heatScore)}`}</span>
+                  <span className="text-[var(--text-tertiary)]">{isLoading ? "로딩 중" : `heat ${Math.round(topic.heatScore)}`}</span>
                   <button
                     type="button"
                     onClick={() => topic.id && onTogglePin(topic.id)}

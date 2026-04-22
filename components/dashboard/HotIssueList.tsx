@@ -53,9 +53,9 @@ export function HotIssueList({
   return (
     <section className="card-panel p-0">
       <div className="flex items-center justify-between border-b border-[var(--border-default)] px-4 py-3">
-        <div>
-          <h2 className="section-title">CONFIRMED GLOBAL ISSUES</h2>
-          <p className="mt-1 text-[11px] text-[var(--text-secondary)]">{scopeLabel} 기준 확산 근거를 통과한 이슈만 노출합니다.</p>
+        <div className="min-w-0">
+          <h2 className="section-title">확인된 글로벌 이슈</h2>
+          <p className="mt-1 break-words text-[11px] text-[var(--text-secondary)]">{scopeLabel} 기준 확산 근거를 통과한 이슈만 노출합니다.</p>
         </div>
       </div>
 
@@ -89,12 +89,12 @@ export function HotIssueList({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="card-title truncate">{title}</p>
+                      <p className="card-title min-w-0 break-words">{title}</p>
                       <span className={`rounded-full border px-2 py-0.5 text-[10px] ${badgeToneClass(badge.tone)}`}>
                         {badge.label}
                       </span>
                     </div>
-                    <p className="card-sub mt-1 line-clamp-1">{summary}</p>
+                    <p className="card-sub mt-1 line-clamp-2 break-words">{summary}</p>
                     <p className="meta-xs mt-1">{flags}</p>
                   </div>
                   <div className="shrink-0 text-right">

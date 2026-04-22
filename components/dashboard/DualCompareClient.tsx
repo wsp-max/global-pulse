@@ -45,14 +45,14 @@ export function DualCompareClient({
   return (
     <main className="page-shell">
       <section>
-        <h1 className="section-title">COMMUNITY VS NEWS</h1>
+        <h1 className="section-title">커뮤니티 vs 뉴스</h1>
       </section>
 
       <section className="grid gap-6 md:grid-cols-2">
         <article className="card-panel p-5">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--border-default)] px-2 py-1 text-xs text-[var(--text-secondary)]">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />
-            community
+            커뮤니티
           </div>
           <WorldHeatMap
             regions={communityRegions}
@@ -75,7 +75,7 @@ export function DualCompareClient({
         <article className="card-panel p-5">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--border-default)] px-2 py-1 text-xs text-[var(--text-secondary)]">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />
-            news
+            뉴스
           </div>
           <WorldHeatMap
             regions={newsRegions}

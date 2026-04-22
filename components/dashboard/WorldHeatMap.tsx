@@ -357,8 +357,8 @@ function FlowOverlay({
             {(showFlowLabels || isHoveredFlow) && (
               <g transform={`translate(${edge.mx} ${edge.my})`} style={{ pointerEvents: "none" }}>
                 <rect x={-34} y={-14} width={68} height={20} rx={10} fill="rgba(10,14,23,0.72)" stroke="none" />
-                <text textAnchor="middle" y={0} fontSize="10" fill={flowColor} className="font-mono">
-                  {`${toLagText(edge.lagMinutes)}${isFast ? " • active" : ""}`}
+                <text textAnchor="middle" y={0} fontSize="9" fill={flowColor} className="font-mono">
+                  {`${toLagText(edge.lagMinutes)}${isFast ? " • 이동" : ""}`}
                 </text>
               </g>
             )}
@@ -520,9 +520,9 @@ export function WorldHeatMap({
       <div className={`absolute inset-0 ${radialGlow}`} />
       <div className="relative">
         <div className="flex items-center justify-between gap-2">
-          <div>
-            <p className="font-display text-lg text-[var(--text-accent)]">WORLD HEAT MAP</p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">선택 source의 지역 heat와 confirmed propagation만 표시합니다.</p>
+          <div className="min-w-0">
+            <p className="font-display text-lg text-[var(--text-accent)]">세계 확산 지도</p>
+            <p className="mt-1 break-words text-xs text-[var(--text-secondary)]">선택 source의 지역 heat와 확인된 확산 경로만 표시합니다.</p>
           </div>
           <label className="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
             <input
@@ -531,7 +531,7 @@ export function WorldHeatMap({
               onChange={(event) => setShowFlowLabels(event.target.checked)}
               className="accent-[var(--text-accent)]"
             />
-            Flow labels
+            경로 라벨
           </label>
         </div>
 
@@ -656,7 +656,7 @@ export function WorldHeatMap({
 
             {flowEdges.length === 0 && (
               <div className="pointer-events-none absolute inset-x-0 bottom-2 text-center text-[10px] text-[var(--text-tertiary)]">
-                현재 배치에서 확인된 cross-region propagation이 없습니다.
+                현재 배치에서 확인된 리전 간 확산 경로가 없습니다.
               </div>
             )}
           </div>
@@ -675,7 +675,7 @@ export function WorldHeatMap({
 
           <details className="ml-auto text-[10px] text-[var(--text-secondary)]">
             <summary className="cursor-pointer select-none rounded-full border border-[var(--border-default)] px-2 py-1 hover:bg-[var(--bg-tertiary)]">
-              Heat Score ?
+              Heat Score 안내
             </summary>
             <p className="mt-2 max-w-sm rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)] p-2 leading-relaxed">
               Heat Score는 게시글/댓글/조회수와 소스 다양성을 반영한 관심도 지표입니다.
@@ -692,7 +692,7 @@ export function WorldHeatMap({
               .slice(0, 3)
               .map((topic) => (
                 <span key={`surging-${topic.id ?? topic.nameEn}`} className="rounded-full border border-red-500/40 bg-red-500/10 px-2 py-1 text-red-300">
-                  surging ·
+                  급상승 ·
                   {" "}
                   {getDisplayTopicName({
                     id: topic.id,

@@ -113,11 +113,16 @@ a {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--text-primary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 .card-sub {
   font-size: 0.75rem;
   color: var(--text-secondary);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .meta-xs {
@@ -159,6 +164,12 @@ a {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
+}
+
+.text-guard {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 @media (min-width: 1024px) {

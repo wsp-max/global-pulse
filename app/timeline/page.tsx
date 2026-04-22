@@ -52,7 +52,7 @@ export default function TimelinePage() {
   return (
     <main className="page-shell">
       <section>
-        <h1 className="section-title">TIMELINE</h1>
+        <h1 className="section-title">타임라인</h1>
         <p className="card-sub mt-2">글로벌 이슈가 리전별로 어떻게 확산되는지 시간순으로 확인합니다.</p>
       </section>
 

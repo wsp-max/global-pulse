@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import type { RegionDashboardRow } from "@/lib/types/api";
@@ -32,7 +32,7 @@ export function RegionExplorer({ regions, topGlobalTopicIds = new Set<number>(),
       {active.map((region) => (
         <article key={region.id} className="card-panel p-0">
           <header className="flex items-center justify-between border-b border-[var(--border-default)] px-4 py-3">
-            <div>
+            <div className="min-w-0">
               <Link
                 href={`/region/${region.id}`}
                 className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--text-accent)]"
@@ -40,11 +40,11 @@ export function RegionExplorer({ regions, topGlobalTopicIds = new Set<number>(),
                 <span aria-hidden>{region.flagEmoji}</span>
                 {region.nameKo}
               </Link>
-              <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+              <p className="mt-1 break-words text-[11px] text-[var(--text-secondary)]">
                 총 heat {Math.round(region.totalHeatScore ?? 0).toLocaleString()} · {Math.min(region.topTopics.length, TOPICS_PER_REGION)}개 이슈
               </p>
             </div>
-            <span className="text-[11px] text-[var(--text-secondary)]">Region Explorer</span>
+            <span className="text-[11px] text-[var(--text-secondary)]">리전 탐색</span>
           </header>
 
           <div className="grid gap-px bg-[var(--border-default)] md:grid-cols-2 xl:grid-cols-3">
@@ -92,7 +92,7 @@ export function RegionExplorer({ regions, topGlobalTopicIds = new Set<number>(),
                           </span>
                         ) : null}
                       </p>
-                      <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)]">
+                      <h3 className="mt-1 line-clamp-2 break-words text-sm font-semibold leading-snug text-[var(--text-primary)]">
                         {cleaned.displayKo || cleaned.displayEn}
                       </h3>
                     </div>
@@ -101,7 +101,7 @@ export function RegionExplorer({ regions, topGlobalTopicIds = new Set<number>(),
                     </span>
                   </div>
 
-                  <p className="line-clamp-2 text-[12px] leading-snug text-[var(--text-secondary)]">{summary}</p>
+                  <p className="line-clamp-2 break-words text-[12px] leading-snug text-[var(--text-secondary)]">{summary}</p>
 
                   <div className="mt-auto flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
                     <span>posts {topic.postCount.toLocaleString()}</span>

@@ -42,7 +42,7 @@ function toTimestamp(value: string | undefined): number {
 
 function toLagText(start: number, end: number): string {
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
-    return "same window";
+    return "동일 구간";
   }
   const lagMinutes = Math.max(1, Math.round((end - start) / 60_000));
   if (lagMinutes < 60) {
@@ -116,19 +116,19 @@ export function PropagationStream({ regions, globalTopics, onTopicSelect }: Prop
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(56,189,248,0.16),transparent_40%)]" />
       <div className="relative">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p className="font-display text-sm tracking-[0.22em] text-[var(--text-accent)]">SIGNAL PROPAGATION</p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">Origin → destination lanes based on propagation timeline.</p>
+          <div className="min-w-0">
+            <p className="font-display text-sm tracking-[0.22em] text-[var(--text-accent)]">신호 확산 흐름</p>
+            <p className="mt-1 break-words text-xs text-[var(--text-secondary)]">전파 타임라인 기반으로 시작 리전에서 도착 리전까지의 흐름을 보여줍니다.</p>
           </div>
           <span className="rounded-full border border-[var(--border-default)] bg-[rgba(15,23,42,0.7)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
-            {lanes.length > 0 ? `Active Lanes ${lanes.length}` : "No Active Propagation"}
+            {lanes.length > 0 ? `활성 경로 ${lanes.length}` : "활성 확산 경로 없음"}
           </span>
         </div>
 
         <div className="mt-4 space-y-3">
           {lanes.length === 0 ? (
             <div className="rounded-xl border border-[var(--border-default)] bg-[rgba(15,23,42,0.72)] p-4 text-xs text-[var(--text-secondary)]">
-              No shared cross-region propagation detected in the current batch.
+              현재 배치에서 리전 간 공통 확산 경로가 확인되지 않았습니다.
             </div>
           ) : (
             lanes.map((lane) => {
@@ -144,7 +144,7 @@ export function PropagationStream({ regions, globalTopics, onTopicSelect }: Prop
                       )}
                     </p>
                     <p className="font-mono text-[11px] text-[var(--text-secondary)]">
-                      Heat {Math.round(lane.heat)} / {lane.lagText}
+                      heat {Math.round(lane.heat)} / {lane.lagText}
                     </p>
                   </div>
 
@@ -152,7 +152,7 @@ export function PropagationStream({ regions, globalTopics, onTopicSelect }: Prop
                     {lane.originLabel} → {lane.currentLabel}
                     {(lane.acceleration > 0 && lane.velocity >= maxVelocity * 0.9) && (
                       <span className="ml-2 rounded-full border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-300">
-                        🔥 surging
+                        🔥 급상승
                       </span>
                     )}
                   </div>

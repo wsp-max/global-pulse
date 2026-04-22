@@ -65,15 +65,15 @@ export function RegionBoard({
   return (
     <section className="card-panel p-0">
       <header className="flex items-center justify-between border-b border-[var(--border-default)] px-4 py-3">
-        <div>
-          <h2 className="section-title">REGION BOARD</h2>
-          <p className="mt-1 text-[11px] text-[var(--text-secondary)]">선택 source 기준 상위 지역 이슈와 반대 source 확인 신호를 함께 보여줍니다.</p>
+        <div className="min-w-0">
+          <h2 className="section-title">리전 보드</h2>
+          <p className="mt-1 break-words text-[11px] text-[var(--text-secondary)]">선택 source 기준 상위 지역 이슈와 반대 source 확인 신호를 함께 보여줍니다.</p>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[11px] text-[var(--text-secondary)]">각 지역 상위 {TOPICS_PER_REGION}개 토픽</span>
           {exploreHref ? (
             <Link href={exploreHref} className="text-[11px] text-[var(--text-accent)] hover:underline">
-              Region Explorer →
+              리전 탐색 →
             </Link>
           ) : null}
         </div>

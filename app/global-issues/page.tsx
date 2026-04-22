@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
@@ -137,10 +137,10 @@ export default function GlobalIssuesPage() {
     <main className="page-shell">
       <section className="card-panel p-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="section-title mt-0">GLOBAL ISSUES</h1>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">
-              짧은 레이블 대신 의미형 이슈명과 요약을 기준으로 글로벌 흐름과 지역별 이슈를 탐색합니다.
+          <div className="min-w-0">
+            <h1 className="section-title mt-0">글로벌 이슈</h1>
+            <p className="mt-2 break-words text-sm text-[var(--text-secondary)]">
+              라이브 배치 기준으로 글로벌 이슈 흐름과 리전별 신호를 함께 탐색합니다.
             </p>
           </div>
 
@@ -156,7 +156,7 @@ export default function GlobalIssuesPage() {
                     : "border-[var(--border-default)] text-[var(--text-secondary)]"
                 }`}
               >
-                {item === "global" ? "Global Overview" : "Region Explorer"}
+                {item === "global" ? "글로벌 보기" : "리전 탐색"}
               </button>
             ))}
 
@@ -186,7 +186,7 @@ export default function GlobalIssuesPage() {
 
       {hasError ? (
         <EmptyState
-          title={view === "regions" ? "지역 이슈를 불러오지 못했습니다." : "글로벌 이슈를 불러오지 못했습니다."}
+          title={view === "regions" ? "리전 이슈를 불러오지 못했습니다." : "글로벌 이슈를 불러오지 못했습니다."}
           description="잠시 후 다시 시도해 주세요."
           className="mb-4"
         />
@@ -216,8 +216,8 @@ export default function GlobalIssuesPage() {
           />
         ) : (
           <EmptyState
-            title="표시할 지역 이슈가 없습니다."
-            description="선택한 scope와 기간에 해당하는 지역별 토픽이 아직 집계되지 않았습니다."
+            title="표시할 리전 이슈가 없습니다."
+            description="선택한 scope와 기간에 해당하는 리전 토픽이 아직 집계되지 않았습니다."
           />
         )
       ) : null}

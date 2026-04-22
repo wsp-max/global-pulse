@@ -26,7 +26,7 @@ export function GlobalIssuePanel({ topics, maxItems = 8, onTopicSelect }: Global
 
   return (
     <section className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-card)]">
-      <h2 className="section-title">Global Issues</h2>
+      <h2 className="section-title">글로벌 이슈</h2>
 
       {rows.length === 0 ? (
         <div className="mt-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 text-sm text-[var(--text-secondary)]">
@@ -57,7 +57,7 @@ export function GlobalIssuePanel({ topics, maxItems = 8, onTopicSelect }: Global
 
             const card = (
               <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 transition-colors hover:border-[var(--border-hover)]">
-                <p className="card-title">
+                <p className="card-title break-words">
                   {cleaned.displayKo}
                   {cleaned.isFallback ? (
                     <span className="ml-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-300">
@@ -73,7 +73,7 @@ export function GlobalIssuePanel({ topics, maxItems = 8, onTopicSelect }: Global
                     })
                     .join(" · ")}
                 </p>
-                <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-[var(--text-secondary)]">{summary}</p>
+                <p className="mt-1 line-clamp-2 break-words text-[12px] leading-snug text-[var(--text-secondary)]">{summary}</p>
 
                 <div className="mt-3 space-y-1.5">
                   {sentimentEntries.slice(0, 3).map(([regionId, value]) => {

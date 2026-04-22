@@ -142,7 +142,7 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
             summaryKo: globalTopic.summaryKo,
             summaryEn: globalTopic.summaryEn,
           })
-        : "Global Topic")
+        : "글로벌 토픽")
     : (topic
         ? getDisplayTopicName({
             id: topic.id,
@@ -155,7 +155,7 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
             keywords: topic.keywords,
             entities: topic.entities ?? [],
           })
-        : "Regional Topic");
+        : "리전 토픽");
 
   const subtitle = isGlobal
     ? buildNarrativeSummary({
@@ -203,9 +203,9 @@ export function TopicPageClient({ topicId }: TopicPageClientProps) {
   return (
     <main className="page-shell">
       <header className="card-panel p-5">
-        <p className="section-title">TOPIC DETAIL</p>
-        <h1 className="text-xl font-semibold text-[var(--text-primary)]">{title}</h1>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">{subtitle}</p>
+        <p className="section-title">토픽 상세</p>
+        <h1 className="break-words text-xl font-semibold text-[var(--text-primary)]">{title}</h1>
+        <p className="mt-2 break-words text-sm leading-relaxed text-[var(--text-secondary)]">{subtitle}</p>
       </header>
 
       <section className="card-panel p-5">

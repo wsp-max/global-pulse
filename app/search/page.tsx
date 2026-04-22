@@ -43,7 +43,7 @@ export default function SearchPage() {
   return (
     <main className="page-shell">
       <section>
-        <h1 className="section-title">SEARCH</h1>
+        <h1 className="section-title">검색</h1>
         <p className="card-sub mt-2">{t("search.description")}</p>
       </section>
 

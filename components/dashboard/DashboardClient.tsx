@@ -413,18 +413,18 @@ export function DashboardClient({
           return (
             <article key={`story-${topic.id ?? topic.nameEn}`} className="card-panel p-4">
               <div className="flex items-start justify-between gap-2">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{displayName}</p>
+                <p className="min-w-0 break-words text-sm font-semibold text-[var(--text-primary)]">{displayName}</p>
                 <span className={`rounded-full border px-2 py-0.5 text-[10px] ${stageToneClass(stage)}`}>
                   {toNarrativeStageLabel(stage)}
                 </span>
               </div>
-              <p className="mt-1 text-[11px] text-[var(--text-secondary)]">{topic.nameEn}</p>
-              <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[var(--text-secondary)]">{summary}</p>
-              <p className="mt-2 text-xs text-[var(--text-primary)]">{buildStoryRouteText(topic)}</p>
+              <p className="mt-1 line-clamp-1 break-words text-[11px] text-[var(--text-secondary)]">{topic.nameEn}</p>
+              <p className="mt-2 line-clamp-2 break-words text-xs leading-relaxed text-[var(--text-secondary)]">{summary}</p>
+              <p className="mt-2 line-clamp-2 break-words text-xs text-[var(--text-primary)]">{buildStoryRouteText(topic)}</p>
               <span className="mt-2 inline-flex rounded-full border border-[var(--border-default)] px-2 py-0.5 text-[10px] text-[var(--text-secondary)]">
                 {comparisonBadge.label}
               </span>
-              <div className="mt-3 flex items-center gap-2">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   disabled={!leadTopic}
@@ -455,7 +455,7 @@ export function DashboardClient({
 
       <section className="grid gap-3 md:grid-cols-4">
         <article className="card-panel p-4">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-tertiary)]">signal quality</p>
+          <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-tertiary)]">quality</p>
           <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">확산 근거 통과</p>
           <p className="mt-2 text-xs text-[var(--text-secondary)]">{qualifiedPrimaryGlobalTopics.length.toLocaleString()}개 이슈</p>
         </article>

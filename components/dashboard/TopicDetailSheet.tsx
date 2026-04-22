@@ -147,9 +147,9 @@ export function TopicDetailSheet({ topicId, onClose, isWatched = false, onToggle
         className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 shadow-[var(--shadow-card)]"
       >
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">{resolved.title}</h2>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="break-words text-lg font-semibold text-[var(--text-primary)]">{resolved.title}</h2>
               <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${lifecycleClass(lifecycleStage)}`}>
                 {lifecycleStage}
               </span>
@@ -164,7 +164,7 @@ export function TopicDetailSheet({ topicId, onClose, isWatched = false, onToggle
                 </span>
               ) : null}
             </div>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">{resolved.subtitle}</p>
+            <p className="mt-2 break-words text-sm text-[var(--text-secondary)]">{resolved.subtitle}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -178,7 +178,7 @@ export function TopicDetailSheet({ topicId, onClose, isWatched = false, onToggle
                   : "border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
               } disabled:cursor-not-allowed disabled:opacity-50`}
             >
-              🔔 {isWatched ? "Watching" : "Watch"}
+              🔔 {isWatched ? "추적 중" : "추적"}
             </button>
             <button
               ref={closeButtonRef}

@@ -130,7 +130,7 @@ export function PropagationEventList({ topics, scope, onTopicSelect }: Propagati
                     {"  "}
                     {formatLagKorean(row.lagMinutes)}
                   </p>
-                  <p className="mt-1 line-clamp-1 text-xs text-[var(--text-primary)]">{row.topicName}</p>
+                  <p className="mt-1 line-clamp-2 break-words text-xs text-[var(--text-primary)]">{row.topicName}</p>
                   <p className="mt-1 text-[11px] text-[var(--text-secondary)]">신뢰도 {Math.round(row.confidence * 100)}%</p>
                 </button>
               </li>
