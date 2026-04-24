@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Global Pulse source recovery verify twice daily
+
+[Timer]
+OnCalendar=*-*-* 03,15:00:00
+RandomizedDelaySec=240
+Persistent=true
+Unit=global-pulse-source-recovery.service
+
+[Install]
+WantedBy=timers.target

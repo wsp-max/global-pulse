@@ -10,7 +10,6 @@ import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 interface RegionCardProps {
   region: RegionDashboardRow;
-  maxRegionHeatScore?: number;
   scope?: DashboardScope;
   onTopicSelect?: (topicId: number) => void;
   onToggleWatch?: (topic: Topic) => void;
@@ -70,18 +69,14 @@ function buildMiniSparkline(values: number[] | null | undefined): string {
     .join(" ");
 }
 
-function resolveCoverage(
-  totalHeatScore: number,
-  maxRegionHeatScore: number,
-): { label: "Low" | "Mid" | "High"; className: string } {
-  const ratio = maxRegionHeatScore > 0 ? totalHeatScore / maxRegionHeatScore : 0;
-  if (ratio < 0.2) {
+function resolveCoverage(coveragePct: number): { label: "Low" | "Mid" | "High"; className: string } {
+  if (coveragePct < 50) {
     return {
       label: "Low",
       className: "border-slate-500/40 text-slate-300",
     };
   }
-  if (ratio < 0.6) {
+  if (coveragePct < 80) {
     return {
       label: "Mid",
       className: "border-sky-500/40 text-sky-300",
@@ -95,7 +90,6 @@ function resolveCoverage(
 
 export function RegionCard({
   region,
-  maxRegionHeatScore = 1,
   scope = "community",
   onTopicSelect,
   onToggleWatch,
@@ -113,7 +107,15 @@ export function RegionCard({
     scope === "news" &&
     region.topTopics.some((topic) => topic.sourceIds.some((sourceId) => PORTAL_SOURCE_ID_SET.has(sourceId)));
   const isPartiallyStale = region.dataState === "partially-stale";
-  const coverage = resolveCoverage(region.totalHeatScore, maxRegionHeatScore);
+  const collectedSources = region.sourceHealth?.collectedSources24h ?? region.sourcesActive;
+  const activeSources = region.sourceHealth?.activeSources ?? region.sourcesTotal;
+  const topicSources = region.sourceHealth?.topicSources ?? 0;
+  const disabledSources = region.sourceHealth?.disabledSources ?? 0;
+  const optionalBlockedSources = region.sourceHealth?.optionalBlockedSources ?? 0;
+  const collectionCoveragePct =
+    region.sourceHealth?.collectionCoveragePct ??
+    (activeSources > 0 ? Number(((collectedSources / activeSources) * 100).toFixed(1)) : 0);
+  const coverage = resolveCoverage(collectionCoveragePct);
 
   return (
     <article
@@ -277,10 +279,17 @@ export function RegionCard({
       </div>
       <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--text-tertiary)]">
         <span>활성 토픽 {region.activeTopics}</span>
-        <span>
-          소스 {region.sourcesActive}/{region.sourcesTotal}
-        </span>
+        <span>수집 {collectedSources}/{activeSources}</span>
       </div>
+      <div className="mt-1 flex items-center justify-between text-[11px] text-[var(--text-tertiary)]">
+        <span>토픽 반영 {topicSources}/{activeSources}</span>
+        <span>비활성 {disabledSources}</span>
+      </div>
+      {optionalBlockedSources > 0 ? (
+        <div className="mt-2 inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">
+          Reddit 선택 신호 blocked {optionalBlockedSources}
+        </div>
+      ) : null}
     </article>
   );
 }

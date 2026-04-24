@@ -1,6 +1,7 @@
 import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
 import type { Pool } from "pg";
 import { Logger } from "./logger";
+import { isOptionalSourceId } from "./source-scaling";
 
 export type CollectorRunStatus = "success" | "failed";
 
@@ -45,13 +46,62 @@ function getPostgresPoolOrNull(): Pool | null {
   }
 }
 
-export function toCollectorRunErrorCode(value: string | null | undefined): string | null {
+export function toCollectorRunErrorCode(value: string | null | undefined, sourceId?: string): string | null {
   if (!value) {
     return null;
   }
-  const token = value.trim().split(/[\s:|]+/, 1)[0] ?? "";
-  const normalized = token.toLowerCase().slice(0, 40);
-  return normalized || null;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.includes("auto_disabled_consecutive_failures")) {
+    return "auto_disabled_consecutive_failures";
+  }
+
+  const statusMatch =
+    normalized.match(/status code\s*(\d{3})/i) ??
+    normalized.match(/\bhttp[_\s-]?(\d{3})\b/i);
+  if (statusMatch?.[1]) {
+    const code = statusMatch[1];
+    if (sourceId && isOptionalSourceId(sourceId) && (code === "403" || code === "429")) {
+      return "reddit_blocked";
+    }
+    if (code === "403") return "http_403";
+    if (code === "429") return "http_429";
+    return `http_${code}`;
+  }
+
+  if (
+    normalized.includes("no rss items parsed") ||
+    normalized.includes("no ranking entries parsed") ||
+    normalized.includes("no ranking entry parsed")
+  ) {
+    return "no_items_parsed";
+  }
+  if (normalized.includes("timeout after") || normalized.includes("timed out")) {
+    return "timeout";
+  }
+  if (
+    normalized.includes("robots disallow") ||
+    normalized.includes("robots.txt disallow") ||
+    (normalized.includes("robots") && normalized.includes("disallow"))
+  ) {
+    return "robots_disallow";
+  }
+  if (
+    sourceId &&
+    isOptionalSourceId(sourceId) &&
+    (normalized.includes("reddit listing failure") ||
+      normalized.includes("listing failure") ||
+      normalized.includes("forbidden") ||
+      normalized.includes("too many requests"))
+  ) {
+    return "reddit_blocked";
+  }
+
+  const token = normalized.split(/[\s:|]+/, 1)[0] ?? "";
+  return token.slice(0, 40) || null;
 }
 
 function isAutoDisabledMarker(value: string | null | undefined): boolean {
@@ -62,6 +112,10 @@ function isAutoDisabledMarker(value: string | null | undefined): boolean {
 }
 
 async function autoDisableOnConsecutiveFailures(pool: Pool, sourceId: string): Promise<boolean> {
+  if (isOptionalSourceId(sourceId)) {
+    return false;
+  }
+
   const recentRuns = await pool.query<{ status: string }>(
     `
     select status
@@ -180,4 +234,3 @@ export async function recordCollectorRun(input: CollectorRunInput): Promise<Coll
     };
   }
 }
-

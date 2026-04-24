@@ -3,6 +3,7 @@ import { SOURCES, getAllRegions } from "@global-pulse/shared";
 import { mapTopicRow, type TopicRow } from "../_shared/mappers";
 import { getPostgresPoolOrNull } from "../_shared/postgres-server";
 import { withApiRequestLog } from "../_shared/route-logger";
+import { fetchSourceHealthRecords, summarizeRegionSourceHealth, type SourceHealthRecord } from "@/lib/source-health";
 
 type Scope = "community" | "news" | "mixed";
 
@@ -72,6 +73,8 @@ async function getRegions(request: Request) {
   const postgres = getPostgresPoolOrNull();
 
   if (postgres) {
+    const allSourceHealth = await fetchSourceHealthRecords(postgres);
+    const sourceHealthById = new Map(allSourceHealth.map((row) => [row.id, row]));
     const regionRows = await Promise.all(
       regions.map(async (region) => {
         const sourceIds = sourceIdsForRegionByScope(region.id, scope);
@@ -81,8 +84,6 @@ async function getRegions(request: Request) {
             active_topics: number | string | null;
             avg_sentiment: number | string | null;
             top_keywords: string[] | null;
-            sources_active: number | string | null;
-            sources_total: number | string | null;
             snapshot_at: string | null;
           }>(
             `
@@ -91,8 +92,6 @@ async function getRegions(request: Request) {
               active_topics,
               avg_sentiment,
               top_keywords,
-              sources_active,
-              sources_total,
               snapshot_at
             from region_snapshots
             where region_id = $1
@@ -158,7 +157,7 @@ async function getRegions(request: Request) {
             total_heat_score: number | string | null;
             active_topics: number | string | null;
             avg_sentiment: number | string | null;
-            sources_active: number | string | null;
+            topic_source_ids: string[] | null;
           }>(
             `
             with filtered as (
@@ -177,7 +176,7 @@ async function getRegions(request: Request) {
               coalesce(sum(heat_score), 0) as total_heat_score,
               count(*) as active_topics,
               coalesce(avg(sentiment), 0) as avg_sentiment,
-              coalesce(count(distinct sid), 0) as sources_active
+              array_remove(array_agg(distinct sid), null) as topic_source_ids
             from filtered
             left join lateral unnest(coalesce(source_ids, '{}'::text[])) as src(sid) on true
             `,
@@ -187,6 +186,13 @@ async function getRegions(request: Request) {
 
         const snapshot = snapshotResult.rows[0];
         const metrics = metricsResult.rows[0];
+        const topicSourceIds = (metrics?.topic_source_ids ?? []).filter(
+          (item): item is string => typeof item === "string" && item.length > 0,
+        );
+        const scopedSourceHealthRows = sourceIds
+          .map((sourceId) => sourceHealthById.get(sourceId))
+          .filter((item): item is SourceHealthRecord => Boolean(item));
+        const sourceHealth = summarizeRegionSourceHealth(region.id, scopedSourceHealthRows, topicSourceIds);
         const dedupeByLabel = (rows: TopicRow[]): TopicRow[] => {
           const seen = new Set<string>();
           const output: TopicRow[] = [];
@@ -304,8 +310,9 @@ async function getRegions(request: Request) {
           activeTopics: Number(hasMetrics ? metrics?.active_topics ?? 0 : 0),
           avgSentiment: Number(hasMetrics ? metrics?.avg_sentiment ?? 0 : 0),
           topKeywords: hasMetrics && enrichedTopTopics.length > 0 ? deriveTopKeywords(enrichedTopTopics) : [],
-          sourcesActive: Number(hasMetrics ? metrics?.sources_active ?? 0 : 0),
-          sourcesTotal: Number(snapshot?.sources_total ?? sourceIds.length),
+          sourcesActive: sourceHealth.collectedSources24h,
+          sourcesTotal: sourceHealth.activeSources,
+          sourceHealth,
           snapshotAt: snapshot?.snapshot_at ?? selectedBatchCreatedAt ?? null,
           dataState,
           supplementedFromHistory,
@@ -334,6 +341,20 @@ async function getRegions(request: Request) {
       topKeywords: [],
       sourcesActive: 0,
       sourcesTotal: 0,
+      sourceHealth: {
+        regionId: region.id,
+        activeSources: 0,
+        collectedSources24h: 0,
+        topicSources: 0,
+        collectionCoveragePct: 0,
+        topicCoveragePct: 0,
+        degradedActiveSources: 0,
+        disabledSources: 0,
+        autoDisabledSources: 0,
+        optionalSources: 0,
+        optionalHealthySources: 0,
+        optionalBlockedSources: 0,
+      },
       scope,
       topTopics: [],
     })),
@@ -343,10 +364,4 @@ async function getRegions(request: Request) {
     lastUpdated: new Date().toISOString(),
   });
 }
-
-
-
-
-
-
 

@@ -37,7 +37,11 @@ function toPositiveInteger(value: number, fallback: number): number {
 }
 
 export function isRedditSourceId(sourceId: string): boolean {
-  return sourceId.trim().toLowerCase().startsWith("reddit");
+  return sourceId.trim().toLowerCase().startsWith("reddit_");
+}
+
+export function isOptionalSourceId(sourceId: string): boolean {
+  return isRedditSourceId(sourceId);
 }
 
 export function resolveCollectorDisableRedditDefault(): boolean {

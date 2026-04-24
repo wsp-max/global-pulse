@@ -1,0 +1,21 @@
+[Unit]
+Description=Global Pulse Optional Reddit Canary Collector
+After=network-online.target global-pulse-web.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/srv/projects/project2/global-pulse
+Environment=NODE_ENV=production
+EnvironmentFile=-/etc/global-pulse/global-pulse.env
+ExecStart=/usr/bin/env bash -lc 'SOURCES="${REDDIT_CANARY_SOURCES:-reddit_worldnews,reddit_japan,reddit_korea,reddit_canada,reddit_nigeria}"; if command -v pnpm >/dev/null 2>&1; then pnpm tsx scripts/run-collector.ts --optional-only --force --source "$SOURCES"; else npx tsx scripts/run-collector.ts --optional-only --force --source "$SOURCES"; fi'
+StandardOutput=journal
+StandardError=journal
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

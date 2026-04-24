@@ -71,6 +71,8 @@ sudo mkdir -p /etc/global-pulse
 sudo install -m 644 infra/systemd/global-pulse-web.service /etc/systemd/system/global-pulse-web.service
 sudo install -m 644 infra/systemd/global-pulse-collector.service /etc/systemd/system/global-pulse-collector.service
 sudo install -m 644 infra/systemd/global-pulse-collector.timer /etc/systemd/system/global-pulse-collector.timer
+sudo install -m 644 infra/systemd/global-pulse-reddit-collector.service /etc/systemd/system/global-pulse-reddit-collector.service
+sudo install -m 644 infra/systemd/global-pulse-reddit-collector.timer /etc/systemd/system/global-pulse-reddit-collector.timer
 sudo install -m 644 infra/systemd/global-pulse-analyzer.service /etc/systemd/system/global-pulse-analyzer.service
 sudo install -m 644 infra/systemd/global-pulse-analyzer.timer /etc/systemd/system/global-pulse-analyzer.timer
 sudo install -m 644 infra/systemd/global-pulse-snapshot.service /etc/systemd/system/global-pulse-snapshot.service
@@ -81,6 +83,8 @@ sudo install -m 644 infra/systemd/global-pulse-backup.service /etc/systemd/syste
 sudo install -m 644 infra/systemd/global-pulse-backup.timer /etc/systemd/system/global-pulse-backup.timer
 sudo install -m 644 infra/systemd/global-pulse-source-verify.service /etc/systemd/system/global-pulse-source-verify.service
 sudo install -m 644 infra/systemd/global-pulse-source-verify.timer /etc/systemd/system/global-pulse-source-verify.timer
+sudo install -m 644 infra/systemd/global-pulse-source-recovery.service /etc/systemd/system/global-pulse-source-recovery.service
+sudo install -m 644 infra/systemd/global-pulse-source-recovery.timer /etc/systemd/system/global-pulse-source-recovery.timer
 sudo install -m 644 infra/systemd/global-pulse-report.service /etc/systemd/system/global-pulse-report.service
 sudo install -m 644 infra/systemd/global-pulse-report.timer /etc/systemd/system/global-pulse-report.timer
 sudo install -m 644 infra/systemd/global-pulse-report-snapshot.service /etc/systemd/system/global-pulse-report-snapshot.service
@@ -96,11 +100,13 @@ fi
 sudo systemctl daemon-reload
 sudo systemctl enable --now global-pulse-web.service
 sudo systemctl enable --now global-pulse-collector.timer
+sudo systemctl enable --now global-pulse-reddit-collector.timer
 sudo systemctl enable --now global-pulse-analyzer.timer
 sudo systemctl enable --now global-pulse-snapshot.timer
 sudo systemctl enable --now global-pulse-cleanup.timer
 sudo systemctl enable --now global-pulse-backup.timer
 sudo systemctl enable --now global-pulse-source-verify.timer
+sudo systemctl enable --now global-pulse-source-recovery.timer
 sudo systemctl enable --now global-pulse-report.timer
 sudo systemctl enable --now global-pulse-report-snapshot.timer
 sudo systemctl restart global-pulse-web.service

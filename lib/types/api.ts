@@ -31,11 +31,54 @@ export interface RegionDashboardRow extends Region {
   topKeywords: string[];
   sourcesActive: number;
   sourcesTotal: number;
+  sourceHealth?: RegionSourceHealthSummary;
   snapshotAt?: string | null;
   scope?: DashboardScope;
   dataState?: "fresh" | "stale" | "empty" | "partially-stale";
   supplementedFromHistory?: number;
   topTopics: Topic[];
+}
+
+export type SourceHealthStatus =
+  | "healthy"
+  | "stale"
+  | "degraded"
+  | "disabled"
+  | "auto_disabled"
+  | "optional_healthy"
+  | "optional_stale"
+  | "optional_degraded"
+  | "optional_blocked";
+
+export interface SourceHealthSummary {
+  totalSources: number;
+  activeSources: number;
+  collectedSources24h: number;
+  collectionCoveragePct: number;
+  degradedActiveSources: number;
+  disabledSources: number;
+  autoDisabledSources: number;
+  healthySources: number;
+  staleSources: number;
+  optionalSources: number;
+  optionalHealthySources: number;
+  optionalBlockedSources: number;
+  recoveryNeededSources: number;
+}
+
+export interface RegionSourceHealthSummary {
+  regionId: string;
+  activeSources: number;
+  collectedSources24h: number;
+  topicSources: number;
+  collectionCoveragePct: number;
+  topicCoveragePct: number;
+  degradedActiveSources: number;
+  disabledSources: number;
+  autoDisabledSources: number;
+  optionalSources: number;
+  optionalHealthySources: number;
+  optionalBlockedSources: number;
 }
 
 export interface RegionsApiResponse {

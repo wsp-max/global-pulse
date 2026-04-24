@@ -1,199 +1,160 @@
+import Link from "next/link";
 import { REGIONS } from "@global-pulse/shared";
 import type { Pool } from "pg";
 import { getPostgresPoolOrNull } from "@/app/api/_shared/postgres-server";
+import {
+  buildSourceErrorGroups,
+  fetchSourceHealthRecords,
+  summarizeRegionSourceHealth,
+  summarizeSourceHealth,
+  type SourceHealthRecord,
+} from "@/lib/source-health";
+import type { SourceHealthStatus } from "@/lib/types/api";
 
 export const dynamic = "force-dynamic";
 
-interface SourceHealthRow {
-  id: string;
-  region_id: string;
-  name: string;
-  type: "community" | "sns" | "news";
-  is_active: boolean;
-  last_error: string | null;
-  last_scraped_at: string | null;
-  recent_count: number | string | null;
-  total_runs_24h: number | string | null;
-  success_runs_24h: number | string | null;
-  p95_latency_ms_24h: number | string | null;
-  recent_error_code: string | null;
-  recent_error_message: string | null;
+interface AdminHealthPageProps {
+  searchParams: Promise<{ status?: string }>;
 }
 
-interface SourceHealthView {
-  id: string;
-  regionId: string;
-  regionName: string;
-  name: string;
-  type: "community" | "sns" | "news";
-  isActive: boolean;
-  recentCount24h: number;
-  totalRuns24h: number;
-  successRuns24h: number;
-  successRate24h: number;
-  p95LatencyMs24h: number | null;
-  lastScrapedAt: string | null;
-  lastError: string | null;
-  recentErrorCode: string | null;
-  recentErrorMessage: string | null;
-  isDegraded: boolean;
-  isAutoDisabled: boolean;
-}
+type StatusFilter = "all" | "healthy" | "stale" | "degraded" | "auto-disabled" | "optional-blocked";
 
 interface AdminHealthPayload {
-  summary: {
-    total: number;
-    healthy: number;
-    degraded: number;
-    autoDisabled: number;
-  };
-  degradedByCode: Array<{
-    errorCode: string;
-    count: number;
+  summary: ReturnType<typeof summarizeSourceHealth>;
+  degradedByCode: ReturnType<typeof buildSourceErrorGroups>;
+  rows: SourceHealthRecord[];
+  lowCoverageRegions: Array<{
+    regionId: string;
+    regionName: string;
+    coveragePct: number;
+    collected: number;
+    active: number;
+    disabled: number;
   }>;
-  degradedRows: SourceHealthView[];
 }
 
-function toNumber(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
+function parseFilter(value: string | undefined): StatusFilter {
+  if (value === "healthy" || value === "stale" || value === "degraded" || value === "auto-disabled" || value === "optional-blocked") {
     return value;
   }
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return parsed;
+  return "all";
+}
+
+function matchesFilter(row: SourceHealthRecord, filter: StatusFilter): boolean {
+  if (filter === "all") return true;
+  if (filter === "healthy") return row.status === "healthy";
+  if (filter === "stale") return row.status === "stale";
+  if (filter === "degraded") return row.status === "degraded";
+  if (filter === "auto-disabled") return row.status === "auto_disabled";
+  return row.status === "optional_blocked";
+}
+
+function statusBadgeClass(status: SourceHealthStatus): string {
+  switch (status) {
+    case "healthy":
+    case "optional_healthy":
+      return "border-emerald-500/40 bg-emerald-500/10 text-emerald-200";
+    case "stale":
+    case "optional_stale":
+      return "border-amber-500/40 bg-amber-500/10 text-amber-200";
+    case "degraded":
+    case "optional_degraded":
+      return "border-orange-500/40 bg-orange-500/10 text-orange-200";
+    case "auto_disabled":
+    case "disabled":
+      return "border-red-500/40 bg-red-500/10 text-red-200";
+    case "optional_blocked":
+      return "border-violet-500/40 bg-violet-500/10 text-violet-200";
+    default:
+      return "border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-secondary)]";
+  }
+}
+
+function suggestedAction(row: SourceHealthRecord): string {
+  if (row.status === "auto_disabled") {
+    return "대체 source 검토 후 수동 재활성";
+  }
+  if (row.status === "disabled") {
+    return "운영 정책 확인 후 복구 후보 등록";
+  }
+  if (row.status === "optional_blocked") {
+    return "옵션 신호 blocked 유지, KPI 제외";
+  }
+  if (row.status === "degraded") {
+    if (row.recentErrorCode === "http_429") {
+      return "요청 간격 확대 및 백오프 적용";
     }
+    if (row.recentErrorCode === "http_403") {
+      return "엔드포인트/접근 정책 점검";
+    }
+    if (row.recentErrorCode === "no_items_parsed") {
+      return "파서 셀렉터 점검";
+    }
+    return "최근 실패 원인 점검 및 재시도";
   }
-  return 0;
+  if (row.status === "stale") {
+    return "최신 성공은 있으나 24h 데이터 없음";
+  }
+  return "-";
 }
 
-function normalizeErrorCode(error: string | null): string {
-  if (!error) {
-    return "none";
+function formatDate(value: string | null | undefined): string {
+  if (!value) {
+    return "-";
   }
-  const token = error.trim().split(/[\s:|]+/, 1)[0] ?? "unknown";
-  return token.toLowerCase().slice(0, 40);
-}
-
-function toPercent(successRuns: number, totalRuns: number): number {
-  if (totalRuns <= 0) {
-    return 0;
+  const parsed = new Date(value);
+  if (!Number.isFinite(parsed.getTime())) {
+    return "-";
   }
-  return Number(((successRuns / totalRuns) * 100).toFixed(1));
-}
-
-function isAutoDisabledMarker(error: string | null): boolean {
-  return Boolean(error && error.startsWith("auto_disabled_consecutive_failures"));
+  return parsed.toLocaleString("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
 async function fetchHealth(pool: Pool): Promise<AdminHealthPayload> {
-  const regionNameById = new Map<string, string>(REGIONS.map((region) => [region.id, region.nameEn]));
+  const rows = await fetchSourceHealthRecords(pool);
+  const summary = summarizeSourceHealth(rows);
+  const degradedByCode = buildSourceErrorGroups(rows);
+  const regionMeta = new Map<string, string>(REGIONS.map((region) => [region.id, region.nameKo]));
+  const regionRows = new Map<string, SourceHealthRecord[]>();
 
-  const { rows } = await pool.query<SourceHealthRow>(
-    `
-    with recent_posts as (
-      select source_id, count(*) as recent_count
-      from raw_posts
-      where collected_at >= now() - interval '24 hours'
-      group by source_id
-    ),
-    run_stats as (
-      select
-        source_id,
-        count(*) as total_runs_24h,
-        count(*) filter (where status = 'success') as success_runs_24h,
-        percentile_cont(0.95) within group (order by latency_ms) as p95_latency_ms_24h
-      from collector_runs
-      where started_at >= now() - interval '24 hours'
-      group by source_id
-    ),
-    latest_failure as (
-      select distinct on (source_id)
-        source_id,
-        error_code as recent_error_code,
-        error_message as recent_error_message
-      from collector_runs
-      where started_at >= now() - interval '24 hours'
-        and status <> 'success'
-      order by source_id, finished_at desc
-    )
-    select
-      s.id,
-      s.region_id,
-      s.name,
-      s.type,
-      s.is_active,
-      s.last_error,
-      s.last_scraped_at,
-      coalesce(rp.recent_count, 0) as recent_count,
-      coalesce(rs.total_runs_24h, 0) as total_runs_24h,
-      coalesce(rs.success_runs_24h, 0) as success_runs_24h,
-      rs.p95_latency_ms_24h,
-      lf.recent_error_code,
-      lf.recent_error_message
-    from sources s
-    left join recent_posts rp on rp.source_id = s.id
-    left join run_stats rs on rs.source_id = s.id
-    left join latest_failure lf on lf.source_id = s.id
-    order by s.region_id asc, s.id asc
-    `,
-  );
-
-  const views = rows.map<SourceHealthView>((row) => {
-    const recentCount24h = toNumber(row.recent_count);
-    const totalRuns24h = toNumber(row.total_runs_24h);
-    const successRuns24h = toNumber(row.success_runs_24h);
-    const successRate24h = toPercent(successRuns24h, totalRuns24h);
-    const p95Value = row.p95_latency_ms_24h === null ? null : toNumber(row.p95_latency_ms_24h);
-    const p95LatencyMs24h = p95Value === null || p95Value <= 0 ? null : Math.round(p95Value);
-    const recentErrorCode = row.recent_error_code ?? (row.last_error ? normalizeErrorCode(row.last_error) : null);
-    const recentErrorMessage = row.recent_error_message ?? row.last_error;
-    const autoDisabled = isAutoDisabledMarker(row.last_error);
-    const isDegraded = recentCount24h < 1 || !!recentErrorCode || (totalRuns24h > 0 && successRate24h < 70);
-
-    return {
-      id: row.id,
-      regionId: row.region_id,
-      regionName: regionNameById.get(row.region_id) ?? row.region_id.toUpperCase(),
-      name: row.name,
-      type: row.type,
-      isActive: row.is_active,
-      recentCount24h,
-      totalRuns24h,
-      successRuns24h,
-      successRate24h,
-      p95LatencyMs24h,
-      lastScrapedAt: row.last_scraped_at,
-      lastError: row.last_error,
-      recentErrorCode,
-      recentErrorMessage,
-      isDegraded,
-      isAutoDisabled: autoDisabled,
-    };
-  });
-
-  const degradedRows = views.filter((row) => row.isDegraded);
-  const grouped = new Map<string, number>();
-  for (const row of degradedRows) {
-    const code = row.recentCount24h < 1 ? "no_data_24h" : row.recentErrorCode ?? "unknown";
-    grouped.set(code, (grouped.get(code) ?? 0) + 1);
+  for (const row of rows) {
+    const current = regionRows.get(row.regionId) ?? [];
+    current.push(row);
+    regionRows.set(row.regionId, current);
   }
 
+  const lowCoverageRegions = [...regionRows.entries()]
+    .map(([regionId, stats]) => {
+      const summarized = summarizeRegionSourceHealth(regionId, stats, []);
+      return {
+        regionId,
+        regionName: regionMeta.get(regionId) ?? regionId.toUpperCase(),
+        coveragePct: summarized.collectionCoveragePct,
+        collected: summarized.collectedSources24h,
+        active: summarized.activeSources,
+        disabled: summarized.disabledSources,
+      };
+    })
+    .filter((row) => row.active > 0 && row.coveragePct < 50)
+    .sort((left, right) => left.coveragePct - right.coveragePct || right.disabled - left.disabled)
+    .slice(0, 12);
+
   return {
-    summary: {
-      total: views.length,
-      healthy: views.length - degradedRows.length,
-      degraded: degradedRows.length,
-      autoDisabled: views.filter((row) => row.isAutoDisabled).length,
-    },
-    degradedByCode: [...grouped.entries()]
-      .map(([errorCode, count]) => ({ errorCode, count }))
-      .sort((left, right) => right.count - left.count),
-    degradedRows,
+    summary,
+    degradedByCode,
+    rows,
+    lowCoverageRegions,
   };
 }
 
-export default async function AdminHealthPage() {
+export default async function AdminHealthPage({ searchParams }: AdminHealthPageProps) {
+  const { status: statusParam } = await searchParams;
+  const filter = parseFilter(statusParam);
   const pool = getPostgresPoolOrNull();
 
   if (!pool) {
@@ -208,6 +169,17 @@ export default async function AdminHealthPage() {
   }
 
   const payload = await fetchHealth(pool);
+  const regionNameById = new Map<string, string>(REGIONS.map((region) => [region.id, region.nameEn]));
+  const filteredRows = payload.rows.filter((row) => matchesFilter(row, filter));
+
+  const filterItems: Array<{ id: StatusFilter; label: string }> = [
+    { id: "all", label: "all" },
+    { id: "healthy", label: "healthy" },
+    { id: "stale", label: "stale" },
+    { id: "degraded", label: "degraded" },
+    { id: "auto-disabled", label: "auto-disabled" },
+    { id: "optional-blocked", label: "optional-blocked" },
+  ];
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6">
@@ -220,25 +192,60 @@ export default async function AdminHealthPage() {
           Open Tuning
         </a>
       </div>
-      <p className="mt-1 text-xs text-[var(--text-tertiary)]">/pulse/admin/health · 최근 24시간 수집 상태</p>
+      <p className="mt-1 text-xs text-[var(--text-tertiary)]">최근 24시간 기준 source 상태</p>
 
-      <section className="mt-4 grid gap-3 sm:grid-cols-4">
+      <section className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3">
-          <p className="text-xs text-[var(--text-tertiary)]">Total Sources</p>
-          <p className="mt-1 font-mono text-xl">{payload.summary.total}</p>
+          <p className="text-xs text-[var(--text-tertiary)]">Active regions</p>
+          <p className="mt-1 font-mono text-xl">{REGIONS.length}/{REGIONS.length}</p>
         </article>
         <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3">
-          <p className="text-xs text-[var(--text-tertiary)]">Healthy</p>
-          <p className="mt-1 font-mono text-xl text-emerald-300">{payload.summary.healthy}</p>
+          <p className="text-xs text-[var(--text-tertiary)]">수집 커버리지</p>
+          <p className="mt-1 font-mono text-xl text-emerald-300">{payload.summary.collectionCoveragePct}%</p>
         </article>
         <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3">
-          <p className="text-xs text-[var(--text-tertiary)]">Degraded</p>
-          <p className="mt-1 font-mono text-xl text-amber-300">{payload.summary.degraded}</p>
+          <p className="text-xs text-[var(--text-tertiary)]">복구 필요</p>
+          <p className="mt-1 font-mono text-xl text-amber-300">{payload.summary.recoveryNeededSources}</p>
         </article>
         <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3">
-          <p className="text-xs text-[var(--text-tertiary)]">Auto Disabled</p>
-          <p className="mt-1 font-mono text-xl text-red-300">{payload.summary.autoDisabled}</p>
+          <p className="text-xs text-[var(--text-tertiary)]">Reddit optional blocked</p>
+          <p className="mt-1 font-mono text-xl text-violet-300">{payload.summary.optionalBlockedSources}</p>
         </article>
+      </section>
+
+      {payload.lowCoverageRegions.length > 0 ? (
+        <section className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+          <h2 className="text-sm font-semibold text-amber-100">최소 커버리지 미달 지역</h2>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            {payload.lowCoverageRegions.map((row) => (
+              <span key={row.regionId} className="rounded-full border border-amber-500/40 px-2 py-1">
+                {row.regionName} {row.collected}/{row.active} ({row.coveragePct}%)
+              </span>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="mt-5 rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3">
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">상태 필터</h2>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+          {filterItems.map((item) => {
+            const active = filter === item.id;
+            return (
+              <Link
+                key={item.id}
+                href={item.id === "all" ? "/admin/health" : `/admin/health?status=${item.id}`}
+                className={`rounded-full border px-2 py-1 ${
+                  active
+                    ? "border-[var(--text-accent)] bg-[var(--text-accent)]/10 text-[var(--text-accent)]"
+                    : "border-[var(--border-default)] text-[var(--text-secondary)]"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
       </section>
 
       <section className="mt-5 rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3">
@@ -254,58 +261,46 @@ export default async function AdminHealthPage() {
       </section>
 
       <section className="mt-5 rounded-xl border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Degraded sources</h2>
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Source details</h2>
         <div className="mt-3 overflow-x-auto">
           <table className="min-w-full text-xs">
             <thead>
               <tr className="border-b border-[var(--border-default)] text-left text-[var(--text-tertiary)]">
                 <th className="px-2 py-2">Source</th>
                 <th className="px-2 py-2">Region</th>
-                <th className="px-2 py-2">Type</th>
-                <th className="px-2 py-2">Runs (24h)</th>
-                <th className="px-2 py-2">Success %</th>
-                <th className="px-2 py-2">P95 Latency</th>
+                <th className="px-2 py-2">Status</th>
+                <th className="px-2 py-2">Latest Run</th>
+                <th className="px-2 py-2">Latest Success</th>
                 <th className="px-2 py-2">Posts (24h)</th>
-                <th className="px-2 py-2">Recent Error</th>
-                <th className="px-2 py-2">Last Scraped</th>
+                <th className="px-2 py-2">Success %</th>
+                <th className="px-2 py-2">Disabled Reason</th>
+                <th className="px-2 py-2">Suggested Action</th>
               </tr>
             </thead>
             <tbody>
-              {payload.degradedRows.map((row) => (
+              {filteredRows.map((row) => (
                 <tr key={row.id} className="border-b border-[var(--border-default)]/60">
+                  <td className="px-2 py-2">{row.name} ({row.id})</td>
+                  <td className="px-2 py-2">{regionNameById.get(row.regionId) ?? row.regionId.toUpperCase()}</td>
                   <td className="px-2 py-2">
-                    <div className="flex items-center gap-2">
-                      <span>{row.name} ({row.id})</span>
-                      {row.isAutoDisabled ? (
-                        <span className="rounded-full border border-red-500/50 bg-red-500/10 px-2 py-0.5 text-[10px] text-red-300">
-                          auto-disabled
-                        </span>
-                      ) : null}
-                    </div>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] ${statusBadgeClass(row.status)}`}>
+                      {row.status}
+                    </span>
                   </td>
-                  <td className="px-2 py-2">{row.regionName}</td>
-                  <td className="px-2 py-2">{row.type}</td>
-                  <td className="px-2 py-2 font-mono">{row.totalRuns24h}</td>
-                  <td className="px-2 py-2 font-mono">{row.successRate24h}%</td>
-                  <td className="px-2 py-2 font-mono">
-                    {row.p95LatencyMs24h === null ? "-" : `${row.p95LatencyMs24h}ms`}
-                  </td>
+                  <td className="px-2 py-2 font-mono">{row.latestRunStatus ?? "-"}</td>
+                  <td className="px-2 py-2 font-mono">{formatDate(row.latestSuccessAt)}</td>
                   <td className="px-2 py-2 font-mono">{row.recentCount24h}</td>
+                  <td className="px-2 py-2 font-mono">{row.successRate24h}%</td>
                   <td className="px-2 py-2">
-                    <span className="font-mono">{row.recentErrorCode ?? "-"}</span>
-                    {row.recentErrorMessage ? (
-                      <p className="mt-0.5 max-w-[320px] truncate text-[10px] text-[var(--text-tertiary)]">
-                        {row.recentErrorMessage}
-                      </p>
-                    ) : null}
+                    <span className="font-mono">{row.recentErrorCode ?? row.lastError ?? "-"}</span>
                   </td>
-                  <td className="px-2 py-2 font-mono text-[11px]">{row.lastScrapedAt ?? "-"}</td>
+                  <td className="px-2 py-2">{suggestedAction(row)}</td>
                 </tr>
               ))}
-              {payload.degradedRows.length === 0 ? (
+              {filteredRows.length === 0 ? (
                 <tr>
                   <td className="px-2 py-3 text-[var(--text-secondary)]" colSpan={9}>
-                    모든 소스가 healthy 상태입니다.
+                    선택한 필터에 해당하는 source가 없습니다.
                   </td>
                 </tr>
               ) : null}

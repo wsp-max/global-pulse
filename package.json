@@ -47,6 +47,7 @@
     "report:pulse-job": "tsx scripts/pulse-report-job.ts",
     "ops:source:apply-policy": "tsx scripts/apply-source-policy.ts",
     "ops:source-verify": "tsx scripts/run-source-verify.ts",
+    "ops:source-recovery": "tsx scripts/run-source-recovery.ts",
     "ops:community:verify-feeds": "tsx scripts/verify-community-feeds.ts",
     "ops:news:verify-feeds": "tsx scripts/verify-news-feeds.ts",
     "ops:gemini:verify": "tsx scripts/verify-gemini-pipeline.ts",

@@ -1,0 +1,24 @@
+[Unit]
+Description=Global Pulse Auto-Disabled Source Recovery Verify
+After=network-online.target global-pulse-collector.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/srv/projects/project2/global-pulse
+Environment=NODE_ENV=production
+Environment=SOURCE_RECOVERY_ENABLED=1
+Environment=SOURCE_RECOVERY_LIMIT=24
+Environment=SOURCE_RECOVERY_BATCH_SIZE=12
+EnvironmentFile=-/etc/global-pulse/global-pulse.env
+ExecStart=/usr/bin/env bash -lc 'if command -v pnpm >/dev/null 2>&1; then pnpm tsx scripts/run-source-recovery.ts; else npx tsx scripts/run-source-recovery.ts; fi'
+StandardOutput=journal
+StandardError=journal
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

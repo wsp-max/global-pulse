@@ -43,8 +43,7 @@ import { ReseteraScraper } from "./scrapers/us/resetera";
 import { SlashdotScraper } from "./scrapers/us/slashdot";
 import { Logger } from "./utils/logger";
 import {
-  isRedditSourceId,
-  resolveCollectorDisableRedditDefault,
+  isOptionalSourceId,
   resolveCollectorSourceIntervalMinutes,
 } from "./utils/source-scaling";
 import { persistScraperResult } from "./utils/supabase-storage";
@@ -232,7 +231,8 @@ async function run(): Promise<void> {
   const sourceArg = parseArg("--source");
   const forceRun = process.argv.includes("--force") || process.env.COLLECTOR_FORCE_RUN === "true";
   const allowInactive = process.argv.includes("--allow-inactive");
-  const disableRedditDefault = resolveCollectorDisableRedditDefault();
+  const includeOptional = process.argv.includes("--include-optional");
+  const optionalOnly = process.argv.includes("--optional-only");
   const sourceFilter = sourceArg
     ? sourceArg
         .split(",")
@@ -377,6 +377,10 @@ async function run(): Promise<void> {
     .map((source) => createNewsScraper(source))
     .filter((scraper): scraper is NonNullable<ReturnType<typeof createNewsScraper>> => Boolean(scraper));
   const candidateScrapers = [...communityAndSnsScrapers, ...newsScrapers];
+  const sourceById = new Map(SOURCES.map((source) => [source.id, source]));
+  const optionalSkippedByPolicy = new Set<string>();
+  const disabledSkippedByDefault = new Set<string>();
+  const explicitSourceMode = sourceFilter.length > 0;
 
   if (sourceFilter.length > 0) {
     const sourceIdSet = new Set<string>(SOURCES.map((source) => source.id));
@@ -387,12 +391,12 @@ async function run(): Promise<void> {
   }
 
   const scrapers = candidateScrapers.filter((scraper) => {
-    const source = SOURCES.find((item) => item.id === scraper.sourceId);
+    const source = sourceById.get(scraper.sourceId);
     if (!source) {
       return false;
     }
 
-    if (sourceFilter.length > 0 && !sourceFilter.includes(source.id)) {
+    if (explicitSourceMode && !sourceFilter.includes(source.id)) {
       return false;
     }
 
@@ -408,11 +412,17 @@ async function run(): Promise<void> {
       return false;
     }
 
-    if (sourceFilter.length === 0 && disableRedditDefault && isRedditSourceId(source.id)) {
+    if (optionalOnly && !isOptionalSourceId(source.id)) {
       return false;
     }
 
-    if (sourceFilter.length === 0 && DISABLED_SOURCE_ID_SET.has(source.id)) {
+    if (!explicitSourceMode && !includeOptional && !optionalOnly && isOptionalSourceId(source.id)) {
+      optionalSkippedByPolicy.add(source.id);
+      return false;
+    }
+
+    if (!explicitSourceMode && DISABLED_SOURCE_ID_SET.has(source.id)) {
+      disabledSkippedByDefault.add(source.id);
       return false;
     }
 
@@ -441,30 +451,27 @@ async function run(): Promise<void> {
     return;
   }
 
+  const intervalSkippedCount = Math.max(0, scrapers.length - scheduledScrapers.length);
   Logger.info(
     `Filters => region: ${regionFilter ?? "all"}, type: ${typeFilter ?? "all"}, source: ${
       sourceFilter.length > 0 ? sourceFilter.join(",") : "all"
-    }, force: ${forceRun}, allowInactive: ${allowInactive}, redditDefaultDisabled: ${
-      sourceFilter.length === 0 ? disableRedditDefault : false
-    }`,
+    }, force: ${forceRun}, allowInactive: ${allowInactive}, includeOptional: ${includeOptional}, optionalOnly: ${optionalOnly}`,
   );
-  if (sourceFilter.length === 0) {
-    if (disableRedditDefault) {
-      const disabledRedditSources = SOURCES.filter((source) => isRedditSourceId(source.id)).map((source) => source.id);
-      if (disabledRedditSources.length > 0) {
-        Logger.info(`Reddit sources skipped by default policy: ${disabledRedditSources.join(", ")}`);
-      }
-    }
-    const disabledByDefault = SOURCES.filter((source) => DISABLED_SOURCE_ID_SET.has(source.id)).map(
-      (source) => source.id,
-    );
-    if (disabledByDefault.length > 0) {
-      Logger.info(`Disabled-by-default sources skipped: ${disabledByDefault.join(", ")}`);
-    }
+  if (!explicitSourceMode && optionalSkippedByPolicy.size > 0) {
+    Logger.info(`Optional sources skipped in default collector: ${optionalSkippedByPolicy.size}`);
   }
-  Logger.info(`Starting collection for ${scheduledScrapers.length} source(s).`);
+  if (!explicitSourceMode && disabledSkippedByDefault.size > 0) {
+    Logger.info(`Disabled-by-default sources skipped: ${disabledSkippedByDefault.size}`);
+  }
+  Logger.info(
+    `Batch summary => scheduled=${scheduledScrapers.length}, dueIntervalSkipped=${intervalSkippedCount}, optionalSkipped=${optionalSkippedByPolicy.size}, disabledSkipped=${disabledSkippedByDefault.size}`,
+  );
 
   const results: ScraperResult[] = [];
+  let successCount = 0;
+  let failedCount = 0;
+  let autoDisabledCount = 0;
+  const successByRegion = new Map<string, Set<string>>();
 
   for (const scraper of scheduledScrapers) {
     const startedAtIso = new Date().toISOString();
@@ -494,9 +501,21 @@ async function run(): Promise<void> {
       fetchedCount: result.posts.length,
       insertedCount: persistence.insertedCount,
       latencyMs: Math.max(1, Date.now() - startedAtMs),
-      errorCode: toCollectorRunErrorCode(runErrorMessage),
+      errorCode: toCollectorRunErrorCode(runErrorMessage, scraper.sourceId),
       errorMessage: runErrorMessage,
     });
+
+    if (collectorStatus === "success") {
+      successCount += 1;
+      const sourceMeta = sourceById.get(scraper.sourceId);
+      if (sourceMeta) {
+        const set = successByRegion.get(sourceMeta.regionId) ?? new Set<string>();
+        set.add(scraper.sourceId);
+        successByRegion.set(sourceMeta.regionId, set);
+      }
+    } else {
+      failedCount += 1;
+    }
 
     if (!persistence.persisted) {
       Logger.warn(
@@ -505,6 +524,7 @@ async function run(): Promise<void> {
     }
 
     if (runOutcome.autoDisabled) {
+      autoDisabledCount += 1;
       Logger.warn(`[${scraper.sourceId}] auto-disabled in sources after 3 consecutive failures`);
     }
 
@@ -516,8 +536,15 @@ async function run(): Promise<void> {
     Logger.info(`[${scraper.sourceId}] collected ${result.posts.length} posts.`);
   }
 
-  const successCount = results.filter((r) => r.success).length;
-  Logger.info(`Collection finished: ${successCount}/${results.length} succeeded.`);
+  const regionSuccessSummary = [...successByRegion.entries()]
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .map(([regionId, sourceIds]) => `${regionId}:${sourceIds.size}`)
+    .join(", ");
+  Logger.info(
+    `Collection finished: scheduled=${scheduledScrapers.length}, success=${successCount}, failed=${failedCount}, autoDisabled=${autoDisabledCount}${
+      regionSuccessSummary ? `, regionSuccess={${regionSuccessSummary}}` : ""
+    }`,
+  );
 }
 
 run().catch((error) => {

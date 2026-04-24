@@ -127,6 +127,7 @@ async function seedWithPostgres(pool: Pool): Promise<void> {
     "is_active",
   ];
   const sourceBatch = buildBatchInsert("sources", sourceColumns, sourceRows);
+  // Keep runtime on/off state in DB (auto-disabled or operator override) when metadata is reseeded.
   await pool.query(
     `
     ${sourceBatch.sql}
@@ -144,8 +145,7 @@ async function seedWithPostgres(pool: Pool): Promise<void> {
       trust_tier = excluded.trust_tier,
       language = excluded.language,
       feed_kind = excluded.feed_kind,
-      metro_hint = excluded.metro_hint,
-      is_active = excluded.is_active
+      metro_hint = excluded.metro_hint
     `,
     sourceBatch.values,
   );

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Global Pulse optional Reddit canary every 3 hours
+
+[Timer]
+OnCalendar=*-*-* 0/3:00:00
+RandomizedDelaySec=120
+Persistent=true
+Unit=global-pulse-reddit-collector.service
+
+[Install]
+WantedBy=timers.target
