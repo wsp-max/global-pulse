@@ -36,6 +36,7 @@ interface TopicEvidence {
 interface LexicalMetrics {
   sharedTokens: number;
   nameSharedTokens: number;
+  keywordSharedTokens: number;
   keywordJaccard: number;
   entitySharedTokens: number;
   hasExactKeywordPhrase: boolean;
@@ -44,7 +45,8 @@ interface LexicalMetrics {
 }
 
 const NON_WORD_REGEX = /[\p{P}\p{S}\s]+/gu;
-const PLACEHOLDER_CANONICAL_REGEX = /^(globaltopic|topic|regiontopic|regionaltopic)\d*$/i;
+const PLACEHOLDER_CANONICAL_REGEX =
+  /^(globaltopic\d*|topic\d*|regiontopic\d*|regionaltopic\d*|region[a-z]{2,3}topic\d+)$/i;
 const URL_LIKE_REGEX = /(https?:\/\/|www\.|\/r\/|submitted by|please read)/i;
 const GENERIC_TOKENS = new Set([
   "news",
@@ -65,7 +67,33 @@ const GENERIC_TOKENS = new Set([
   "provided",
   "keywords",
   "current",
+  "read",
+  "source",
+  "sources",
+  "submitted",
+  "login",
+  "register",
+  "diario",
+  "consulta",
+  "consultas",
+  "click",
+  "more",
 ]);
+
+export function isPlaceholderCanonicalKey(value: string | null | undefined): boolean {
+  const normalized = normalizeTopicNameValue(value);
+  if (!normalized || URL_LIKE_REGEX.test(normalized)) {
+    return true;
+  }
+
+  const collapsed = normalized
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(NON_WORD_REGEX, "")
+    .trim();
+
+  return !collapsed || PLACEHOLDER_CANONICAL_REGEX.test(collapsed);
+}
 
 function normalizeCanonicalKey(value: string | null | undefined): string | null {
   const normalized = normalizeTopicNameValue(value);
@@ -82,7 +110,7 @@ function normalizeCanonicalKey(value: string | null | undefined): string | null 
   if (
     !collapsed ||
     collapsed.length < 5 ||
-    PLACEHOLDER_CANONICAL_REGEX.test(collapsed) ||
+    isPlaceholderCanonicalKey(normalized) ||
     (isLowInfoTopicName(normalized, "ko") && isLowInfoTopicName(normalized, "en"))
   ) {
     return null;
@@ -174,9 +202,9 @@ function buildTopicEvidence(topic: ScopeOverlapCandidate): TopicEvidence {
   }
 
   for (const keyword of topic.keywords ?? []) {
-    const normalizedKeyword = normalizeToken(keyword);
-    if (normalizedKeyword && normalizedKeyword.includes(" ")) {
-      keywordPhrases.add(normalizedKeyword);
+    const keywordPhrase = tokenize(keyword).join(" ");
+    if (keywordPhrase && keywordPhrase.includes(" ")) {
+      keywordPhrases.add(keywordPhrase);
     }
     addTokens(keywordTokens, [keyword]);
   }
@@ -221,6 +249,7 @@ function jaccard(left: Set<string>, right: Set<string>): number {
 function computeLexicalMetrics(left: TopicEvidence, right: TopicEvidence): LexicalMetrics {
   const sharedTokens = intersectionCount(left.tokens, right.tokens);
   const nameSharedTokens = intersectionCount(left.nameTokens, right.nameTokens);
+  const keywordSharedTokens = intersectionCount(left.keywordTokens, right.keywordTokens);
   const entitySharedTokens = intersectionCount(left.entityTokens, right.entityTokens);
   const keywordJaccard = jaccard(left.keywordTokens, right.keywordTokens);
   let hasExactKeywordPhrase = false;
@@ -244,15 +273,15 @@ function computeLexicalMetrics(left: TopicEvidence, right: TopicEvidence): Lexic
   return {
     sharedTokens,
     nameSharedTokens,
+    keywordSharedTokens,
     keywordJaccard,
     entitySharedTokens,
     hasExactKeywordPhrase,
     score,
     hasEvidence:
-      sharedTokens >= 2 ||
-      nameSharedTokens >= 1 ||
+      nameSharedTokens >= 2 ||
+      keywordSharedTokens >= 1 ||
       entitySharedTokens >= 1 ||
-      keywordJaccard >= 0.18 ||
       hasExactKeywordPhrase,
   };
 }
@@ -318,11 +347,26 @@ export function detectScopeOverlaps(
         Boolean(communityEvidence.canonical) && communityEvidence.canonical === newsEvidence.canonical;
       const cosine = cosineSimilarity(communityEvidence.embedding, newsEvidence.embedding);
       const lexical = computeLexicalMetrics(communityEvidence, newsEvidence);
-      const passesCanonicalMatch = canonicalMatch && (cosine >= 0.55 || lexical.hasEvidence);
-      const passesStrongCosine = cosine >= autoCosineThreshold;
-      const passesAssistedCosine = cosine >= cosineThreshold && lexical.hasEvidence;
+      const passesCanonicalMatch =
+        canonicalMatch && (lexical.nameSharedTokens >= 1 || lexical.keywordSharedTokens >= 1);
+      const passesNameMatch = lexical.nameSharedTokens >= 2;
+      const passesEntityMatch = lexical.entitySharedTokens >= 1;
+      const passesKeywordPhraseMatch = lexical.hasExactKeywordPhrase;
+      const passesAssistedCosine =
+        cosine >= cosineThreshold &&
+        (lexical.nameSharedTokens >= 2 || lexical.entitySharedTokens >= 1 || lexical.hasExactKeywordPhrase);
+      const passesStrongCosine =
+        cosine >= autoCosineThreshold &&
+        (lexical.nameSharedTokens >= 2 || lexical.entitySharedTokens >= 1 || lexical.hasExactKeywordPhrase);
 
-      if (!passesCanonicalMatch && !passesStrongCosine && !passesAssistedCosine) {
+      if (
+        !passesCanonicalMatch &&
+        !passesNameMatch &&
+        !passesEntityMatch &&
+        !passesKeywordPhraseMatch &&
+        !passesStrongCosine &&
+        !passesAssistedCosine
+      ) {
         continue;
       }
 

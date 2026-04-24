@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Topic, TopicEntity } from "@global-pulse/shared";
-import { detectScopeOverlaps, type ScopeOverlapCandidate } from "../src/scope-overlap";
+import { detectScopeOverlaps, isPlaceholderCanonicalKey, type ScopeOverlapCandidate } from "../src/scope-overlap";
 
 function buildTopic(params: {
   id: number;
@@ -56,6 +56,62 @@ test("detectScopeOverlaps ignores placeholder canonical-only matches", () => {
         keywords: ["interest rates"],
         embedding: [0, 1, 0],
         canonicalKey: "globalTopic1",
+      }),
+    ],
+  );
+
+  assert.equal(overlaps.length, 0);
+});
+
+test("detectScopeOverlaps treats regional placeholder canonical variants as placeholders", () => {
+  assert.equal(isPlaceholderCanonicalKey("region jp topic 6"), true);
+  assert.equal(isPlaceholderCanonicalKey("regionjptopic6"), true);
+  assert.equal(isPlaceholderCanonicalKey("region-jp-topic-6"), true);
+
+  const overlaps = detectScopeOverlaps(
+    [
+      buildTopic({
+        id: 3,
+        scope: "community",
+        nameEn: "Baseball trade rumors",
+        keywords: ["baseball"],
+        embedding: [],
+        canonicalKey: "region jp topic 6",
+      }),
+    ],
+    [
+      buildTopic({
+        id: 4,
+        scope: "news",
+        nameEn: "Central bank rate decision",
+        keywords: ["interest rates"],
+        embedding: [],
+        canonicalKey: "region-jp-topic-6",
+      }),
+    ],
+  );
+
+  assert.equal(overlaps.length, 0);
+});
+
+test("detectScopeOverlaps rejects matches supported only by noisy tokens", () => {
+  const overlaps = detectScopeOverlaps(
+    [
+      buildTopic({
+        id: 5,
+        scope: "community",
+        nameEn: "Forum source submitted read thread",
+        keywords: ["read", "source", "submitted"],
+        embedding: [],
+      }),
+    ],
+    [
+      buildTopic({
+        id: 6,
+        scope: "news",
+        nameEn: "Login register current source",
+        keywords: ["read", "source", "submitted"],
+        embedding: [],
       }),
     ],
   );
@@ -146,6 +202,33 @@ test("detectScopeOverlaps accepts meaningful canonical matches without embedding
   assert.equal(overlaps.length, 1);
   assert.equal(overlaps[0]?.communityTopicId, 25);
   assert.equal(overlaps[0]?.newsTopicId, 26);
+});
+
+test("detectScopeOverlaps accepts strong shared name tokens without embeddings", () => {
+  const overlaps = detectScopeOverlaps(
+    [
+      buildTopic({
+        id: 27,
+        scope: "community",
+        nameEn: "Nintendo Switch launch discussion",
+        keywords: ["gaming"],
+        embedding: [],
+      }),
+    ],
+    [
+      buildTopic({
+        id: 28,
+        scope: "news",
+        nameEn: "Nintendo Switch launch timing",
+        keywords: ["console"],
+        embedding: [],
+      }),
+    ],
+  );
+
+  assert.equal(overlaps.length, 1);
+  assert.equal(overlaps[0]?.communityTopicId, 27);
+  assert.equal(overlaps[0]?.newsTopicId, 28);
 });
 
 test("detectScopeOverlaps greedily keeps the best one-to-one pair", () => {

@@ -18,6 +18,7 @@ import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useSourceTransfer } from "@/lib/hooks/useSourceTransfer";
 import type {
   SourceTransferApiResponse,
+  SourceTransferCandidatePairRow,
   SourceTransferDirection,
   SourceTransferPairRow,
 } from "@/lib/types/api";
@@ -227,6 +228,7 @@ export function SourceTransferPageClient({
   );
 
   const pairs = useMemo(() => data?.pairs ?? [], [data?.pairs]);
+  const candidatePairs = useMemo(() => data?.candidatePairs ?? [], [data?.candidatePairs]);
   const topTransferCards = useMemo(
     () =>
       [...pairs]
@@ -238,6 +240,17 @@ export function SourceTransferPageClient({
         .slice(0, 8),
     [pairs],
   );
+  const topCandidateCards = useMemo(
+    () =>
+      [...candidatePairs]
+        .sort((left, right) => {
+          if (right.matchScore !== left.matchScore) return right.matchScore - left.matchScore;
+          return Math.abs(left.latestLagMinutes ?? 0) - Math.abs(right.latestLagMinutes ?? 0);
+        })
+        .slice(0, 8),
+    [candidatePairs],
+  );
+  const showCandidateCards = topTransferCards.length === 0 && topCandidateCards.length > 0;
   const snapshotSummary = data?.snapshotSummary ?? data?.summary;
   const historySummary = data?.historySummary ?? data?.summary;
   const latestAnalyzerRunAt = data?.latestAnalyzerRunAt ?? null;
@@ -445,6 +458,94 @@ export function SourceTransferPageClient({
             })}
           </div>
         )}
+
+        {showCandidateCards ? (
+          <div className="mt-5 border-t border-[var(--border-default)] pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-amber-100">검토 후보</h3>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                  정식 전이 기준은 통과하지 않았지만 이름/키워드 근거가 있는 후보입니다. KPI에는 포함하지 않습니다.
+                </p>
+              </div>
+              <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-100">
+                후보 {data?.candidateSummary?.totalCandidates.toLocaleString() ?? topCandidateCards.length.toLocaleString()}건
+              </span>
+            </div>
+            <div className="mt-3 grid gap-3 xl:grid-cols-2">
+              {topCandidateCards.map((row: SourceTransferCandidatePairRow) => {
+                const regionInfo = getRegionById(row.regionId);
+                const communityName = toTopicLabel(row, "community");
+                const newsName = toTopicLabel(row, "news");
+                return (
+                  <article
+                    key={row.pairKey}
+                    className="rounded-lg border border-amber-400/25 bg-amber-500/5 p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[11px] text-[var(--text-tertiary)]">
+                          {regionInfo ? `${regionInfo.flagEmoji} ${regionInfo.nameKo}` : row.regionId.toUpperCase()}
+                        </p>
+                        <p className="mt-1 break-words text-sm font-semibold text-[var(--text-primary)]">
+                          {communityName}
+                        </p>
+                        <p className="mt-1 break-words text-sm text-orange-200">{newsName}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-100">
+                          정식 전이 아님
+                        </span>
+                        <span className={`rounded-full border px-2 py-1 text-[11px] ${leaderToneClass(row.leader)}`}>
+                          {leaderLabel(row.leader)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-[11px] text-[var(--text-secondary)] sm:grid-cols-3">
+                      <span>후보 점수 {Math.round(row.matchScore * 100)}%</span>
+                      <span>lag {formatLag(row.latestLagMinutes ?? row.avgLagMinutes)}</span>
+                      <span>근거 {row.matchReasons.length.toLocaleString()}개</span>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {row.matchReasons.slice(0, 4).map((reason) => (
+                        <span
+                          key={reason}
+                          className="rounded-full border border-amber-400/25 bg-[var(--bg-primary)] px-2 py-0.5 text-[10px] text-amber-100"
+                        >
+                          {reason}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="mt-4">
+                      <div className="relative h-8">
+                        <div className="absolute left-3 right-3 top-1/2 h-px -translate-y-1/2 bg-amber-400/25" />
+                        <div className="absolute left-0 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                          <span className="h-3 w-3 rounded-full bg-cyan-300" />
+                          <span className="rounded-full border border-cyan-300/40 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-100">
+                            커뮤니티 최초
+                          </span>
+                        </div>
+                        <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                          <span className="rounded-full border border-orange-300/40 bg-orange-500/10 px-2 py-0.5 text-[10px] text-orange-100">
+                            뉴스 최초
+                          </span>
+                          <span className="h-3 w-3 rounded-full bg-orange-300" />
+                        </div>
+                      </div>
+                      <div className="mt-2 grid gap-2 text-[11px] text-[var(--text-secondary)] sm:grid-cols-2">
+                        <span>커뮤니티 {formatDateTime(row.communityFirstPostAt)}</span>
+                        <span className="sm:text-right">뉴스 {formatDateTime(row.newsFirstPostAt)}</span>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="card-panel p-4">

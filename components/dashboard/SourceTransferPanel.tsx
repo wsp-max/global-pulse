@@ -82,9 +82,16 @@ export function SourceTransferPanel({ primaryScope, limit = 20 }: SourceTransfer
 
   const summary = data?.snapshotSummary ?? data?.summary;
   const latestPair = data?.pairs[0];
+  const candidateCount = data?.candidateSummary?.totalCandidates ?? 0;
+  const latestCandidate = summary?.totalEvents === 0 ? data?.candidatePairs?.[0] : undefined;
   const latestRegion = latestPair ? getRegionById(latestPair.regionId) : null;
   const fromName = latestPair ? topicLabel(latestPair, primaryScope) : null;
   const toName = latestPair ? topicLabel(latestPair, primaryScope === "community" ? "news" : "community") : null;
+  const candidateRegion = latestCandidate ? getRegionById(latestCandidate.regionId) : null;
+  const candidateFromName = latestCandidate ? topicLabel(latestCandidate, primaryScope) : null;
+  const candidateToName = latestCandidate
+    ? topicLabel(latestCandidate, primaryScope === "community" ? "news" : "community")
+    : null;
 
   return (
     <section className="card-panel p-4">
@@ -134,6 +141,13 @@ export function SourceTransferPanel({ primaryScope, limit = 20 }: SourceTransfer
         </div>
       ) : null}
 
+      {!isLoading && !error && summary?.totalEvents === 0 && candidateCount > 0 ? (
+        <div className="mt-3 rounded-lg border border-amber-400/30 bg-amber-500/5 p-3 text-xs text-[var(--text-secondary)]">
+          <p className="text-amber-100">검토 후보 {candidateCount.toLocaleString()}건</p>
+          <p className="mt-1">정식 전이 수에는 포함하지 않은 낮은 신뢰 후보입니다.</p>
+        </div>
+      ) : null}
+
       {!isLoading && !error && latestPair ? (
         <div className="mt-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3 text-xs text-[var(--text-secondary)]">
           <p>
@@ -143,6 +157,19 @@ export function SourceTransferPanel({ primaryScope, limit = 20 }: SourceTransfer
           </p>
           <p className="mt-1 break-words text-[var(--text-primary)]">
             {fromName} {"->"} {toName}
+          </p>
+        </div>
+      ) : null}
+
+      {!isLoading && !error && !latestPair && latestCandidate ? (
+        <div className="mt-3 rounded-lg border border-amber-400/30 bg-amber-500/5 p-3 text-xs text-[var(--text-secondary)]">
+          <p>
+            검토 후보: {candidateRegion?.flagEmoji ?? ""} {latestCandidate.regionId.toUpperCase()} · 후보 점수{" "}
+            {Math.round(latestCandidate.matchScore * 100)}% · lag{" "}
+            {formatLagMinutes(latestCandidate.latestLagMinutes ?? latestCandidate.avgLagMinutes)}
+          </p>
+          <p className="mt-1 break-words text-[var(--text-primary)]">
+            {candidateFromName} {"->"} {candidateToName}
           </p>
         </div>
       ) : null}

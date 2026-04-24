@@ -232,6 +232,17 @@ export interface SourceTransferPairRow {
   avgCosine: number | null;
 }
 
+export interface SourceTransferCandidatePairRow extends SourceTransferPairRow {
+  confidence: "candidate";
+  matchReasons: string[];
+  matchScore: number;
+}
+
+export interface SourceTransferCandidateSummary {
+  totalCandidates: number;
+  returnedCandidates: number;
+}
+
 export interface SourceTransferApiResponse {
   summary: SourceTransferSummary;
   snapshotSummary: SourceTransferSummary;
@@ -243,6 +254,8 @@ export interface SourceTransferApiResponse {
   };
   trendHourly: SourceTransferTrendPoint[];
   pairs: SourceTransferPairRow[];
+  candidatePairs: SourceTransferCandidatePairRow[];
+  candidateSummary: SourceTransferCandidateSummary;
   meta: {
     direction: SourceTransferDirection;
     hours: number;

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAllRegions } from "@global-pulse/shared";
 import type {
+  SourceTransferCandidatePairRow,
+  SourceTransferCandidateSummary,
   SourceTransferDirection,
+  SourceTransferPairRow,
   SourceTransferSummary,
 } from "@/lib/types/api";
 import { getPostgresPoolOrNull } from "../../_shared/postgres-server";
@@ -51,6 +54,32 @@ interface TrendRow {
 interface LeadCountsRow {
   community_lead_count: number | string;
   news_lead_count: number | string;
+}
+
+interface TopicCandidateRow {
+  id: number | string;
+  region_id: string;
+  scope: "community" | "news" | "mixed";
+  name_ko: string | null;
+  name_en: string | null;
+  summary_ko: string | null;
+  summary_en: string | null;
+  sample_titles: string[] | null;
+  keywords: string[] | null;
+  entities: Array<{ text?: string | null; type?: string | null }> | null;
+  aliases: string[] | null;
+  canonical_key: string | null;
+  heat_score: number | string | null;
+  post_count: number | string | null;
+  period_start: string;
+}
+
+interface CandidateEvidence {
+  canonical: string | null;
+  nameTokens: Set<string>;
+  keywordTokens: Set<string>;
+  keywordPhrases: Set<string>;
+  entityTokens: Set<string>;
 }
 
 function toNumber(value: unknown, fallback = 0): number {
@@ -114,6 +143,290 @@ function parseRegion(value: string | null): string {
   return regionIds.has(raw) ? raw : "all";
 }
 
+const PLACEHOLDER_CANONICAL_SQL_PATTERN =
+  "^(globaltopic[0-9]*|topic[0-9]*|regiontopic[0-9]*|regionaltopic[0-9]*|region[a-z]{2,3}topic[0-9]+)$";
+const NON_WORD_REGEX = /[\p{P}\p{S}\s]+/gu;
+const GENERIC_TOKENS = new Set([
+  "news",
+  "topic",
+  "issue",
+  "update",
+  "updates",
+  "latest",
+  "breaking",
+  "community",
+  "reddit",
+  "video",
+  "photo",
+  "post",
+  "posts",
+  "thread",
+  "article",
+  "provided",
+  "keywords",
+  "current",
+  "read",
+  "source",
+  "sources",
+  "submitted",
+  "login",
+  "register",
+  "diario",
+  "consulta",
+  "consultas",
+  "click",
+  "more",
+]);
+
+function buildCanonicalFilterSql(columnName: string): string {
+  return `(
+          ${columnName} is null
+          or regexp_replace(lower(coalesce(${columnName}, '')), '[^a-z0-9]+', '', 'g')
+            !~ '${PLACEHOLDER_CANONICAL_SQL_PATTERN}'
+        )`;
+}
+
+function normalizeText(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeCanonical(value: string | null | undefined): string | null {
+  const normalized = normalizeText(value);
+  if (!normalized || /(https?:\/\/|www\.|\/r\/|submitted by|please read)/i.test(normalized)) {
+    return null;
+  }
+
+  const collapsed = normalized.replace(NON_WORD_REGEX, "").trim();
+  if (
+    !collapsed ||
+    collapsed.length < 5 ||
+    new RegExp(PLACEHOLDER_CANONICAL_SQL_PATTERN, "i").test(collapsed)
+  ) {
+    return null;
+  }
+  return collapsed;
+}
+
+function shouldKeepToken(value: string): boolean {
+  if (!value || GENERIC_TOKENS.has(value) || /^\d+$/.test(value)) {
+    return false;
+  }
+  if (/^[a-z0-9]+$/i.test(value)) {
+    return value.length >= 3;
+  }
+  return value.length >= 2;
+}
+
+function tokenize(value: string | null | undefined): string[] {
+  return normalizeText(value).split(" ").filter(shouldKeepToken);
+}
+
+function addTokens(target: Set<string>, values: Array<string | null | undefined>): void {
+  for (const value of values) {
+    for (const token of tokenize(value)) {
+      target.add(token);
+    }
+  }
+}
+
+function intersection(left: Set<string>, right: Set<string>): string[] {
+  const values: string[] = [];
+  for (const value of left) {
+    if (right.has(value)) {
+      values.push(value);
+    }
+  }
+  return values;
+}
+
+function topicTimestamp(row: TopicCandidateRow): string {
+  return row.period_start;
+}
+
+function buildCandidateEvidence(row: TopicCandidateRow): CandidateEvidence {
+  const nameTokens = new Set<string>();
+  const keywordTokens = new Set<string>();
+  const keywordPhrases = new Set<string>();
+  const entityTokens = new Set<string>();
+  const canonical = normalizeCanonical(row.canonical_key ?? row.name_en);
+
+  addTokens(nameTokens, [row.name_ko, row.name_en, row.summary_ko, row.summary_en, ...(row.aliases ?? [])]);
+  if (canonical) {
+    addTokens(nameTokens, [row.canonical_key ?? row.name_en]);
+  }
+
+  for (const keyword of row.keywords ?? []) {
+    addTokens(keywordTokens, [keyword]);
+    const phrase = tokenize(keyword).join(" ");
+    if (phrase && phrase.includes(" ")) {
+      keywordPhrases.add(phrase);
+    }
+  }
+  addTokens(keywordTokens, row.sample_titles ?? []);
+
+  for (const entity of row.entities ?? []) {
+    addTokens(entityTokens, [entity.text]);
+  }
+
+  return { canonical, nameTokens, keywordTokens, keywordPhrases, entityTokens };
+}
+
+function resolveLeader(lagMinutes: number): "community" | "news" | "tie" {
+  if (Math.abs(lagMinutes) < 10) {
+    return "tie";
+  }
+  return lagMinutes > 0 ? "community" : "news";
+}
+
+function directionAllowsLeader(direction: SourceTransferDirection, leader: "community" | "news" | "tie"): boolean {
+  return (
+    (direction === "community_to_news" && leader === "community") ||
+    (direction === "news_to_community" && leader === "news") ||
+    (direction === "both" && (leader === "community" || leader === "news" || leader === "tie"))
+  );
+}
+
+function buildCandidatePairs(
+  topicRows: TopicCandidateRow[],
+  officialPairs: SourceTransferPairRow[],
+  direction: SourceTransferDirection,
+  limit: number,
+): { pairs: SourceTransferCandidatePairRow[]; summary: SourceTransferCandidateSummary } {
+  const communityRows = topicRows.filter((row) => row.scope === "community");
+  const newsRowsByRegion = new Map<string, TopicCandidateRow[]>();
+  for (const row of topicRows) {
+    if (row.scope !== "news") {
+      continue;
+    }
+    const items = newsRowsByRegion.get(row.region_id) ?? [];
+    items.push(row);
+    newsRowsByRegion.set(row.region_id, items);
+  }
+
+  const officialKeys = new Set(officialPairs.map((pair) => pair.pairKey));
+  const candidates: SourceTransferCandidatePairRow[] = [];
+
+  for (const community of communityRows) {
+    const communityTopicId = toNumber(community.id);
+    if (communityTopicId <= 0) {
+      continue;
+    }
+    const communityEvidence = buildCandidateEvidence(community);
+    const newsRows = newsRowsByRegion.get(community.region_id) ?? [];
+
+    for (const news of newsRows) {
+      const newsTopicId = toNumber(news.id);
+      if (newsTopicId <= 0) {
+        continue;
+      }
+
+      const pairKey = buildPairKey(community.region_id, communityTopicId, newsTopicId);
+      if (officialKeys.has(pairKey)) {
+        continue;
+      }
+
+      const newsEvidence = buildCandidateEvidence(news);
+      const sharedNameTokens = intersection(communityEvidence.nameTokens, newsEvidence.nameTokens);
+      const sharedKeywordTokens = intersection(communityEvidence.keywordTokens, newsEvidence.keywordTokens);
+      const sharedEntityTokens = intersection(communityEvidence.entityTokens, newsEvidence.entityTokens);
+      const sharedKeywordPhrases = intersection(communityEvidence.keywordPhrases, newsEvidence.keywordPhrases);
+      const canonicalMatch =
+        Boolean(communityEvidence.canonical) && communityEvidence.canonical === newsEvidence.canonical;
+
+      const hasNameAndKeyword = sharedNameTokens.length >= 1 && sharedKeywordTokens.length >= 1;
+      const hasCanonicalPartial = canonicalMatch && (sharedNameTokens.length >= 1 || sharedKeywordTokens.length >= 1);
+      if (!hasNameAndKeyword && !hasCanonicalPartial) {
+        continue;
+      }
+
+      const communityTime = topicTimestamp(community);
+      const newsTime = topicTimestamp(news);
+      const lagMinutes = Math.round((new Date(newsTime).getTime() - new Date(communityTime).getTime()) / 60000);
+      if (!Number.isFinite(lagMinutes)) {
+        continue;
+      }
+
+      const leader = resolveLeader(lagMinutes);
+      if (!directionAllowsLeader(direction, leader)) {
+        continue;
+      }
+
+      const matchReasons = [
+        ...sharedNameTokens.slice(0, 3).map((token) => `이름 토큰: ${token}`),
+        ...sharedKeywordTokens.slice(0, 3).map((token) => `키워드 토큰: ${token}`),
+        ...sharedEntityTokens.slice(0, 2).map((token) => `엔티티: ${token}`),
+        ...sharedKeywordPhrases.slice(0, 2).map((token) => `키워드 phrase: ${token}`),
+        ...(canonicalMatch ? ["의미 있는 canonical 부분 일치"] : []),
+      ];
+      const matchScore = Number(
+        Math.min(
+          1,
+          sharedNameTokens.length * 0.24 +
+            sharedKeywordTokens.length * 0.18 +
+            sharedEntityTokens.length * 0.18 +
+            sharedKeywordPhrases.length * 0.16 +
+            (canonicalMatch ? 0.22 : 0),
+        ).toFixed(4),
+      );
+      const detectedAt = new Date(Math.max(new Date(communityTime).getTime(), new Date(newsTime).getTime())).toISOString();
+
+      candidates.push({
+        pairKey,
+        regionId: community.region_id,
+        leader,
+        communityTopicId,
+        communityTopicNameKo: community.name_ko ?? "",
+        communityTopicNameEn: community.name_en ?? "",
+        newsTopicId,
+        newsTopicNameKo: news.name_ko ?? "",
+        newsTopicNameEn: news.name_en ?? "",
+        eventCount: 0,
+        firstDetectedAt: detectedAt,
+        lastDetectedAt: detectedAt,
+        communityFirstPostAt: communityTime,
+        newsFirstPostAt: newsTime,
+        avgLagMinutes: Math.abs(lagMinutes),
+        latestLagMinutes: lagMinutes,
+        avgCosine: null,
+        confidence: "candidate",
+        matchReasons,
+        matchScore,
+      });
+    }
+  }
+
+  const usedCommunityTopicIds = new Set<number>();
+  const usedNewsTopicIds = new Set<number>();
+  const selected: SourceTransferCandidatePairRow[] = [];
+  for (const candidate of candidates.sort((left, right) => {
+    if (right.matchScore !== left.matchScore) {
+      return right.matchScore - left.matchScore;
+    }
+    return Math.abs(left.latestLagMinutes ?? 0) - Math.abs(right.latestLagMinutes ?? 0);
+  })) {
+    if (usedCommunityTopicIds.has(candidate.communityTopicId) || usedNewsTopicIds.has(candidate.newsTopicId)) {
+      continue;
+    }
+    usedCommunityTopicIds.add(candidate.communityTopicId);
+    usedNewsTopicIds.add(candidate.newsTopicId);
+    selected.push(candidate);
+  }
+
+  const returned = selected.slice(0, limit);
+  return {
+    pairs: returned,
+    summary: {
+      totalCandidates: selected.length,
+      returnedCandidates: returned.length,
+    },
+  };
+}
+
 function buildSnapshotCte() {
   return `
     with snapshot_base as (
@@ -121,10 +434,7 @@ function buildSnapshotCte() {
       from issue_overlap_events
       where analyzer_run_at = $1::timestamptz
         and ($2::text = 'all' or region_id = $2::text)
-        and (
-          canonical_key is null
-          or canonical_key !~* '^(globaltopic|region[a-z]+topic|regiontopic|regionaltopic|topic)[0-9]+$'
-        )
+        and ${buildCanonicalFilterSql("canonical_key")}
     ),
     snapshot_filtered as (
       select *
@@ -145,10 +455,7 @@ function buildHistoryCte() {
       from issue_overlap_events
       where detected_at >= now() - ($1::text || ' hours')::interval
         and ($2::text = 'all' or region_id = $2::text)
-        and (
-          canonical_key is null
-          or canonical_key !~* '^(globaltopic|region[a-z]+topic|regiontopic|regionaltopic|topic)[0-9]+$'
-        )
+        and ${buildCanonicalFilterSql("canonical_key")}
     ),
     history_filtered as (
       select *
@@ -284,6 +591,11 @@ export async function GET(request: Request) {
         },
         trendHourly: [],
         pairs: [],
+        candidatePairs: [],
+        candidateSummary: {
+          totalCandidates: 0,
+          returnedCandidates: 0,
+        },
         meta: {
           direction,
           hours,
@@ -570,6 +882,67 @@ export async function GET(request: Request) {
       };
     });
 
+    let candidatePairs: SourceTransferCandidatePairRow[] = [];
+    let candidateSummary: SourceTransferCandidateSummary = {
+      totalCandidates: 0,
+      returnedCandidates: 0,
+    };
+
+    if (offset === 0 && totalPairs < Math.min(3, limit)) {
+      const candidateTopicsResult = await postgres.query<TopicCandidateRow>(
+        `
+        with ranked as (
+          select
+            id,
+            region_id,
+            scope,
+            name_ko,
+            name_en,
+            summary_ko,
+            summary_en,
+            sample_titles,
+            keywords,
+            entities,
+            aliases,
+            canonical_key,
+            heat_score,
+            post_count,
+            period_start::text as period_start,
+            row_number() over (
+              partition by scope, region_id
+              order by coalesce(heat_score, 0) desc, period_start desc, id desc
+            ) as rn
+          from topics
+          where period_start >= now() - ($1::text || ' hours')::interval
+            and scope in ('community', 'news')
+            and ($2::text = 'all' or region_id = $2::text)
+        )
+        select
+          id,
+          region_id,
+          scope,
+          name_ko,
+          name_en,
+          summary_ko,
+          summary_en,
+          sample_titles,
+          keywords,
+          entities,
+          aliases,
+          canonical_key,
+          heat_score,
+          post_count,
+          period_start
+        from ranked
+        where rn <= 80
+        `,
+        [hours, region],
+      );
+      const candidateResult = buildCandidatePairs(candidateTopicsResult.rows, pairs, direction, Math.min(limit, 30));
+      candidatePairs = candidateResult.pairs;
+      candidateSummary = candidateResult.summary;
+    }
+
     const nodes: Array<{ id: string; label: string; scope: "community" | "news"; topicId: number }> = [];
     const links: Array<{
       source: number;
@@ -643,6 +1016,8 @@ export async function GET(request: Request) {
       },
       trendHourly: buildTrendSeries(trendResult.rows, hours),
       pairs,
+      candidatePairs,
+      candidateSummary,
       meta: {
         direction,
         hours,
