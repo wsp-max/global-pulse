@@ -121,6 +121,10 @@ function buildSnapshotCte() {
       from issue_overlap_events
       where analyzer_run_at = $1::timestamptz
         and ($2::text = 'all' or region_id = $2::text)
+        and (
+          canonical_key is null
+          or canonical_key !~* '^(globaltopic|region[a-z]+topic|regiontopic|regionaltopic|topic)[0-9]+$'
+        )
     ),
     snapshot_filtered as (
       select *
@@ -141,6 +145,10 @@ function buildHistoryCte() {
       from issue_overlap_events
       where detected_at >= now() - ($1::text || ' hours')::interval
         and ($2::text = 'all' or region_id = $2::text)
+        and (
+          canonical_key is null
+          or canonical_key !~* '^(globaltopic|region[a-z]+topic|regiontopic|regionaltopic|topic)[0-9]+$'
+        )
     ),
     history_filtered as (
       select *
