@@ -48,7 +48,10 @@ function findMatchedTopic(topics: GlobalTopic[], from: string, to: string, lagMi
 
 function toEventRows(topics: GlobalTopic[], scope: "community" | "news"): PropagationEventRow[] {
   const qualifiedTopics = prepareQualifiedGlobalTopics(topics, scope);
-  const edges = aggregateFlowEdges(qualifiedTopics, { limit: 24, maxTopics: 64 });
+  const edges = aggregateFlowEdges(qualifiedTopics, {
+    limit: scope === "community" ? 48 : 24,
+    maxTopics: scope === "community" ? 128 : 64,
+  });
 
   const rows = edges.map((edge, index) => {
     const matchedTopic = findMatchedTopic(qualifiedTopics, edge.from, edge.to, edge.lagMinutes);
@@ -85,7 +88,7 @@ function toEventRows(topics: GlobalTopic[], scope: "community" | "news"): Propag
       }
       return right.confidence - left.confidence;
     })
-    .slice(0, 8);
+    .slice(0, scope === "community" ? 12 : 8);
 }
 
 export function PropagationEventList({ topics, scope, onTopicSelect }: PropagationEventListProps) {

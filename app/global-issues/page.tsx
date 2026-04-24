@@ -61,7 +61,10 @@ export default function GlobalIssuesPage() {
   const period = parsePeriod(searchParams.get("period"));
   const view = parseView(searchParams.get("view"));
 
-  const { data: globalData, isLoading: globalLoading, error: globalError } = useGlobalTopics(20, scope);
+  const { data: globalData, isLoading: globalLoading, error: globalError } = useGlobalTopics(
+    scope === "community" ? 40 : 20,
+    scope,
+  );
   const { data: regionsData, isLoading: regionsLoading, error: regionsError } = useRegions(scope);
 
   const filteredRegions = useMemo(() => {

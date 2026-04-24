@@ -1,4 +1,5 @@
 import { DISABLED_SOURCE_ID_SET, SOURCES, type ScraperResult, type Source } from "@global-pulse/shared";
+import { createPostgresPool, hasPostgresConfig } from "@global-pulse/shared/postgres";
 import { TiebaScraper } from "./scrapers/china/tieba";
 import { WeiboScraper } from "./scrapers/china/weibo";
 import { ZhihuScraper } from "./scrapers/china/zhihu";
@@ -26,6 +27,7 @@ import { JsonNewsScraper } from "./scrapers/news/json-news-scraper";
 import { RankingNewsScraper } from "./scrapers/news/ranking-news-scraper";
 import { RssNewsScraper } from "./scrapers/news/rss-news-scraper";
 import { BilibiliScraper } from "./scrapers/sns/bilibili";
+import { BlueskyScraper } from "./scrapers/sns/bluesky";
 import { MastodonScraper } from "./scrapers/sns/mastodon";
 import { YoutubeScraper } from "./scrapers/sns/youtube";
 import { HabrScraper } from "./scrapers/russia/habr";
@@ -46,12 +48,114 @@ import { recordCollectorRun, toCollectorRunErrorCode } from "./utils/collector-r
 const DEFAULT_SCRAPER_TIMEOUT_MS = Number(process.env.COLLECTOR_SCRAPER_TIMEOUT_MS ?? 90_000);
 const BROWSER_SCRAPER_TIMEOUT_MS = Number(process.env.COLLECTOR_BROWSER_TIMEOUT_MS ?? 150_000);
 const MAX_COLLECTOR_RSS_MB = Number(process.env.COLLECTOR_MAX_RSS_MB ?? 1536);
+const ENFORCE_SOURCE_INTERVAL = (process.env.COLLECTOR_ENFORCE_SOURCE_INTERVAL ?? "true").toLowerCase() !== "false";
 const BROWSER_SOURCE_IDS = new Set<string>(["zhihu", "dcard", "tiktok", "threads"]);
+
+interface SourceScheduleRow {
+  id: string;
+  is_active: boolean;
+  scrape_interval_minutes: number | string | null;
+  last_scraped_at: string | null;
+}
 
 function parseArg(flag: string): string | undefined {
   const idx = process.argv.findIndex((arg) => arg === flag);
   if (idx === -1) return undefined;
   return process.argv[idx + 1];
+}
+
+function toNumber(value: unknown, fallback: number): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return fallback;
+}
+
+function isDueByInterval(lastScrapedAt: string | null, intervalMinutes: number, nowMs: number): boolean {
+  if (!lastScrapedAt) {
+    return true;
+  }
+  const lastScrapedMs = new Date(lastScrapedAt).getTime();
+  if (!Number.isFinite(lastScrapedMs)) {
+    return true;
+  }
+  return nowMs >= lastScrapedMs + intervalMinutes * 60_000;
+}
+
+async function resolveDueSourceIds(
+  sourceIds: string[],
+  options: {
+    forceRun: boolean;
+    allowInactive: boolean;
+  },
+): Promise<Set<string> | null> {
+  if (sourceIds.length === 0) {
+    return new Set<string>();
+  }
+
+  if (options.forceRun || !ENFORCE_SOURCE_INTERVAL) {
+    return new Set(sourceIds);
+  }
+
+  if (!hasPostgresConfig()) {
+    return null;
+  }
+
+  const nowMs = Date.now();
+  try {
+    const pool = createPostgresPool();
+    const { rows } = await pool.query<SourceScheduleRow>(
+      `
+      select id, is_active, scrape_interval_minutes, last_scraped_at
+      from sources
+      where id = any($1::text[])
+      `,
+      [sourceIds],
+    );
+    const byId = new Map<string, SourceScheduleRow>(rows.map((row) => [row.id, row]));
+    const dueSourceIds = new Set<string>();
+    const missingSourceRows: string[] = [];
+
+    for (const sourceId of sourceIds) {
+      const row = byId.get(sourceId);
+      if (!row) {
+        missingSourceRows.push(sourceId);
+        continue;
+      }
+
+      if (!options.allowInactive && row.is_active === false) {
+        continue;
+      }
+
+      const intervalMinutes = Math.max(1, toNumber(row.scrape_interval_minutes, 30));
+      if (isDueByInterval(row.last_scraped_at, intervalMinutes, nowMs)) {
+        dueSourceIds.add(sourceId);
+      }
+    }
+
+    if (missingSourceRows.length > 0) {
+      const preview = missingSourceRows.slice(0, 10).join(", ");
+      const suffix = missingSourceRows.length > 10 ? ` (+${missingSourceRows.length - 10} more)` : "";
+      Logger.warn(
+        `Skipping ${missingSourceRows.length} source(s) missing from DB sources table: ${preview}${suffix}. Run seed:regions to sync source metadata.`,
+      );
+    }
+
+    return dueSourceIds;
+  } catch (error) {
+    Logger.warn(
+      `Source interval guard skipped due to DB lookup failure: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+    return null;
+  }
 }
 
 function isBrowserLikelySource(sourceId: string): boolean {
@@ -120,6 +224,8 @@ async function run(): Promise<void> {
   const regionFilter = parseArg("--region");
   const typeFilterRaw = parseArg("--type");
   const sourceArg = parseArg("--source");
+  const forceRun = process.argv.includes("--force") || process.env.COLLECTOR_FORCE_RUN === "true";
+  const allowInactive = process.argv.includes("--allow-inactive");
   const sourceFilter = sourceArg
     ? sourceArg
         .split(",")
@@ -242,7 +348,20 @@ async function run(): Promise<void> {
     new YoutubeScraper("youtube_me"),
     new YoutubeScraper("youtube_ru"),
     new BilibiliScraper(),
-    new MastodonScraper(),
+    new BlueskyScraper("bluesky_kr"),
+    new BlueskyScraper("bluesky_jp"),
+    new BlueskyScraper("bluesky_tw"),
+    new BlueskyScraper("bluesky_cn"),
+    new BlueskyScraper("bluesky_us"),
+    new BlueskyScraper("bluesky_eu"),
+    new BlueskyScraper("bluesky_me"),
+    new BlueskyScraper("bluesky_ru"),
+    new MastodonScraper("mastodon_kr"),
+    new MastodonScraper("mastodon_jp"),
+    new MastodonScraper("mastodon_tw"),
+    new MastodonScraper("mastodon_cn"),
+    new MastodonScraper("mastodon_us"),
+    new MastodonScraper("mastodon_eu"),
     new MastodonScraper("mastodon_me"),
     new MastodonScraper("mastodon_ru"),
     new DcardScraper(),
@@ -278,6 +397,10 @@ async function run(): Promise<void> {
       return false;
     }
 
+    if (!allowInactive && "isActive" in source && source.isActive === false) {
+      return false;
+    }
+
     if (sourceFilter.length === 0 && DISABLED_SOURCE_ID_SET.has(source.id)) {
       return false;
     }
@@ -290,10 +413,27 @@ async function run(): Promise<void> {
     return;
   }
 
+  const dueSourceIds = await resolveDueSourceIds(
+    scrapers.map((scraper) => scraper.sourceId),
+    {
+      forceRun,
+      allowInactive,
+    },
+  );
+  const scheduledScrapers =
+    dueSourceIds === null
+      ? scrapers
+      : scrapers.filter((scraper) => dueSourceIds.has(scraper.sourceId));
+
+  if (scheduledScrapers.length === 0) {
+    Logger.info("No sources are due by scrape interval. Nothing to collect.");
+    return;
+  }
+
   Logger.info(
     `Filters => region: ${regionFilter ?? "all"}, type: ${typeFilter ?? "all"}, source: ${
       sourceFilter.length > 0 ? sourceFilter.join(",") : "all"
-    }`,
+    }, force: ${forceRun}, allowInactive: ${allowInactive}`,
   );
   if (sourceFilter.length === 0) {
     const disabledByDefault = SOURCES.filter((source) => DISABLED_SOURCE_ID_SET.has(source.id)).map(
@@ -303,11 +443,11 @@ async function run(): Promise<void> {
       Logger.info(`Disabled-by-default sources skipped: ${disabledByDefault.join(", ")}`);
     }
   }
-  Logger.info(`Starting collection for ${scrapers.length} source(s).`);
+  Logger.info(`Starting collection for ${scheduledScrapers.length} source(s).`);
 
   const results: ScraperResult[] = [];
 
-  for (const scraper of scrapers) {
+  for (const scraper of scheduledScrapers) {
     const startedAtIso = new Date().toISOString();
     const startedAtMs = Date.now();
     assertCollectorMemoryBudget(scraper.sourceId);

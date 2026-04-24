@@ -251,8 +251,12 @@ export async function GET(request: Request) {
 
 async function getGlobalTopics(request: Request) {
   const { searchParams } = new URL(request.url);
-  const limit = Math.min(Number(searchParams.get("limit") ?? 10), 50);
-  const minRegions = Math.max(Number(searchParams.get("minRegions") ?? 2), 1);
+  const parsedLimit = Number(searchParams.get("limit") ?? 10);
+  const parsedMinRegions = Number(searchParams.get("minRegions") ?? 2);
+  const limit = Math.max(1, Math.min(Math.trunc(Number.isFinite(parsedLimit) ? parsedLimit : 10), 100));
+  const minRegions = Math.max(Math.trunc(Number.isFinite(parsedMinRegions) ? parsedMinRegions : 2), 1);
+  const primaryFetchLimit = Math.max(100, limit * 2);
+  const supplementalFetchLimit = Math.max(200, limit * 4);
   const sort = searchParams.get("sort") === "spread" ? "spread" : "heat";
   const scope = parseScope(searchParams.get("scope"));
   const minAcceleration = Number(searchParams.get("min_acceleration") ?? Number.NaN);
@@ -271,9 +275,9 @@ async function getGlobalTopics(request: Request) {
         where (expires_at is null or expires_at > now())
           and scope = $1
         order by ${sort === "spread" ? "spread_score" : "total_heat_score"} desc nulls last, total_heat_score desc
-        limit 100
+        limit $2
         `,
-        [scope],
+        [scope, primaryFetchLimit],
       );
 
       let mapped = freshRows.map(mapGlobalTopicRow).filter((topic) => topic.regions.length >= minRegions);
@@ -290,9 +294,9 @@ async function getGlobalTopics(request: Request) {
           from global_topics
           where scope = $1
           order by created_at desc, ${sort === "spread" ? "spread_score" : "total_heat_score"} desc nulls last
-          limit 100
+          limit $2
           `,
-          [scope],
+          [scope, primaryFetchLimit],
         );
         mapped = staleRows.map(mapGlobalTopicRow).filter((topic) => topic.regions.length >= minRegions);
         dataState = mapped.length > 0 ? "stale" : "empty";
@@ -306,9 +310,9 @@ async function getGlobalTopics(request: Request) {
           from global_topics
           where scope = $1
           order by created_at desc, ${sort === "spread" ? "spread_score" : "total_heat_score"} desc nulls last
-          limit 200
+          limit $2
           `,
-          [scope],
+          [scope, supplementalFetchLimit],
         );
 
         for (const topic of staleRows.map(mapGlobalTopicRow)) {

@@ -75,7 +75,7 @@ async function main(): Promise<void> {
   const verifyArgs = ["tsx", scriptPath, ...cliArgs];
 
   if (!hasFlag(cliArgs, "--sources")) {
-    verifyArgs.push("--sources", process.env.VERIFY_SOURCE_SOURCES ?? "bilibili,mastodon");
+    verifyArgs.push("--sources", process.env.VERIFY_SOURCE_SOURCES ?? "bilibili,mastodon_eu");
   }
 
   if (!hasFlag(cliArgs, "--minutes")) {

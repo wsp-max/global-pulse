@@ -193,7 +193,7 @@ export function DashboardClient({
 
   const communityRegions = useRegions("community", { fallbackData: communityRegionFallback });
   const newsRegions = useRegions("news", { fallbackData: newsRegionFallback });
-  const communityGlobalTopics = useGlobalTopics(30, "community", { fallbackData: communityGlobalFallback });
+  const communityGlobalTopics = useGlobalTopics(60, "community", { fallbackData: communityGlobalFallback });
   const newsGlobalTopics = useGlobalTopics(30, "news", { fallbackData: newsGlobalFallback });
 
   const primaryRegionsData = activeScope === "community" ? communityRegions.data : newsRegions.data;

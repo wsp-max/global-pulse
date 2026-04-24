@@ -113,9 +113,22 @@ const SOURCE_WEIGHT_MAP: Record<string, number> = {
   youtube_us: 0.45,
   youtube_me: 0.45,
   youtube_ru: 0.45,
-  mastodon: 0.8,
-  mastodon_me: 0.82,
-  mastodon_ru: 0.82,
+  bluesky_kr: 0.85,
+  bluesky_jp: 0.85,
+  bluesky_tw: 0.85,
+  bluesky_cn: 0.85,
+  bluesky_us: 0.85,
+  bluesky_eu: 0.85,
+  bluesky_me: 0.85,
+  bluesky_ru: 0.85,
+  mastodon_kr: 0.8,
+  mastodon_jp: 0.8,
+  mastodon_tw: 0.8,
+  mastodon_cn: 0.8,
+  mastodon_us: 0.8,
+  mastodon_eu: 0.8,
+  mastodon_me: 0.8,
+  mastodon_ru: 0.8,
   bilibili: 0.8,
 };
 
@@ -960,4 +973,3 @@ export async function clusterTopics(
     rank: index + 1,
   }));
 }
-

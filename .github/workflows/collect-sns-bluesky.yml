@@ -1,0 +1,46 @@
+name: Collect Bluesky Signals
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Execute job
+        run: npx tsx packages/collector/src/run.ts --source bluesky_kr,bluesky_jp,bluesky_tw,bluesky_cn,bluesky_us,bluesky_eu,bluesky_me,bluesky_ru
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          BLUESKY_IDENTIFIER: ${{ secrets.BLUESKY_IDENTIFIER }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+          BLUESKY_DEFAULT_HANDLES: ${{ secrets.BLUESKY_DEFAULT_HANDLES }}
+          BLUESKY_KR_HANDLES: ${{ secrets.BLUESKY_KR_HANDLES }}
+          BLUESKY_JP_HANDLES: ${{ secrets.BLUESKY_JP_HANDLES }}
+          BLUESKY_TW_HANDLES: ${{ secrets.BLUESKY_TW_HANDLES }}
+          BLUESKY_CN_HANDLES: ${{ secrets.BLUESKY_CN_HANDLES }}
+          BLUESKY_US_HANDLES: ${{ secrets.BLUESKY_US_HANDLES }}
+          BLUESKY_EU_HANDLES: ${{ secrets.BLUESKY_EU_HANDLES }}
+          BLUESKY_ME_HANDLES: ${{ secrets.BLUESKY_ME_HANDLES }}
+          BLUESKY_RU_HANDLES: ${{ secrets.BLUESKY_RU_HANDLES }}
+          BLUESKY_MAX_HANDLES: '12'
+          BLUESKY_POSTS_PER_HANDLE: '40'
+          BLUESKY_SOURCE_POST_CAP: '70'
+
+      - name: Report status
+        if: failure()
+        run: echo "::warning::Collect Bluesky Signals failed"

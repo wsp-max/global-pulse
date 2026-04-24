@@ -446,11 +446,11 @@ export function WorldHeatMap({
   const flowEdges = useMemo(
     () =>
       aggregateFlowEdges(primaryQualifiedTopics, {
-        limit: 20,
-        maxTopics: 64,
+        limit: variant === "community" ? 40 : 20,
+        maxTopics: variant === "community" ? 128 : 64,
         isValidRegion: (regionId) => Boolean(REGION_COORDINATES[regionId]),
       }),
-    [primaryQualifiedTopics],
+    [primaryQualifiedTopics, variant],
   );
   const maxVolume = Math.max(...flowEdges.map((edge) => edge.volumeHeatSum), 1);
   const radialGlow =

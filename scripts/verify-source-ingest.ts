@@ -44,7 +44,7 @@ function toPositiveInt(raw: string | undefined, fallback: number): number {
 }
 
 async function main(): Promise<void> {
-  const sources = parseListArg(parseArg("--sources"), ["bilibili", "mastodon"]);
+  const sources = parseListArg(parseArg("--sources"), ["bilibili", "mastodon_eu"]);
   const minutes = toPositiveInt(parseArg("--minutes"), 60);
   const sampleLimit = Math.min(toPositiveInt(parseArg("--samples"), 3), 10);
   const allowEmpty = process.argv.includes("--allow-empty");
@@ -149,4 +149,3 @@ main().catch((error) => {
   logger.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 });
-

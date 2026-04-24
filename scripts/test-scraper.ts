@@ -26,6 +26,7 @@ import { TiebaScraper } from "../packages/collector/src/scrapers/china/tieba";
 import { GutefrageScraper } from "../packages/collector/src/scrapers/europe/gutefrage";
 import { MumsnetScraper } from "../packages/collector/src/scrapers/europe/mumsnet";
 import { BilibiliScraper } from "../packages/collector/src/scrapers/sns/bilibili";
+import { BlueskyScraper } from "../packages/collector/src/scrapers/sns/bluesky";
 import { MastodonScraper } from "../packages/collector/src/scrapers/sns/mastodon";
 import { YoutubeScraper } from "../packages/collector/src/scrapers/sns/youtube";
 import { BahamutScraper } from "../packages/collector/src/scrapers/taiwan/bahamut";
@@ -162,7 +163,20 @@ async function run(): Promise<void> {
     youtube_me: new YoutubeScraper("youtube_me"),
     youtube_ru: new YoutubeScraper("youtube_ru"),
     bilibili: new BilibiliScraper(),
-    mastodon: new MastodonScraper(),
+    bluesky_kr: new BlueskyScraper("bluesky_kr"),
+    bluesky_jp: new BlueskyScraper("bluesky_jp"),
+    bluesky_tw: new BlueskyScraper("bluesky_tw"),
+    bluesky_cn: new BlueskyScraper("bluesky_cn"),
+    bluesky_us: new BlueskyScraper("bluesky_us"),
+    bluesky_eu: new BlueskyScraper("bluesky_eu"),
+    bluesky_me: new BlueskyScraper("bluesky_me"),
+    bluesky_ru: new BlueskyScraper("bluesky_ru"),
+    mastodon_kr: new MastodonScraper("mastodon_kr"),
+    mastodon_jp: new MastodonScraper("mastodon_jp"),
+    mastodon_tw: new MastodonScraper("mastodon_tw"),
+    mastodon_cn: new MastodonScraper("mastodon_cn"),
+    mastodon_us: new MastodonScraper("mastodon_us"),
+    mastodon_eu: new MastodonScraper("mastodon_eu"),
     mastodon_me: new MastodonScraper("mastodon_me"),
     mastodon_ru: new MastodonScraper("mastodon_ru"),
     dcard: new DcardScraper(),
