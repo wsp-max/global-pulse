@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const DC_HIT_URL = "https://gall.dcinside.com/board/lists?id=hit&page=1";
@@ -60,7 +61,7 @@ export class DcInsideScraper extends BaseScraper {
     const posts: ScrapedPost[] = [];
 
     $("tr.ub-content").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -105,4 +106,6 @@ export class DcInsideScraper extends BaseScraper {
     return posts;
   }
 }
+
+
 

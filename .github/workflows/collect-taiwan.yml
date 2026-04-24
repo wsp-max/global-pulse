@@ -2,7 +2,7 @@ name: Collect Taiwan Communities
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '*/20 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -31,5 +31,6 @@ jobs:
       - name: Report status
         if: failure()
         run: echo "::warning::Collect Taiwan Communities failed"
+
 
 

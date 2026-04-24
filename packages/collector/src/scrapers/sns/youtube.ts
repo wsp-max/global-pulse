@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/videos";
@@ -72,7 +73,7 @@ export class YoutubeScraper extends BaseScraper {
       part: "snippet,statistics",
       chart: "mostPopular",
       regionCode,
-      maxResults: "20",
+      maxResults: String(resolveCollectorSourceCap(this.sourceId, 20)),
       key: apiKey,
     });
 

@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { fetchGoogleNewsSiteFallback } from "../../utils/google-news-fallback";
 import { cleanText } from "../../utils/text-cleaner";
 
@@ -24,7 +25,7 @@ function toExternalId(url: string): string | null {
   }
 }
 
-function mergeByExternalId(postGroups: ScrapedPost[][]): ScrapedPost[] {
+function mergeByExternalId(postGroups: ScrapedPost[][], maxItems = Number.POSITIVE_INFINITY): ScrapedPost[] {
   const merged: ScrapedPost[] = [];
   const seenIds = new Set<string>();
 
@@ -35,7 +36,7 @@ function mergeByExternalId(postGroups: ScrapedPost[][]): ScrapedPost[] {
       }
       seenIds.add(post.externalId);
       merged.push(post);
-      if (merged.length >= 50) {
+      if (merged.length >= maxItems) {
         return merged;
       }
     }
@@ -44,7 +45,7 @@ function mergeByExternalId(postGroups: ScrapedPost[][]): ScrapedPost[] {
   return merged;
 }
 
-async function fetchDirectHotPosts(): Promise<ScrapedPost[]> {
+async function fetchDirectHotPosts(sourceId: string): Promise<ScrapedPost[]> {
   const response = await fetchWithRetry<string>(ARCA_HOT_URL, {
     responseType: "text",
     headers: {
@@ -63,7 +64,7 @@ async function fetchDirectHotPosts(): Promise<ScrapedPost[]> {
   const seenIds = new Set<string>();
 
   $('a[href*="/b/"]').each((_, element) => {
-    if (posts.length >= 50) {
+    if (posts.length >= resolveCollectorSourceCap(sourceId, 50)) {
       return false;
     }
 
@@ -95,14 +96,14 @@ async function fetchDirectHotPosts(): Promise<ScrapedPost[]> {
   return posts;
 }
 
-async function fetchFallbackPosts(): Promise<ScrapedPost[]> {
+async function fetchFallbackPosts(sourceId: string): Promise<ScrapedPost[]> {
   const groups: ScrapedPost[][] = [];
   for (const rssUrl of ARCA_GOOGLE_NEWS_RSS) {
     try {
       const posts = await fetchGoogleNewsSiteFallback({
         rssUrl,
         sourceHost: "arca.live",
-        maxItems: 30,
+        maxItems: resolveCollectorSourceCap(sourceId, 30),
         maxAgeHours: 168,
       });
       groups.push(posts);
@@ -111,7 +112,7 @@ async function fetchFallbackPosts(): Promise<ScrapedPost[]> {
     }
   }
 
-  return mergeByExternalId(groups);
+  return mergeByExternalId(groups, resolveCollectorSourceCap(sourceId, 50));
 }
 
 export class ArcaScraper extends BaseScraper {
@@ -122,7 +123,7 @@ export class ArcaScraper extends BaseScraper {
     let directPosts: ScrapedPost[] = [];
 
     try {
-      directPosts = await fetchDirectHotPosts();
+      directPosts = await fetchDirectHotPosts(this.sourceId);
       if (directPosts.length >= 5) {
         return directPosts;
       }
@@ -130,8 +131,8 @@ export class ArcaScraper extends BaseScraper {
       errors.push(`direct: ${error instanceof Error ? error.message : String(error)}`);
     }
 
-    const fallbackPosts = await fetchFallbackPosts();
-    const merged = mergeByExternalId([directPosts, fallbackPosts]);
+    const fallbackPosts = await fetchFallbackPosts(this.sourceId);
+    const merged = mergeByExternalId([directPosts, fallbackPosts], resolveCollectorSourceCap(this.sourceId, 50));
     if (merged.length > 0) {
       return merged;
     }
@@ -139,3 +140,5 @@ export class ArcaScraper extends BaseScraper {
     throw new Error(`Arca fetch failed. ${errors.join(" | ")}`.slice(0, 1000));
   }
 }
+
+

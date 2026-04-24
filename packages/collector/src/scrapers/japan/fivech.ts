@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const FIVECH_SUBBACK_URL = "https://itest.5ch.io/subbacks/bbynews.json";
@@ -66,7 +67,7 @@ export class FivechScraper extends BaseScraper {
     }
 
     const posts: ScrapedPost[] = [];
-    for (const row of payload.threads.slice(0, 50)) {
+    for (const row of payload.threads.slice(0, resolveCollectorSourceCap(this.sourceId, 50))) {
       const title = cleanText(String(row[5] ?? ""));
       if (!title) {
         continue;
@@ -98,4 +99,6 @@ export class FivechScraper extends BaseScraper {
     return posts;
   }
 }
+
+
 

@@ -72,15 +72,15 @@ test("resolveConfiguredInstances only has default fallback for US/EU", () => {
   );
 });
 
-test("mastodon defaults are set to High-2x profile", () => {
+test("mastodon defaults are set to 3x profile", () => {
   withEnv({}, () => {
-    const instanceList = Array.from({ length: 12 }, (_, index) => `m${index + 1}.example.com`).join(",");
+    const instanceList = Array.from({ length: 40 }, (_, index) => `m${index + 1}.example.com`).join(",");
     process.env.MASTODON_US_INSTANCES = instanceList;
     const capped = resolveConfiguredInstances("mastodon_us");
 
-    assert.equal(capped.length, 10);
-    assert.equal(resolveMastodonPostsPerInstance(), 70);
-    assert.equal(resolveMastodonSourcePostCap(), 70);
+    assert.equal(capped.length, 30);
+    assert.equal(resolveMastodonPostsPerInstance(), 210);
+    assert.equal(resolveMastodonSourcePostCap(), 210);
   });
 });
 

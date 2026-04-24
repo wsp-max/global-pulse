@@ -72,11 +72,11 @@ test("resolveConfiguredHandles only uses default fallback for US/EU", () => {
   );
 });
 
-test("bluesky defaults are set to High-2x profile", () => {
+test("bluesky defaults are set to 3x profile", () => {
   withEnv({}, () => {
-    assert.equal(resolveBlueskyMaxHandles(), 12);
-    assert.equal(resolveBlueskyPostsPerHandle(), 40);
-    assert.equal(resolveBlueskySourcePostCap(), 70);
+    assert.equal(resolveBlueskyMaxHandles(), 36);
+    assert.equal(resolveBlueskyPostsPerHandle(), 120);
+    assert.equal(resolveBlueskySourcePostCap(), 210);
   });
 });
 

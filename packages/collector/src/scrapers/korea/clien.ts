@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const CLIEN_URL = "https://www.clien.net/service/board/park";
@@ -55,7 +56,7 @@ export class ClienScraper extends BaseScraper {
     const seenIds = new Set<string>();
 
     $(".list_item.symph_row").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -91,4 +92,6 @@ export class ClienScraper extends BaseScraper {
     return posts;
   }
 }
+
+
 

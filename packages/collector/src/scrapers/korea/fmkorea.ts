@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { fetchGoogleNewsSiteFallback } from "../../utils/google-news-fallback";
 import { cleanText } from "../../utils/text-cleaner";
 
@@ -60,7 +61,7 @@ export class FmkoreaScraper extends BaseScraper {
 
       for (const selector of selectors) {
         $(selector).each((_, element) => {
-          if (posts.length >= 50) {
+          if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
             return false;
           }
 
@@ -114,9 +115,9 @@ export class FmkoreaScraper extends BaseScraper {
     const fallbackPosts = await fetchGoogleNewsSiteFallback({
       rssUrl: FMKOREA_GOOGLE_NEWS_RSS,
       sourceHost: "fmkorea.com",
-      maxItems: 30,
+      maxItems: resolveCollectorSourceCap(this.sourceId, 30),
       maxAgeHours: 72,
-      titleSuffixes: ["에펨코리아"],
+      titleSuffixes: ["FMKorea"],
     });
     if (fallbackPosts.length > 0) {
       return fallbackPosts;
@@ -125,4 +126,6 @@ export class FmkoreaScraper extends BaseScraper {
     throw new Error(`FMKorea fetch failed. ${directErrors.join(" | ")}`.slice(0, 1000));
   }
 }
+
+
 

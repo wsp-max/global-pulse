@@ -253,10 +253,10 @@ async function getGlobalTopics(request: Request) {
   const { searchParams } = new URL(request.url);
   const parsedLimit = Number(searchParams.get("limit") ?? 10);
   const parsedMinRegions = Number(searchParams.get("minRegions") ?? 2);
-  const limit = Math.max(1, Math.min(Math.trunc(Number.isFinite(parsedLimit) ? parsedLimit : 10), 100));
+  const limit = Math.max(1, Math.min(Math.trunc(Number.isFinite(parsedLimit) ? parsedLimit : 10), 300));
   const minRegions = Math.max(Math.trunc(Number.isFinite(parsedMinRegions) ? parsedMinRegions : 2), 1);
-  const primaryFetchLimit = Math.max(100, limit * 2);
-  const supplementalFetchLimit = Math.max(200, limit * 4);
+  const primaryFetchLimit = Math.max(300, limit * 2);
+  const supplementalFetchLimit = Math.max(600, limit * 4);
   const sort = searchParams.get("sort") === "spread" ? "spread" : "heat";
   const scope = parseScope(searchParams.get("scope"));
   const minAcceleration = Number(searchParams.get("min_acceleration") ?? Number.NaN);

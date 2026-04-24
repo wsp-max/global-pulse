@@ -8,7 +8,7 @@ export const revalidate = 0;
 export default async function NewsDashboardPage() {
   const [regionsData, globalTopicsData] = await Promise.all([
     fetchServerJson<RegionsApiResponse>("/api/regions?scope=news"),
-    fetchServerJson<GlobalTopicsApiResponse>("/api/global-topics?scope=news&limit=20"),
+    fetchServerJson<GlobalTopicsApiResponse>("/api/global-topics?scope=news&limit=60"),
   ]);
 
   return (

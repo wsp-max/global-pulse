@@ -1,6 +1,7 @@
-﻿import type { ScrapedPost } from "@global-pulse/shared";
+import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const PTT_GOSSIPING_URL = "https://www.ptt.cc/bbs/Gossiping/index.html";
@@ -81,7 +82,7 @@ export class PttScraper extends BaseScraper {
 
     const posts: ScrapedPost[] = [];
     $(".r-ent").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -114,3 +115,5 @@ export class PttScraper extends BaseScraper {
     return posts;
   }
 }
+
+

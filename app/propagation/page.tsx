@@ -20,8 +20,8 @@ export default async function PropagationPage({ searchParams }: PropagationPageP
   const [communityRegions, newsRegions, communityGlobalTopics, newsGlobalTopics] = await Promise.all([
     fetchServerJson<RegionsApiResponse>("/api/regions?scope=community"),
     fetchServerJson<RegionsApiResponse>("/api/regions?scope=news"),
-    fetchServerJson<GlobalTopicsApiResponse>("/api/global-topics?scope=community&limit=60"),
-    fetchServerJson<GlobalTopicsApiResponse>("/api/global-topics?scope=news&limit=30"),
+    fetchServerJson<GlobalTopicsApiResponse>("/api/global-topics?scope=community&limit=180"),
+    fetchServerJson<GlobalTopicsApiResponse>("/api/global-topics?scope=news&limit=90"),
   ]);
 
   return (

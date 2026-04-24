@@ -1,11 +1,12 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const FOURCHAN_CATALOG_URL = "https://a.4cdn.org/pol/catalog.json";
 const FOURCHAN_THREAD_URL = "https://boards.4chan.org/pol/thread";
-const MAX_THREADS = 50;
+const MAX_THREADS = resolveCollectorSourceCap("fourchan", 50);
 
 interface FourchanThread {
   no?: number;

@@ -126,7 +126,7 @@ export async function GET(request: Request) {
       where created_at >= now() - ($1::text || ' days')::interval
         and scope = $2
       order by created_at desc, total_heat_score desc nulls last
-      limit 240
+      limit 720
       `,
       [days, scope],
     );

@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const GUTEFRAGE_URL = "https://www.gutefrage.net/";
@@ -46,7 +47,7 @@ export class GutefrageScraper extends BaseScraper {
     const seenIds = new Set<string>();
 
     $("article.Plate.ListingElement").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -93,4 +94,6 @@ export class GutefrageScraper extends BaseScraper {
     return posts;
   }
 }
+
+
 

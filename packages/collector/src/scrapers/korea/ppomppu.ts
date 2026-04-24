@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const PPOMPPU_URL = "https://www.ppomppu.co.kr/zboard/zboard.php?id=freeboard";
@@ -36,7 +37,7 @@ export class PpomppuScraper extends BaseScraper {
     const seen = new Set<string>();
 
     $("tr.baseList").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -68,4 +69,6 @@ export class PpomppuScraper extends BaseScraper {
     return posts;
   }
 }
+
+
 

@@ -27,10 +27,10 @@ export function DualCompareClient({
     fallbackData: initialNewsRegions,
   });
 
-  const { data: communityGlobalData } = useGlobalTopics(30, "community", {
+  const { data: communityGlobalData } = useGlobalTopics(90, "community", {
     fallbackData: initialCommunityGlobalTopics,
   });
-  const { data: newsGlobalData } = useGlobalTopics(30, "news", {
+  const { data: newsGlobalData } = useGlobalTopics(90, "news", {
     fallbackData: initialNewsGlobalTopics,
   });
 

@@ -129,7 +129,7 @@ interface AnalysisStorage {
   insertRegionSnapshot(row: SnapshotInsertRow): Promise<void>;
 }
 
-const ANALYZER_RAW_POST_LIMIT = Number(process.env.ANALYZER_RAW_POST_LIMIT ?? 1500);
+const ANALYZER_RAW_POST_LIMIT = Number(process.env.ANALYZER_RAW_POST_LIMIT ?? 4500);
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -956,7 +956,6 @@ runAnalysis().catch((error) => {
   logger.error(`Analysis failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });
-
 
 
 

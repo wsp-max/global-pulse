@@ -2,7 +2,7 @@ name: Collect Korea Communities
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -30,5 +30,6 @@ jobs:
       - name: Report status
         if: failure()
         run: echo "::warning::Collect Korea Communities failed"
+
 
 

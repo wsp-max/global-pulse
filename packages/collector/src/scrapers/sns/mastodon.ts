@@ -14,9 +14,9 @@ const MASTODON_SOURCE_IDS = [
   "mastodon_ru",
 ] as const;
 
-const DEFAULT_MASTODON_POSTS_PER_INSTANCE = 70;
-const DEFAULT_MASTODON_SOURCE_POST_CAP = 70;
-const DEFAULT_MASTODON_MAX_INSTANCES = 10;
+const DEFAULT_MASTODON_POSTS_PER_INSTANCE = 210;
+const DEFAULT_MASTODON_SOURCE_POST_CAP = 210;
+const DEFAULT_MASTODON_MAX_INSTANCES = 30;
 
 export type MastodonSourceId = (typeof MASTODON_SOURCE_IDS)[number];
 
@@ -140,16 +140,16 @@ export function resolveMastodonPostsPerInstance(): number {
     process.env.MASTODON_POSTS_PER_INSTANCE,
     DEFAULT_MASTODON_POSTS_PER_INSTANCE,
     1,
-    80,
+    300,
   );
 }
 
 export function resolveMastodonSourcePostCap(): number {
-  return toPositiveInt(process.env.MASTODON_SOURCE_POST_CAP, DEFAULT_MASTODON_SOURCE_POST_CAP, 1, 200);
+  return toPositiveInt(process.env.MASTODON_SOURCE_POST_CAP, DEFAULT_MASTODON_SOURCE_POST_CAP, 1, 600);
 }
 
 function resolveMastodonMaxInstances(): number {
-  return toPositiveInt(process.env.MASTODON_MAX_INSTANCES, DEFAULT_MASTODON_MAX_INSTANCES, 1, 15);
+  return toPositiveInt(process.env.MASTODON_MAX_INSTANCES, DEFAULT_MASTODON_MAX_INSTANCES, 1, 60);
 }
 
 export function resolveConfiguredInstances(sourceId: MastodonSourceId): string[] {

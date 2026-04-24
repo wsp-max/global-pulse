@@ -62,7 +62,7 @@ export default function GlobalIssuesPage() {
   const view = parseView(searchParams.get("view"));
 
   const { data: globalData, isLoading: globalLoading, error: globalError } = useGlobalTopics(
-    scope === "community" ? 40 : 20,
+    scope === "community" ? 120 : 60,
     scope,
   );
   const { data: regionsData, isLoading: regionsLoading, error: regionsError } = useRegions(scope);

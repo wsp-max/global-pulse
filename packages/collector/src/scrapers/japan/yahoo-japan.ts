@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const YAHOO_JAPAN_RSS_FEEDS = [
@@ -41,7 +42,7 @@ function normalizePublishedAt(value: string): string | undefined {
   return parsed.toISOString();
 }
 
-async function fetchFeed(url: string): Promise<ScrapedPost[]> {
+async function fetchFeed(url: string, sourceId: string): Promise<ScrapedPost[]> {
   const response = await fetchWithRetry<string>(url, {
     responseType: "text",
     headers: {
@@ -55,7 +56,7 @@ async function fetchFeed(url: string): Promise<ScrapedPost[]> {
   const posts: ScrapedPost[] = [];
 
   $("item").each((_, element) => {
-    if (posts.length >= 20) {
+    if (posts.length >= resolveCollectorSourceCap(sourceId, 20)) {
       return false;
     }
 
@@ -86,7 +87,7 @@ export class YahooJapanScraper extends BaseScraper {
     const results = await Promise.all(
       YAHOO_JAPAN_RSS_FEEDS.map(async (feedUrl) => {
         try {
-          return await fetchFeed(feedUrl);
+          return await fetchFeed(feedUrl, this.sourceId);
         } catch {
           return [] as ScrapedPost[];
         }
@@ -103,7 +104,7 @@ export class YahooJapanScraper extends BaseScraper {
         }
         seenIds.add(post.externalId);
         merged.push(post);
-        if (merged.length >= 50) {
+        if (merged.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
           return merged;
         }
       }
@@ -116,4 +117,6 @@ export class YahooJapanScraper extends BaseScraper {
     return merged;
   }
 }
+
+
 

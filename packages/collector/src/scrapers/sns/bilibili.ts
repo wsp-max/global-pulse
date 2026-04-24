@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const BILIBILI_HOTWORD_URL = "https://s.search.bilibili.com/main/hotword";
@@ -60,7 +61,7 @@ export class BilibiliScraper extends BaseScraper {
     }
 
     const posts: ScrapedPost[] = [];
-    for (const item of payload.list.slice(0, 30)) {
+    for (const item of payload.list.slice(0, resolveCollectorSourceCap(this.sourceId, 30))) {
       const keyword = cleanText(item.show_name || item.keyword);
       if (!keyword) {
         continue;
@@ -80,4 +81,6 @@ export class BilibiliScraper extends BaseScraper {
     return posts;
   }
 }
+
+
 

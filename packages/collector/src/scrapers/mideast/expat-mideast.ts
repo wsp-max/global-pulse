@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText, cleanUrl } from "../../utils/text-cleaner";
 
 const EXPAT_MIDEAST_URL = "https://www.expat.com/en/forum/middle-east/";
@@ -58,7 +59,7 @@ export class ExpatMideastScraper extends BaseScraper {
     const seenIds = new Set<string>();
 
     $(".card-topic").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -104,3 +105,5 @@ export class ExpatMideastScraper extends BaseScraper {
     return posts;
   }
 }
+
+

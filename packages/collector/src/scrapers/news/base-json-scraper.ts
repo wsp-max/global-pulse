@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { SOURCES, type ScrapedPost, type Source } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import {
   normalizePublishedAt,
   sanitizeNewsBodyPreview,
@@ -74,7 +75,7 @@ export class BaseJsonNewsScraper extends BaseScraper {
     const seen = new Set<string>();
 
     for (const item of objects) {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         break;
       }
 
@@ -114,3 +115,5 @@ export class BaseJsonNewsScraper extends BaseScraper {
     return posts;
   }
 }
+
+

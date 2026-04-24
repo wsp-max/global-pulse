@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const WEIBO_HOT_SEARCH_URL = "https://weibo.com/ajax/side/hotSearch";
@@ -77,7 +78,7 @@ export class WeiboScraper extends BaseScraper {
     const capturedAt = new Date();
     const postedAt = capturedAt.toISOString();
     const posts: ScrapedPost[] = [];
-    for (const [index, item] of realtime.slice(0, 50).entries()) {
+    for (const [index, item] of realtime.slice(0, resolveCollectorSourceCap(this.sourceId, 50)).entries()) {
       const title = cleanText(item.word || item.note);
       if (!title) {
         continue;
@@ -96,4 +97,6 @@ export class WeiboScraper extends BaseScraper {
     return posts;
   }
 }
+
+
 

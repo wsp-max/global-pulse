@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const RESETERA_GAMING_RSS_URL = "https://www.resetera.com/forums/gaming-forum.7/index.rss";
@@ -67,7 +68,7 @@ export class ReseteraScraper extends BaseScraper {
     const seenIds = new Set<string>();
 
     $("item").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -100,3 +101,5 @@ export class ReseteraScraper extends BaseScraper {
     return posts;
   }
 }
+
+

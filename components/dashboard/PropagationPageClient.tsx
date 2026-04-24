@@ -73,10 +73,10 @@ export function PropagationPageClient({
   const newsRegions = useRegions("news", {
     fallbackData: initialNewsRegions,
   });
-  const communityGlobalTopics = useGlobalTopics(60, "community", {
+  const communityGlobalTopics = useGlobalTopics(180, "community", {
     fallbackData: initialCommunityGlobalTopics,
   });
-  const newsGlobalTopics = useGlobalTopics(30, "news", {
+  const newsGlobalTopics = useGlobalTopics(90, "news", {
     fallbackData: initialNewsGlobalTopics,
   });
 

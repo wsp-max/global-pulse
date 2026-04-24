@@ -2,7 +2,7 @@ name: Analyze Global Cross-Region Topics
 
 on:
   schedule:
-    - cron: '15 */3 * * *'
+    - cron: '15 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -26,9 +26,11 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          FEATURE_NEWS_PIPELINE: 'true'
 
       - name: Report status
         if: failure()
         run: echo "::warning::Analyze Global Cross-Region Topics failed"
+
 
 

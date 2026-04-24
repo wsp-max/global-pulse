@@ -17,9 +17,9 @@ const BLUESKY_SOURCE_IDS = [
   "bluesky_ru",
 ] as const;
 
-const DEFAULT_BLUESKY_MAX_HANDLES = 12;
-const DEFAULT_BLUESKY_POSTS_PER_HANDLE = 40;
-const DEFAULT_BLUESKY_SOURCE_POST_CAP = 70;
+const DEFAULT_BLUESKY_MAX_HANDLES = 36;
+const DEFAULT_BLUESKY_POSTS_PER_HANDLE = 120;
+const DEFAULT_BLUESKY_SOURCE_POST_CAP = 210;
 
 export type BlueskySourceId = (typeof BLUESKY_SOURCE_IDS)[number];
 
@@ -114,15 +114,15 @@ export function parseHandleList(value: string | undefined): string[] {
 }
 
 export function resolveBlueskyMaxHandles(): number {
-  return toPositiveInt(process.env.BLUESKY_MAX_HANDLES, DEFAULT_BLUESKY_MAX_HANDLES, 1, 25);
+  return toPositiveInt(process.env.BLUESKY_MAX_HANDLES, DEFAULT_BLUESKY_MAX_HANDLES, 1, 60);
 }
 
 export function resolveBlueskyPostsPerHandle(): number {
-  return toPositiveInt(process.env.BLUESKY_POSTS_PER_HANDLE, DEFAULT_BLUESKY_POSTS_PER_HANDLE, 1, 100);
+  return toPositiveInt(process.env.BLUESKY_POSTS_PER_HANDLE, DEFAULT_BLUESKY_POSTS_PER_HANDLE, 1, 300);
 }
 
 export function resolveBlueskySourcePostCap(): number {
-  return toPositiveInt(process.env.BLUESKY_SOURCE_POST_CAP, DEFAULT_BLUESKY_SOURCE_POST_CAP, 1, 200);
+  return toPositiveInt(process.env.BLUESKY_SOURCE_POST_CAP, DEFAULT_BLUESKY_SOURCE_POST_CAP, 1, 600);
 }
 
 export function resolveConfiguredHandles(sourceId: BlueskySourceId): string[] {

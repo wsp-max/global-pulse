@@ -42,6 +42,11 @@ import { RedditScraper } from "./scrapers/us/reddit";
 import { ReseteraScraper } from "./scrapers/us/resetera";
 import { SlashdotScraper } from "./scrapers/us/slashdot";
 import { Logger } from "./utils/logger";
+import {
+  isRedditSourceId,
+  resolveCollectorDisableRedditDefault,
+  resolveCollectorSourceIntervalMinutes,
+} from "./utils/source-scaling";
 import { persistScraperResult } from "./utils/supabase-storage";
 import { recordCollectorRun, toCollectorRunErrorCode } from "./utils/collector-runs";
 
@@ -133,7 +138,8 @@ async function resolveDueSourceIds(
         continue;
       }
 
-      const intervalMinutes = Math.max(1, toNumber(row.scrape_interval_minutes, 30));
+      const baseIntervalMinutes = Math.max(1, toNumber(row.scrape_interval_minutes, 30));
+      const intervalMinutes = resolveCollectorSourceIntervalMinutes(sourceId, baseIntervalMinutes);
       if (isDueByInterval(row.last_scraped_at, intervalMinutes, nowMs)) {
         dueSourceIds.add(sourceId);
       }
@@ -226,6 +232,7 @@ async function run(): Promise<void> {
   const sourceArg = parseArg("--source");
   const forceRun = process.argv.includes("--force") || process.env.COLLECTOR_FORCE_RUN === "true";
   const allowInactive = process.argv.includes("--allow-inactive");
+  const disableRedditDefault = resolveCollectorDisableRedditDefault();
   const sourceFilter = sourceArg
     ? sourceArg
         .split(",")
@@ -401,6 +408,10 @@ async function run(): Promise<void> {
       return false;
     }
 
+    if (sourceFilter.length === 0 && disableRedditDefault && isRedditSourceId(source.id)) {
+      return false;
+    }
+
     if (sourceFilter.length === 0 && DISABLED_SOURCE_ID_SET.has(source.id)) {
       return false;
     }
@@ -433,9 +444,17 @@ async function run(): Promise<void> {
   Logger.info(
     `Filters => region: ${regionFilter ?? "all"}, type: ${typeFilter ?? "all"}, source: ${
       sourceFilter.length > 0 ? sourceFilter.join(",") : "all"
-    }, force: ${forceRun}, allowInactive: ${allowInactive}`,
+    }, force: ${forceRun}, allowInactive: ${allowInactive}, redditDefaultDisabled: ${
+      sourceFilter.length === 0 ? disableRedditDefault : false
+    }`,
   );
   if (sourceFilter.length === 0) {
+    if (disableRedditDefault) {
+      const disabledRedditSources = SOURCES.filter((source) => isRedditSourceId(source.id)).map((source) => source.id);
+      if (disabledRedditSources.length > 0) {
+        Logger.info(`Reddit sources skipped by default policy: ${disabledRedditSources.join(", ")}`);
+      }
+    }
     const disabledByDefault = SOURCES.filter((source) => DISABLED_SOURCE_ID_SET.has(source.id)).map(
       (source) => source.id,
     );

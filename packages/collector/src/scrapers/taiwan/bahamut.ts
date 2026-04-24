@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { fetchGoogleNewsSiteFallback } from "../../utils/google-news-fallback";
 import { cleanText } from "../../utils/text-cleaner";
 
@@ -26,7 +27,7 @@ function toExternalId(url: string): string | null {
   }
 }
 
-async function fetchDirectPosts(): Promise<ScrapedPost[]> {
+async function fetchDirectPosts(sourceId: string): Promise<ScrapedPost[]> {
   const response = await fetchWithRetry<string>(BAHAMUT_HOME_URL, {
     responseType: "text",
     headers: {
@@ -40,7 +41,7 @@ async function fetchDirectPosts(): Promise<ScrapedPost[]> {
   const seenIds = new Set<string>();
 
   $('a[href*="gnn.gamer.com.tw/detail.php?sn="]').each((_, element) => {
-    if (posts.length >= 50) {
+    if (posts.length >= resolveCollectorSourceCap(sourceId, 50)) {
       return false;
     }
 
@@ -77,7 +78,7 @@ export class BahamutScraper extends BaseScraper {
   async fetchAndParse(): Promise<ScrapedPost[]> {
     const errors: string[] = [];
     try {
-      const directPosts = await fetchDirectPosts();
+      const directPosts = await fetchDirectPosts(this.sourceId);
       if (directPosts.length > 0) {
         return directPosts;
       }
@@ -89,9 +90,9 @@ export class BahamutScraper extends BaseScraper {
     const fallbackPosts = await fetchGoogleNewsSiteFallback({
       rssUrl: BAHAMUT_GOOGLE_NEWS_RSS,
       sourceHost: "gamer.com.tw",
-      maxItems: 30,
+      maxItems: resolveCollectorSourceCap(this.sourceId, 30),
       maxAgeHours: 168,
-      titleSuffixes: ["GNN 新聞網", "巴哈姆特電玩資訊站"],
+      titleSuffixes: ["GNN", "Bahamut"],
     });
     if (fallbackPosts.length > 0) {
       return fallbackPosts;
@@ -100,3 +101,5 @@ export class BahamutScraper extends BaseScraper {
     throw new Error(`Bahamut fetch failed. ${errors.join(" | ")}`.slice(0, 1000));
   }
 }
+
+

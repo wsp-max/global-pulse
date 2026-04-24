@@ -446,8 +446,8 @@ export function WorldHeatMap({
   const flowEdges = useMemo(
     () =>
       aggregateFlowEdges(primaryQualifiedTopics, {
-        limit: variant === "community" ? 40 : 20,
-        maxTopics: variant === "community" ? 128 : 64,
+        limit: variant === "community" ? 120 : 60,
+        maxTopics: variant === "community" ? 384 : 192,
         isValidRegion: (regionId) => Boolean(REGION_COORDINATES[regionId]),
       }),
     [primaryQualifiedTopics, variant],

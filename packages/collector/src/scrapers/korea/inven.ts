@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const INVEN_NEWS_URL = "https://www.inven.co.kr/webzine/news/?site=webzine";
@@ -57,7 +58,7 @@ export class InvenScraper extends BaseScraper {
     const seenIds = new Set<string>();
 
     $('a[href*="/webzine/news/?news="]').each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -97,3 +98,5 @@ export class InvenScraper extends BaseScraper {
     return posts;
   }
 }
+
+

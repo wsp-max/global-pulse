@@ -1,4 +1,4 @@
-﻿import { cleanText, cleanUrl } from "../../utils/text-cleaner";
+import { cleanText, cleanUrl } from "../../utils/text-cleaner";
 
 const CLICKBAIT_PREFIX = new RegExp(
   String.raw`^(?:\[[^\]]*]|\([^)]+\)|【[^】]+】)?\s*(?:충격|속보|단독|긴급|速報|衝撃|震惊|重磅)\s*(?::|-|\|)?\s*`,

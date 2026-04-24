@@ -2,7 +2,7 @@ name: Collect Threads Trending
 
 on:
   schedule:
-    - cron: '0 */2 * * *'
+    - cron: '*/40 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -31,5 +31,6 @@ jobs:
       - name: Report status
         if: failure()
         run: echo "::warning::Collect Threads Trending failed"
+
 
 

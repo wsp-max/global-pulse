@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const ZHIHU_HOT_API = "https://api.zhihu.com/topstory/hot-list";
@@ -80,7 +81,7 @@ export class ZhihuScraper extends BaseScraper {
     const posts: ScrapedPost[] = [];
     const seen = new Set<string>();
 
-    for (const item of list.slice(0, 50)) {
+    for (const item of list.slice(0, resolveCollectorSourceCap(this.sourceId, 50))) {
       const target = item.target;
       if (!target) {
         continue;
@@ -108,4 +109,6 @@ export class ZhihuScraper extends BaseScraper {
     return posts;
   }
 }
+
+
 

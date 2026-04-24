@@ -10,7 +10,7 @@ import { useTimeline } from "@/lib/hooks/useTimeline";
 import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 export default function TimelinePage() {
-  const { data: globalData, isLoading: globalLoading, error: globalError } = useGlobalTopics(50);
+  const { data: globalData, isLoading: globalLoading, error: globalError } = useGlobalTopics(150);
   const globalTopics = useMemo(() => globalData?.globalTopics ?? [], [globalData?.globalTopics]);
 
   const [selectedTopicId, setSelectedTopicId] = useState<string>("");

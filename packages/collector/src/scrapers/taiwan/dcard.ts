@@ -3,11 +3,12 @@ import { existsSync } from "node:fs";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
 import { fetchGoogleNewsSiteFallback } from "../../utils/google-news-fallback";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const DCARD_POPULAR_ENDPOINTS = [
-  "https://www.dcard.tw/service/api/v2/posts?popular=true&limit=30",
-  "https://www.dcard.tw/_api/posts?popular=true&limit=30",
+  `https://www.dcard.tw/service/api/v2/posts?popular=true&limit=${resolveCollectorSourceCap("dcard", 30)}`,
+  `https://www.dcard.tw/_api/posts?popular=true&limit=${resolveCollectorSourceCap("dcard", 30)}`,
 ] as const;
 const DCARD_GOOGLE_NEWS_RSS =
   "https://news.google.com/rss/search?q=site:dcard.tw&hl=zh-TW&gl=TW&ceid=TW:zh-Hant";
@@ -273,7 +274,7 @@ export class DcardScraper extends BaseScraper {
       const fallbackPosts = await fetchGoogleNewsSiteFallback({
         rssUrl: DCARD_GOOGLE_NEWS_RSS,
         sourceHost: "dcard.tw",
-        maxItems: 30,
+        maxItems: resolveCollectorSourceCap(this.sourceId, 30),
         maxAgeHours: 72,
         titleSuffixes: ["Dcard"],
       });

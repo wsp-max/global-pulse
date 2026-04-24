@@ -12,8 +12,8 @@ export default async function ComparePage() {
   const [communityRegions, newsRegions, communityGlobal, newsGlobal] = await Promise.all([
     fetchServerJson<RegionsApiResponse>("/api/regions?scope=community"),
     fetchServerJson<RegionsApiResponse>("/api/regions?scope=news"),
-    fetchServerJson<GlobalTopicsApiResponse>("/api/global-topics?scope=community&limit=20"),
-    fetchServerJson<GlobalTopicsApiResponse>("/api/global-topics?scope=news&limit=20"),
+    fetchServerJson<GlobalTopicsApiResponse>("/api/global-topics?scope=community&limit=60"),
+    fetchServerJson<GlobalTopicsApiResponse>("/api/global-topics?scope=news&limit=60"),
   ]);
 
   return (

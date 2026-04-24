@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const RULIWEB_URL = "https://bbs.ruliweb.com/best/selection";
@@ -35,7 +36,7 @@ export class RuliwebScraper extends BaseScraper {
     const seen = new Set<string>();
 
     $("tr.table_body").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -66,4 +67,6 @@ export class RuliwebScraper extends BaseScraper {
     return posts;
   }
 }
+
+
 

@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const TOGETTER_TOP_URL = "https://togetter.com/";
@@ -45,7 +46,7 @@ export class TogetterScraper extends BaseScraper {
     const seenIds = new Set<string>();
 
     $('a[href*="/li/"][title]').each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -82,3 +83,5 @@ export class TogetterScraper extends BaseScraper {
     return posts;
   }
 }
+
+

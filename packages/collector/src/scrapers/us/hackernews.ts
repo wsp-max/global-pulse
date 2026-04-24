@@ -1,11 +1,12 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const TOP_STORIES_URL = "https://hacker-news.firebaseio.com/v0/topstories.json";
 const ITEM_URL = "https://hacker-news.firebaseio.com/v0/item";
-const MAX_STORY_COUNT = 30;
+const MAX_STORY_COUNT = resolveCollectorSourceCap("hackernews", 30);
 const FETCH_CONCURRENCY = 10;
 
 interface HackerNewsItem {

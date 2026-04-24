@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const TIEBA_HOT_TOPIC_LIST_URL = "https://tieba.baidu.com/hottopic/browse/topicList?res_type=1";
@@ -8,7 +9,7 @@ const TIEBA_BASE_URL = "https://tieba.baidu.com";
 
 function parseCount(value: string): number {
   const normalized = cleanText(value).toLowerCase();
-  const matched = normalized.match(/([\d.]+)\s*([wk万亿m]?)/u);
+  const matched = normalized.match(/([\d.]+)\s*([wkm万亿]?)/u);
   if (!matched) {
     return 0;
   }
@@ -64,7 +65,7 @@ export class TiebaScraper extends BaseScraper {
     const seenIds = new Set<string>();
 
     $(".topic-top-item").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -95,4 +96,6 @@ export class TiebaScraper extends BaseScraper {
     return posts;
   }
 }
+
+
 

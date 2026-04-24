@@ -16,8 +16,8 @@ interface ClusterOptions {
   scope?: "community" | "news" | "mixed";
 }
 
-const ANALYZER_MAX_TOPICS = Number(process.env.ANALYZER_MAX_TOPICS ?? 20);
-const ANALYZER_MAX_SINGLE_POST_TOPICS = Number(process.env.ANALYZER_MAX_SINGLE_POST_TOPICS ?? 8);
+const ANALYZER_MAX_TOPICS = Number(process.env.ANALYZER_MAX_TOPICS ?? 60);
+const ANALYZER_MAX_SINGLE_POST_TOPICS = Number(process.env.ANALYZER_MAX_SINGLE_POST_TOPICS ?? 24);
 const ANALYZER_SINGLE_POST_SEED_MIN_KEYWORDS = Number(
   process.env.ANALYZER_SINGLE_POST_SEED_MIN_KEYWORDS ?? 20,
 );

@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const HABR_RSS_URL = "https://habr.com/ru/rss/news/";
@@ -46,7 +47,7 @@ export class HabrScraper extends BaseScraper {
     const seenIds = new Set<string>();
 
     $("item").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -76,3 +77,5 @@ export class HabrScraper extends BaseScraper {
     return posts;
   }
 }
+
+

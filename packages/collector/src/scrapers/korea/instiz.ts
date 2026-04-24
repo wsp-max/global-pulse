@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const INSTIZ_PT_URL = "https://www.instiz.net/pt";
@@ -65,7 +66,7 @@ export class InstizScraper extends BaseScraper {
     const seenIds = new Set<string>();
 
     $('a[href*="/pt/"]').each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -112,3 +113,5 @@ export class InstizScraper extends BaseScraper {
     return posts;
   }
 }
+
+

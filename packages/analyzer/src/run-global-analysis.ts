@@ -618,7 +618,7 @@ function resolveStorage(): GlobalAnalysisStorage | null {
 async function runGlobalAnalysis(): Promise<void> {
   const scopeArg = parseScopeArg(parseArg("--scope"));
   const hours = Number(parseArg("--hours") ?? 24);
-  const limit = Math.min(Number(parseArg("--limit") ?? 25), 100);
+  const limit = Math.min(Number(parseArg("--limit") ?? 75), 100);
   const minRegions = Math.max(Number(parseArg("--min-regions") ?? 2), 2);
   const similarity = Number(parseArg("--similarity") ?? 0.24);
 

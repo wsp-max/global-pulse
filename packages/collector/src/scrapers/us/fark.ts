@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const FARK_RSS_URLS = [
@@ -90,7 +91,7 @@ export class FarkScraper extends BaseScraper {
     const itemNodes = $("item").length > 0 ? $("item") : $("entry");
 
     itemNodes.each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -133,3 +134,5 @@ export class FarkScraper extends BaseScraper {
     return posts;
   }
 }
+
+

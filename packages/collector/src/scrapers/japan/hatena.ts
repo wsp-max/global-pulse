@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const HATENA_RSS_URL = "https://b.hatena.ne.jp/hotentry/all.rss";
@@ -30,7 +31,7 @@ export class HatenaScraper extends BaseScraper {
 
     const posts: ScrapedPost[] = [];
     $("item").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -59,4 +60,6 @@ export class HatenaScraper extends BaseScraper {
     return posts;
   }
 }
+
+
 

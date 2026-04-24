@@ -2,7 +2,7 @@ name: Analyze Topics
 
 on:
   schedule:
-    - cron: '5 * * * *'
+    - cron: '*/20 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -26,9 +26,11 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          FEATURE_NEWS_PIPELINE: 'true'
 
       - name: Report status
         if: failure()
         run: echo "::warning::Analyze Topics failed"
+
 
 

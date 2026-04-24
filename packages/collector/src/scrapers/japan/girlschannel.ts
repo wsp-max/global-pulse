@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const GIRLSCHANNEL_NEW_URL = "https://girlschannel.net/new/";
@@ -35,22 +36,22 @@ function toPostedAt(relativeText: string): string | undefined {
   }
 
   const now = Date.now();
-  const second = normalized.match(/(\d+)\s*秒前/u);
+  const second = normalized.match(/(\d+)\s*秒/u);
   if (second) {
     return new Date(now - Number(second[1]) * 1_000).toISOString();
   }
 
-  const minute = normalized.match(/(\d+)\s*分前/u);
+  const minute = normalized.match(/(\d+)\s*分/u);
   if (minute) {
     return new Date(now - Number(minute[1]) * 60_000).toISOString();
   }
 
-  const hour = normalized.match(/(\d+)\s*時間前/u);
+  const hour = normalized.match(/(\d+)\s*(時間|時)/u);
   if (hour) {
     return new Date(now - Number(hour[1]) * 60 * 60_000).toISOString();
   }
 
-  const day = normalized.match(/(\d+)\s*日前/u);
+  const day = normalized.match(/(\d+)\s*日/u);
   if (day) {
     return new Date(now - Number(day[1]) * 24 * 60 * 60_000).toISOString();
   }
@@ -75,7 +76,7 @@ export class GirlschannelScraper extends BaseScraper {
     const seenIds = new Set<string>();
 
     $("div.topic-list-wrap li").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -110,3 +111,5 @@ export class GirlschannelScraper extends BaseScraper {
     return posts;
   }
 }
+
+

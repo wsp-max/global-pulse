@@ -1,6 +1,7 @@
 import type { ScrapedPost } from "@global-pulse/shared";
 import { BaseScraper } from "../base-scraper";
 import { fetchWithRetry } from "../../utils/http-client";
+import { resolveCollectorSourceCap } from "../../utils/source-scaling";
 import { cleanText } from "../../utils/text-cleaner";
 
 const MUMSNET_FEED_URL = "https://www.mumsnet.com/talk/feed";
@@ -48,7 +49,7 @@ export class MumsnetScraper extends BaseScraper {
     const seenIds = new Set<string>();
 
     $("item").each((_, element) => {
-      if (posts.length >= 50) {
+      if (posts.length >= resolveCollectorSourceCap(this.sourceId, 50)) {
         return false;
       }
 
@@ -78,3 +79,5 @@ export class MumsnetScraper extends BaseScraper {
     return posts;
   }
 }
+
+

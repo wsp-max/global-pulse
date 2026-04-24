@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 APP_DIR="${APP_DIR:-/srv/projects/project2/global-pulse}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${APP_DIR}/docs/evidence/cutover}"
-SOURCE_ID="${SOURCE_ID:-reddit_worldnews}"
+SOURCE_ID="${SOURCE_ID:-hackernews}"
 RUN_BACKUP_RESTORE="${RUN_BACKUP_RESTORE:-1}"
 
 TIMESTAMP="$(date +'%Y%m%d_%H%M%S')"
