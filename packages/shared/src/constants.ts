@@ -1234,7 +1234,7 @@ const CORE_SOURCES = [
     type: "community" as const,
     scrapeUrl: "https://wilddog.net.za/forums/-/index.rss",
     scrapeIntervalMinutes: 90,
-    isActive: true,
+    isActive: false,
     language: "en",
     feedKind: "rss",
   },
