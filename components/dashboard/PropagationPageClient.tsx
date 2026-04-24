@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { GlobalTopic } from "@global-pulse/shared";
 import { ScopeTabs } from "@/components/dashboard/ScopeTabs";
+import { SourceTransferPanel } from "@/components/dashboard/SourceTransferPanel";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGlobalTopics } from "@/lib/hooks/useGlobalTopics";
 import { useRegions } from "@/lib/hooks/useRegions";
@@ -152,6 +153,10 @@ export function PropagationPageClient({
       <section className="card-panel p-5">
         {isLoading ? <LoadingSkeleton className="h-[280px]" /> : <PulseSignalBoard regions={regions} globalTopics={qualifiedPrimaryTopics} />}
       </section>
+
+      <div className="border-t border-white/5" />
+
+      <SourceTransferPanel primaryScope={activeScope} onTopicSelect={(topicId) => setSelectedTopicId(topicId)} />
 
       <div className="border-t border-white/5" />
 

@@ -9,6 +9,7 @@ import { HotIssueList } from "@/components/dashboard/HotIssueList";
 import { PropagationEventList } from "@/components/dashboard/PropagationEventList";
 import { RegionBoard } from "@/components/dashboard/RegionBoard";
 import { ScopeTabs } from "@/components/dashboard/ScopeTabs";
+import { SourceTransferPanel } from "@/components/dashboard/SourceTransferPanel";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGlobalTopics } from "@/lib/hooks/useGlobalTopics";
@@ -379,6 +380,8 @@ export function DashboardClient({
         value={activeScope}
         onChange={(nextScope) => applyQuery({ scope: nextScope === "news" ? "news" : "community" })}
       />
+
+      <SourceTransferPanel primaryScope={activeScope} onTopicSelect={(topicId) => setSelectedTopicId(topicId)} />
 
       <section>
         <div className="mb-2 px-1">
