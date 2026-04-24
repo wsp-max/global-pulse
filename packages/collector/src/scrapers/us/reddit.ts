@@ -11,6 +11,7 @@ const REDDIT_OAUTH_API_BASE = "https://oauth.reddit.com";
 const REDDIT_USER_AGENT =
   process.env.REDDIT_USER_AGENT ??
   "global-pulse/1.0 (by /u/global_pulse_monitor; https://github.com/wsp-max/global-pulse)";
+const REDDIT_PUBLIC_FALLBACK_MODE = (process.env.REDDIT_PUBLIC_FALLBACK_MODE ?? "rss-first").trim().toLowerCase();
 
 const REDDIT_SOURCE_TARGET_MAP = {
   reddit: { path: "r/all/hot", limit: 50 },
@@ -410,6 +411,23 @@ async function parseRssPosts(xml: string, limit: number): Promise<ScrapedPost[]>
   return posts;
 }
 
+async function fetchRssPosts(path: string, limit: number, errors: string[]): Promise<ScrapedPost[]> {
+  for (const rssUrl of buildPublicRssUrls(path, limit)) {
+    try {
+      const rssXml = await fetchPublicRssListing(rssUrl);
+      const rssPosts = await parseRssPosts(rssXml, limit);
+      if (rssPosts.length > 0) {
+        return rssPosts;
+      }
+      errors.push(`${rssUrl}: parsed 0 posts`);
+    } catch (error) {
+      errors.push(`${rssUrl}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  return [];
+}
+
 export class RedditScraper extends BaseScraper {
   sourceId: RedditSourceId;
 
@@ -433,6 +451,13 @@ export class RedditScraper extends BaseScraper {
       }
     }
 
+    if (!payload && REDDIT_PUBLIC_FALLBACK_MODE !== "json-first") {
+      const rssPosts = await fetchRssPosts(path, limit, errors);
+      if (rssPosts.length > 0) {
+        return rssPosts;
+      }
+    }
+
     if (!payload) {
       for (const url of buildPublicListingUrls(path, limit)) {
         try {
@@ -449,16 +474,10 @@ export class RedditScraper extends BaseScraper {
       return listingPosts;
     }
 
-    for (const rssUrl of buildPublicRssUrls(path, limit)) {
-      try {
-        const rssXml = await fetchPublicRssListing(rssUrl);
-        const rssPosts = await parseRssPosts(rssXml, limit);
-        if (rssPosts.length > 0) {
-          return rssPosts;
-        }
-        errors.push(`${rssUrl}: parsed 0 posts`);
-      } catch (error) {
-        errors.push(`${rssUrl}: ${error instanceof Error ? error.message : String(error)}`);
+    if (REDDIT_PUBLIC_FALLBACK_MODE === "json-first") {
+      const rssPosts = await fetchRssPosts(path, limit, errors);
+      if (rssPosts.length > 0) {
+        return rssPosts;
       }
     }
 
