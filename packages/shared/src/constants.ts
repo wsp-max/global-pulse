@@ -1260,7 +1260,7 @@ const CORE_SOURCES = [
     type: "community" as const,
     scrapeUrl: "https://pantip.com/forum/feed",
     scrapeIntervalMinutes: 60,
-    isActive: true,
+    isActive: false,
     language: "th",
     feedKind: "rss",
   },

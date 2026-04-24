@@ -64,6 +64,7 @@ export class RssCommunityScraper extends BaseScraper {
     const response = await fetchWithRetry<string>(this.source.scrapeUrl, {
       responseType: "text",
       headers: {
+        "User-Agent": "Mozilla/5.0 GlobalPulseBot/1.0",
         Accept: "*/*",
       },
       timeout: 30_000,
