@@ -90,6 +90,8 @@ interface IssueOverlapEventRow extends IssueOverlapSnapshotRow {
   community_topic_name_en: string;
   news_topic_name_ko: string;
   news_topic_name_en: string;
+  community_first_post_at: string | null;
+  news_first_post_at: string | null;
 }
 
 interface GlobalAnalysisStorage {
@@ -633,6 +635,8 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
         "community_topic_name_en",
         "news_topic_name_ko",
         "news_topic_name_en",
+        "community_first_post_at",
+        "news_first_post_at",
       ] as const;
 
       for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
@@ -848,6 +852,14 @@ async function runGlobalAnalysis(): Promise<void> {
     const communityTopic = communityTopicById.get(item.communityTopicId);
     const newsTopic = newsTopicById.get(item.newsTopicId);
     const regionId = communityTopic?.regionId ?? newsTopic?.regionId;
+    const communityFirstPostAt =
+      overlapFirstPostByTopicId.get(item.communityTopicId)?.first_post_at ??
+      communityTopic?.periodStart ??
+      null;
+    const newsFirstPostAt =
+      overlapFirstPostByTopicId.get(item.newsTopicId)?.first_post_at ??
+      newsTopic?.periodStart ??
+      null;
 
     if (!regionId) {
       continue;
@@ -878,6 +890,8 @@ async function runGlobalAnalysis(): Promise<void> {
       community_topic_name_en: communityTopic?.nameEn ?? "",
       news_topic_name_ko: newsTopic?.nameKo ?? "",
       news_topic_name_en: newsTopic?.nameEn ?? "",
+      community_first_post_at: communityFirstPostAt,
+      news_first_post_at: newsFirstPostAt,
     });
   }
 

@@ -225,6 +225,8 @@ export interface SourceTransferPairRow {
   eventCount: number;
   firstDetectedAt: string;
   lastDetectedAt: string;
+  communityFirstPostAt: string | null;
+  newsFirstPostAt: string | null;
   avgLagMinutes: number | null;
   latestLagMinutes: number | null;
   avgCosine: number | null;
@@ -232,6 +234,9 @@ export interface SourceTransferPairRow {
 
 export interface SourceTransferApiResponse {
   summary: SourceTransferSummary;
+  snapshotSummary: SourceTransferSummary;
+  historySummary: SourceTransferSummary;
+  latestAnalyzerRunAt: string | null;
   sankey: {
     nodes: SourceTransferSankeyNode[];
     links: SourceTransferSankeyLink[];

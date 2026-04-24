@@ -6,9 +6,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getAllRegions, getRegionById } from "@global-pulse/shared";
 import {
   Bar,
+  BarChart,
   CartesianGrid,
+  Cell,
   ComposedChart,
-  Legend,
   Line,
   ResponsiveContainer,
   Sankey,
@@ -105,6 +106,30 @@ function formatDetectedAt(value: string | null | undefined): string {
   });
 }
 
+function formatPostAt(value: string | null | undefined): string {
+  if (!value) {
+    return "-";
+  }
+  const parsed = new Date(value);
+  if (!Number.isFinite(parsed.getTime())) {
+    return "-";
+  }
+  return parsed.toLocaleString("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function formatCosine(value: number | null | undefined): string {
+  if (!Number.isFinite(value ?? Number.NaN)) {
+    return "-";
+  }
+  return Number(value).toFixed(3);
+}
+
 function directionLabel(direction: SourceTransferDirection): string {
   if (direction === "news_to_community") {
     return "뉴스 → 커뮤니티";
@@ -134,24 +159,34 @@ function toTopicLabel(pair: SourceTransferPairRow, scope: "community" | "news"):
   });
 }
 
+function truncateLabel(value: string, max = 34): string {
+  const normalized = value.trim();
+  if (normalized.length <= max) {
+    return normalized;
+  }
+  return `${normalized.slice(0, max - 1)}…`;
+}
+
 function buildNarrative(
   direction: SourceTransferDirection,
   hours: number,
-  summary: SourceTransferApiResponse["summary"] | undefined,
+  snapshotSummary: SourceTransferApiResponse["summary"] | undefined,
+  historySummary: SourceTransferApiResponse["summary"] | undefined,
   topPair: SourceTransferPairRow | undefined,
 ): string {
-  if (!summary) {
-    return "소스 전이 이력 데이터를 불러오는 중입니다.";
+  if (!snapshotSummary) {
+    return "소스 전이 스냅샷 데이터를 불러오는 중입니다.";
   }
-  if (summary.totalEvents <= 0) {
-    return `최근 ${hours}시간 동안 ${directionLabel(direction)} 전이 이벤트가 감지되지 않았습니다.`;
+  if (snapshotSummary.totalEvents <= 0) {
+    return `최신 배치 스냅샷에서 ${directionLabel(direction)} 전이가 감지되지 않았습니다. ${hours}h 이력에서는 ${historySummary?.totalEvents?.toLocaleString() ?? "0"}건이 관측되었습니다.`;
   }
 
   const region = topPair ? getRegionById(topPair.regionId)?.nameKo ?? topPair.regionId.toUpperCase() : "-";
   const fromName = topPair ? toTopicLabel(topPair, "community") : "-";
   const toName = topPair ? toTopicLabel(topPair, "news") : "-";
+  const lag = topPair ? formatLag(topPair.latestLagMinutes ?? topPair.avgLagMinutes) : "-";
 
-  return `최근 ${hours}시간 기준 ${directionLabel(direction)} 전이 ${summary.totalEvents.toLocaleString()}건, 고유 전이쌍 ${summary.uniquePairs.toLocaleString()}건입니다. 상위 전이쌍은 ${region}의 "${fromName}" ↔ "${toName}" (${topPair?.eventCount ?? 0}건)이며, 중앙값 지연은 ${formatLag(summary.medianLagMinutes)}입니다.`;
+  return `최신 배치 스냅샷 기준 ${directionLabel(direction)} 전이 ${snapshotSummary.totalEvents.toLocaleString()}건, 고유 전이쌍 ${snapshotSummary.uniquePairs.toLocaleString()}건입니다. 대표 전이는 ${region} "${fromName}" → "${toName}"이며 실제 lag는 ${lag}입니다. 별도 ${hours}h 이력 집계는 ${historySummary?.totalEvents?.toLocaleString() ?? "0"}건입니다.`;
 }
 
 export function SourceTransferPageClient({
@@ -217,8 +252,10 @@ export function SourceTransferPageClient({
     return { nodes, links };
   }, [data?.sankey.links, data?.sankey.nodes]);
 
-  const pairs = data?.pairs ?? [];
-  const summary = data?.summary;
+  const pairs = useMemo(() => data?.pairs ?? [], [data?.pairs]);
+  const snapshotSummary = data?.snapshotSummary ?? data?.summary;
+  const historySummary = data?.historySummary ?? data?.summary;
+  const latestAnalyzerRunAt = data?.latestAnalyzerRunAt ?? null;
   const totalPairs = data?.meta.totalPairs ?? 0;
   const returnedPairs = data?.meta.returnedPairs ?? 0;
   const currentPage = Math.floor(offset / Math.max(1, limit)) + 1;
@@ -226,12 +263,40 @@ export function SourceTransferPageClient({
   const canPrev = offset > 0;
   const canNext = offset + returnedPairs < totalPairs;
 
+  const topTransferData = useMemo(() => {
+    return [...pairs]
+      .sort((left, right) => {
+        const leftCosine = left.avgCosine ?? -1;
+        const rightCosine = right.avgCosine ?? -1;
+        if (leftCosine !== rightCosine) {
+          return rightCosine - leftCosine;
+        }
+        const leftLag = Math.abs(left.latestLagMinutes ?? left.avgLagMinutes ?? Number.POSITIVE_INFINITY);
+        const rightLag = Math.abs(right.latestLagMinutes ?? right.avgLagMinutes ?? Number.POSITIVE_INFINITY);
+        return leftLag - rightLag;
+      })
+      .slice(0, 12)
+      .map((row) => {
+        const community = toTopicLabel(row, "community");
+        const news = toTopicLabel(row, "news");
+        const score = Math.max(0, Number(((row.avgCosine ?? 0) * 100).toFixed(1)));
+        const regionName = getRegionById(row.regionId)?.nameKo ?? row.regionId.toUpperCase();
+        return {
+          pairKey: row.pairKey,
+          label: `${community} → ${news}`,
+          cosineScore: score,
+          lagMinutes: row.latestLagMinutes ?? row.avgLagMinutes,
+          regionName,
+        };
+      });
+  }, [pairs]);
+
   return (
     <main className="page-shell">
       <section className="card-panel p-4">
         <h1 className="section-title">소스 전이</h1>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          커뮤니티와 뉴스 간 전이 이력을 기준으로 선행 방향, 지연 시간, 상위 전이쌍을 추적합니다.
+          기준을 분리해 보여줍니다. 상단 KPI와 전이쌍은 최신 배치 스냅샷 기준, 시간대 추이는 {hours}h 이력 기준입니다.
         </p>
       </section>
 
@@ -302,50 +367,179 @@ export function SourceTransferPageClient({
         </section>
       ) : null}
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-        <article className="card-panel p-4">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">events</p>
-          <p className="mt-1 text-lg font-semibold">{summary?.totalEvents.toLocaleString() ?? "-"}</p>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">총 전이 이벤트</p>
-        </article>
-        <article className="card-panel p-4">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">pairs</p>
-          <p className="mt-1 text-lg font-semibold">{summary?.uniquePairs.toLocaleString() ?? "-"}</p>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">고유 전이쌍</p>
-        </article>
-        <article className="card-panel p-4">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">lead share</p>
-          <p className="mt-1 text-lg font-semibold">{formatRatio(summary?.forwardLeadShare)}</p>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">{directionLabel(direction)} 선행 비율</p>
-        </article>
-        <article className="card-panel p-4">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">median lag</p>
-          <p className="mt-1 text-lg font-semibold">{formatLag(summary?.medianLagMinutes)}</p>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">중앙값 지연</p>
-        </article>
-        <article className="card-panel p-4">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">p90 lag</p>
-          <p className="mt-1 text-lg font-semibold">{formatLag(summary?.p90LagMinutes)}</p>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">상위 10% 지연</p>
-        </article>
-        <article className="card-panel p-4">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">latest</p>
-          <p className="mt-1 text-sm font-semibold">{formatDetectedAt(summary?.latestDetectedAt)}</p>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">최신 감지 시각</p>
-        </article>
+      <section className="card-panel p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="section-title">최신 배치 스냅샷</h2>
+          <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
+            snapshot
+          </span>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">events</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              {snapshotSummary?.totalEvents.toLocaleString() ?? "-"}
+            </p>
+          </article>
+          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">pairs</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              {snapshotSummary?.uniquePairs.toLocaleString() ?? "-"}
+            </p>
+          </article>
+          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">lead share</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              {formatRatio(snapshotSummary?.forwardLeadShare)}
+            </p>
+          </article>
+          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">median lag</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              {formatLag(snapshotSummary?.medianLagMinutes)}
+            </p>
+          </article>
+          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">p90 lag</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              {formatLag(snapshotSummary?.p90LagMinutes)}
+            </p>
+          </article>
+          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">latest run</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{formatDetectedAt(latestAnalyzerRunAt)}</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="card-panel p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="section-title">{hours}h 이력</h2>
+          <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
+            history
+          </span>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">events</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              {historySummary?.totalEvents.toLocaleString() ?? "-"}
+            </p>
+          </article>
+          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">pairs</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              {historySummary?.uniquePairs.toLocaleString() ?? "-"}
+            </p>
+          </article>
+          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">lead share</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              {formatRatio(historySummary?.forwardLeadShare)}
+            </p>
+          </article>
+          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">median lag</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              {formatLag(historySummary?.medianLagMinutes)}
+            </p>
+          </article>
+          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">latest detect</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
+              {formatDetectedAt(historySummary?.latestDetectedAt)}
+            </p>
+          </article>
+        </div>
       </section>
 
       <section className="card-panel p-4">
         <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-          {buildNarrative(direction, hours, summary, pairs[0])}
+          {buildNarrative(direction, hours, snapshotSummary, historySummary, pairs[0])}
         </p>
       </section>
 
       <section className="grid gap-3 xl:grid-cols-[1.5fr_1fr]">
         <article className="card-panel p-4">
-          <h2 className="section-title">전이 Sankey</h2>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">이벤트 빈도 기준 상위 전이쌍 흐름</p>
-          <div className="mt-3 h-[380px] w-full">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="section-title">Top 전이 막대 차트</h2>
+            <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
+              snapshot
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">상위 전이쌍 유사도(값)와 실제 lag를 함께 확인합니다.</p>
+          <div className="mt-3 h-[420px] w-full">
+            {topTransferData.length === 0 ? (
+              <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 text-xs text-[var(--text-secondary)]">
+                표시할 스냅샷 전이쌍이 없습니다.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topTransferData} layout="vertical" margin={{ top: 8, right: 20, bottom: 8, left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" horizontal={false} />
+                  <XAxis
+                    type="number"
+                    domain={[0, 100]}
+                    tickFormatter={(value) => `${Math.round(value)}%`}
+                    tick={{ fill: "#94a3b8", fontSize: 11 }}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    width={260}
+                    tickFormatter={(value) => truncateLabel(String(value))}
+                    tick={{ fill: "#cbd5e1", fontSize: 11 }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#0f172a",
+                      border: "1px solid #334155",
+                      borderRadius: "8px",
+                      color: "#e2e8f0",
+                    }}
+                    formatter={(value, name) => {
+                      if (name === "cosineScore") {
+                        return [`${Number(value).toFixed(1)}%`, "유사도"];
+                      }
+                      return [value as string, name];
+                    }}
+                    labelFormatter={(_, payload) => {
+                      const row = payload?.[0]?.payload as
+                        | {
+                            label: string;
+                            regionName: string;
+                            lagMinutes: number | null;
+                          }
+                        | undefined;
+                      if (!row) {
+                        return "";
+                      }
+                      return `${row.regionName} | ${row.label} | lag ${formatLag(row.lagMinutes)}`;
+                    }}
+                  />
+                  <Bar dataKey="cosineScore" name="cosineScore" radius={[0, 6, 6, 0]}>
+                    {topTransferData.map((entry, index) => (
+                      <Cell
+                        key={entry.pairKey}
+                        fill={index % 2 === 0 ? "rgba(56, 189, 248, 0.8)" : "rgba(251, 146, 60, 0.8)"}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </article>
+
+        <article className="card-panel p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="section-title">보조 Sankey</h2>
+            <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
+              snapshot
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">상위 링크 8개만 축약해 전이 흐름 방향을 빠르게 확인합니다.</p>
+          <div className="mt-3 h-[420px] w-full">
             {sankeyData.links.length === 0 ? (
               <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 text-xs text-[var(--text-secondary)]">
                 표시할 전이 흐름이 없습니다.
@@ -354,9 +548,9 @@ export function SourceTransferPageClient({
               <ResponsiveContainer width="100%" height="100%">
                 <Sankey
                   data={sankeyData}
-                  nodePadding={28}
-                  nodeWidth={15}
-                  linkCurvature={0.4}
+                  nodePadding={26}
+                  nodeWidth={14}
+                  linkCurvature={0.35}
                   margin={{ top: 12, right: 12, bottom: 12, left: 12 }}
                 >
                   <Tooltip
@@ -372,60 +566,64 @@ export function SourceTransferPageClient({
             )}
           </div>
         </article>
+      </section>
 
-        <article className="card-panel p-4">
+      <section className="card-panel p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="section-title">시간대 추이</h2>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">시간별 전이 건수와 평균 지연</p>
-          <div className="mt-3 h-[380px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={trendData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                <XAxis dataKey="label" minTickGap={22} tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                <YAxis
-                  yAxisId="events"
-                  tick={{ fill: "#94a3b8", fontSize: 11 }}
-                  axisLine={{ stroke: "#334155" }}
-                  tickLine={{ stroke: "#334155" }}
-                  width={38}
-                />
-                <YAxis
-                  yAxisId="lag"
-                  orientation="right"
-                  tick={{ fill: "#94a3b8", fontSize: 11 }}
-                  axisLine={{ stroke: "#334155" }}
-                  tickLine={{ stroke: "#334155" }}
-                  width={44}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#0f172a",
-                    border: "1px solid #334155",
-                    borderRadius: "8px",
-                    color: "#e2e8f0",
-                  }}
-                  formatter={(value, name) => {
-                    const numeric = typeof value === "number" ? value : Number(value ?? 0);
-                    if (name === "eventCount") return [numeric.toLocaleString(), "이벤트"];
-                    if (name === "avgLagMinutes") return [formatLag(numeric), "평균 지연"];
-                    return [numeric, String(name)];
-                  }}
-                />
-                <Legend />
-                <Bar yAxisId="events" dataKey="eventCount" name="eventCount" fill="#38bdf8" radius={[4, 4, 0, 0]} />
-                <Line
-                  yAxisId="lag"
-                  type="monotone"
-                  dataKey="avgLagMinutes"
-                  name="avgLagMinutes"
-                  stroke="#f97316"
-                  strokeWidth={2}
-                  dot={false}
-                  connectNulls
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </article>
+          <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
+            {hours}h history
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">시간별 전이 이벤트 수와 평균 지연(24h 이력 분석)을 보여줍니다.</p>
+        <div className="mt-3 h-[340px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={trendData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+              <XAxis dataKey="label" minTickGap={22} tick={{ fill: "#94a3b8", fontSize: 11 }} />
+              <YAxis
+                yAxisId="events"
+                tick={{ fill: "#94a3b8", fontSize: 11 }}
+                axisLine={{ stroke: "#334155" }}
+                tickLine={{ stroke: "#334155" }}
+                width={38}
+              />
+              <YAxis
+                yAxisId="lag"
+                orientation="right"
+                tick={{ fill: "#94a3b8", fontSize: 11 }}
+                axisLine={{ stroke: "#334155" }}
+                tickLine={{ stroke: "#334155" }}
+                width={44}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#0f172a",
+                  border: "1px solid #334155",
+                  borderRadius: "8px",
+                  color: "#e2e8f0",
+                }}
+                formatter={(value, name) => {
+                  const numeric = typeof value === "number" ? value : Number(value ?? 0);
+                  if (name === "eventCount") return [numeric.toLocaleString(), "이벤트"];
+                  if (name === "avgLagMinutes") return [formatLag(numeric), "평균 지연"];
+                  return [numeric, String(name)];
+                }}
+              />
+              <Bar yAxisId="events" dataKey="eventCount" name="eventCount" fill="#38bdf8" radius={[4, 4, 0, 0]} />
+              <Line
+                yAxisId="lag"
+                type="monotone"
+                dataKey="avgLagMinutes"
+                name="avgLagMinutes"
+                stroke="#f97316"
+                strokeWidth={2}
+                dot={false}
+                connectNulls
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
       </section>
 
       <section className="card-panel p-4">
@@ -466,21 +664,22 @@ export function SourceTransferPageClient({
                   <th className="px-2 py-2">지역</th>
                   <th className="px-2 py-2">커뮤니티 토픽</th>
                   <th className="px-2 py-2">뉴스 토픽</th>
-                  <th className="px-2 py-2">건수</th>
-                  <th className="px-2 py-2">지연(평균/최신)</th>
-                  <th className="px-2 py-2">코사인</th>
-                  <th className="px-2 py-2">최초/최종 감지</th>
+                  <th className="px-2 py-2">유사도</th>
+                  <th className="px-2 py-2">실제 lag</th>
+                  <th className="px-2 py-2">커뮤니티 최초 게시</th>
+                  <th className="px-2 py-2">뉴스 최초 게시</th>
+                  <th className="px-2 py-2">감지(보조)</th>
                 </tr>
               </thead>
               <tbody>
                 {pairs.map((row) => {
-                  const region = getRegionById(row.regionId);
+                  const regionInfo = getRegionById(row.regionId);
                   const communityName = toTopicLabel(row, "community");
                   const newsName = toTopicLabel(row, "news");
                   return (
                     <tr key={row.pairKey} className="border-b border-[var(--border-default)]/60">
                       <td className="px-2 py-2 text-[var(--text-primary)]">
-                        {region ? `${region.flagEmoji} ${region.nameKo}` : row.regionId.toUpperCase()}
+                        {regionInfo ? `${regionInfo.flagEmoji} ${regionInfo.nameKo}` : row.regionId.toUpperCase()}
                       </td>
                       <td className="px-2 py-2">
                         {row.communityTopicId > 0 ? (
@@ -500,14 +699,13 @@ export function SourceTransferPageClient({
                           <span className="text-[var(--text-primary)]">{newsName}</span>
                         )}
                       </td>
-                      <td className="px-2 py-2 font-mono text-[var(--text-primary)]">{row.eventCount.toLocaleString()}</td>
+                      <td className="px-2 py-2 font-mono text-[var(--text-primary)]">{formatCosine(row.avgCosine)}</td>
                       <td className="px-2 py-2 text-[var(--text-primary)]">
-                        {formatLag(row.avgLagMinutes)} / {formatLag(row.latestLagMinutes)}
+                        {formatLag(row.latestLagMinutes ?? row.avgLagMinutes)}
                       </td>
-                      <td className="px-2 py-2 font-mono text-[var(--text-primary)]">
-                        {row.avgCosine == null ? "-" : row.avgCosine.toFixed(3)}
-                      </td>
-                      <td className="px-2 py-2 text-[var(--text-primary)]">
+                      <td className="px-2 py-2 text-[var(--text-primary)]">{formatPostAt(row.communityFirstPostAt)}</td>
+                      <td className="px-2 py-2 text-[var(--text-primary)]">{formatPostAt(row.newsFirstPostAt)}</td>
+                      <td className="px-2 py-2 text-[var(--text-secondary)]">
                         {formatDetectedAt(row.firstDetectedAt)} / {formatDetectedAt(row.lastDetectedAt)}
                       </td>
                     </tr>

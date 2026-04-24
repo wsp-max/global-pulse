@@ -61,6 +61,10 @@ async function getIssueOverlaps(request: Request) {
     join topics tn on tn.id = io.news_topic_id
     where tc.scope = 'community'
       and tn.scope = 'news'
+      and io.detected_at = (
+        select max(detected_at)
+        from issue_overlaps
+      )
       and exists (
         select 1
         from unnest(coalesce(tn.source_ids, '{}'::text[])) as sid(source_id)
