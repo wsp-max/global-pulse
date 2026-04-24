@@ -166,8 +166,12 @@ function buildTopicEvidence(topic: ScopeOverlapCandidate): TopicEvidence {
   const keywordTokens = new Set<string>();
   const entityTokens = new Set<string>();
   const keywordPhrases = new Set<string>();
+  const canonical = normalizeCanonicalKey(topic.canonicalKey ?? topic.nameEn);
 
   addTokens(nameTokens, [topic.nameKo, topic.nameEn, topic.summaryKo, topic.summaryEn]);
+  if (canonical) {
+    addTokens(nameTokens, [topic.canonicalKey ?? topic.nameEn]);
+  }
 
   for (const keyword of topic.keywords ?? []) {
     const normalizedKeyword = normalizeToken(keyword);
@@ -185,7 +189,7 @@ function buildTopicEvidence(topic: ScopeOverlapCandidate): TopicEvidence {
   addTokens(keywordTokens, topic.sampleTitles ?? []);
 
   return {
-    canonical: normalizeCanonicalKey(topic.canonicalKey ?? topic.nameEn),
+    canonical,
     embedding: toEmbeddingVector(topic.embeddingJson ?? null),
     tokens: new Set([...nameTokens, ...keywordTokens, ...entityTokens]),
     nameTokens,

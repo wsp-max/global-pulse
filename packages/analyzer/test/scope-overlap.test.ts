@@ -119,6 +119,35 @@ test("detectScopeOverlaps accepts assist-cosine pairs with shared lexical eviden
   assert.equal(overlaps[0]?.leader, "community");
 });
 
+test("detectScopeOverlaps accepts meaningful canonical matches without embeddings", () => {
+  const overlaps = detectScopeOverlaps(
+    [
+      buildTopic({
+        id: 25,
+        scope: "community",
+        nameEn: "Community posts discuss Casa Rosada protests",
+        keywords: ["protest"],
+        embedding: [],
+        canonicalKey: "casa rosada",
+      }),
+    ],
+    [
+      buildTopic({
+        id: 26,
+        scope: "news",
+        nameEn: "News reports Casa Rosada protest",
+        keywords: ["demonstration"],
+        embedding: [],
+        canonicalKey: "casa rosada",
+      }),
+    ],
+  );
+
+  assert.equal(overlaps.length, 1);
+  assert.equal(overlaps[0]?.communityTopicId, 25);
+  assert.equal(overlaps[0]?.newsTopicId, 26);
+});
+
 test("detectScopeOverlaps greedily keeps the best one-to-one pair", () => {
   const overlaps = detectScopeOverlaps(
     [
