@@ -100,8 +100,8 @@ test("detectScopeOverlaps rejects matches supported only by noisy tokens", () =>
       buildTopic({
         id: 5,
         scope: "community",
-        nameEn: "Forum source submitted read thread",
-        keywords: ["read", "source", "submitted"],
+        nameEn: "Forum source submitted read thread and they",
+        keywords: ["read", "source", "submitted", "and they"],
         embedding: [],
       }),
     ],
@@ -109,8 +109,8 @@ test("detectScopeOverlaps rejects matches supported only by noisy tokens", () =>
       buildTopic({
         id: 6,
         scope: "news",
-        nameEn: "Login register current source",
-        keywords: ["read", "source", "submitted"],
+        nameEn: "Login register current source and they",
+        keywords: ["read", "source", "submitted", "and they"],
         embedding: [],
       }),
     ],
