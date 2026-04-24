@@ -52,7 +52,7 @@ interface ProjectedMarker {
   targetTopicId: number | null;
 }
 
-const GEO_URL = "/pulse/geo/countries-110m.json";
+const GEO_PATH = "/geo/countries-110m.json";
 const MAP_WIDTH = 1000;
 const MAP_HEIGHT = 560;
 const MIN_ZOOM = 0.8;
@@ -115,6 +115,26 @@ const EU_COUNTRY_CODES = new Set([
   "MT",
   "CY",
 ]);
+
+function normalizeBasePath(input?: string): string {
+  const raw = input?.trim() ?? "";
+  if (!raw) return "";
+  return raw.startsWith("/") ? raw.replace(/\/+$/, "") : `/${raw.replace(/\/+$/, "")}`;
+}
+
+function detectRuntimeBasePath(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const pathname = window.location.pathname;
+  return pathname === "/pulse" || pathname.startsWith("/pulse/") ? "/pulse" : "";
+}
+
+function resolveAssetPath(pathname: string): string {
+  const basePath = normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH) || detectRuntimeBasePath();
+  return `${basePath}${pathname}`;
+}
 
 function resolveRegionIdFromGeography(geo: { properties?: Record<string, unknown> }): string | null {
   const props = geo.properties ?? {};
@@ -475,6 +495,7 @@ export function WorldHeatMap({
     () => geoEqualEarth().translate([MAP_WIDTH / 2, MAP_HEIGHT / 2]).scale(175),
     [],
   );
+  const geoUrl = useMemo(() => resolveAssetPath(GEO_PATH), []);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
@@ -600,7 +621,7 @@ export function WorldHeatMap({
                 projectionConfig={{ scale: 175 }}
                 style={{ width: "100%", height: "100%" }}
               >
-                <Geographies geography={GEO_URL}>
+                <Geographies geography={geoUrl}>
                   {({ geographies }) =>
                     geographies.map((geo) => {
                       const regionId = resolveRegionIdFromGeography(geo as unknown as { properties?: Record<string, unknown> });

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
 import { getRegionById } from "@global-pulse/shared";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
-import { useIssueOverlaps } from "@/lib/hooks/useIssueOverlaps";
+import { useSourceTransfer } from "@/lib/hooks/useSourceTransfer";
+import type { SourceTransferDirection, SourceTransferPairRow } from "@/lib/types/api";
 import { getDisplayTopicName } from "@/lib/utils/topic-name";
 
 interface SourceTransferPanelProps {
@@ -23,7 +23,10 @@ function formatLagMinutes(value: number | null | undefined): string {
   return `${(safe / 60).toFixed(1)}시간`;
 }
 
-function formatDetectedAt(value: string): string {
+function formatDetectedAt(value: string | null | undefined): string {
+  if (!value) {
+    return "-";
+  }
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime())) {
     return "-";
@@ -37,29 +40,51 @@ function formatDetectedAt(value: string): string {
   });
 }
 
-export function SourceTransferPanel({ primaryScope, limit = 80 }: SourceTransferPanelProps) {
-  const { data, isLoading, error } = useIssueOverlaps(limit, 2);
-  const overlaps = useMemo(() => data?.overlaps ?? [], [data?.overlaps]);
+function formatRatio(value: number | null | undefined): string {
+  if (!Number.isFinite(value ?? Number.NaN)) {
+    return "-";
+  }
+  return `${(Number(value) * 100).toFixed(1)}%`;
+}
 
-  const forwardLeader = primaryScope;
-  const reverseLeader = primaryScope === "community" ? "news" : "community";
-  const forwardLabel = primaryScope === "community" ? "커뮤니티→뉴스" : "뉴스→커뮤니티";
-  const reverseLabel = primaryScope === "community" ? "뉴스 선행" : "커뮤니티 선행";
-  const detailDirection = primaryScope === "community" ? "community_to_news" : "news_to_community";
+function topicLabel(pair: SourceTransferPairRow, scope: "community" | "news"): string {
+  if (scope === "community") {
+    return getDisplayTopicName({
+      id: pair.communityTopicId,
+      nameKo: pair.communityTopicNameKo,
+      nameEn: pair.communityTopicNameEn,
+      summaryKo: undefined,
+      summaryEn: undefined,
+    });
+  }
 
-  const forwardOverlaps = useMemo(
-    () => overlaps.filter((item) => item.leader === forwardLeader),
-    [forwardLeader, overlaps],
-  );
-  const reverseOverlaps = useMemo(
-    () => overlaps.filter((item) => item.leader === reverseLeader),
-    [overlaps, reverseLeader],
-  );
-  const tieCount = useMemo(
-    () => overlaps.filter((item) => item.leader === "tie").length,
-    [overlaps],
-  );
-  const latestForward = forwardOverlaps[0];
+  return getDisplayTopicName({
+    id: pair.newsTopicId,
+    nameKo: pair.newsTopicNameKo,
+    nameEn: pair.newsTopicNameEn,
+    summaryKo: undefined,
+    summaryEn: undefined,
+  });
+}
+
+export function SourceTransferPanel({ primaryScope, limit = 20 }: SourceTransferPanelProps) {
+  const detailDirection: SourceTransferDirection =
+    primaryScope === "community" ? "community_to_news" : "news_to_community";
+  const directionLabel = primaryScope === "community" ? "커뮤니티 -> 뉴스" : "뉴스 -> 커뮤니티";
+  const sourceLeadLabel = primaryScope === "community" ? "커뮤니티 선행" : "뉴스 선행";
+  const { data, isLoading, error } = useSourceTransfer({
+    direction: detailDirection,
+    hours: 24,
+    region: "all",
+    limit,
+    offset: 0,
+  });
+
+  const summary = data?.snapshotSummary ?? data?.summary;
+  const latestPair = data?.pairs[0];
+  const latestRegion = latestPair ? getRegionById(latestPair.regionId) : null;
+  const fromName = latestPair ? topicLabel(latestPair, primaryScope) : null;
+  const toName = latestPair ? topicLabel(latestPair, primaryScope === "community" ? "news" : "community") : null;
 
   return (
     <section className="card-panel p-4">
@@ -67,7 +92,7 @@ export function SourceTransferPanel({ primaryScope, limit = 80 }: SourceTransfer
         <div>
           <h3 className="section-title">소스 전이 요약</h3>
           <p className="mt-1 text-xs text-[var(--text-secondary)]">
-            상세 전이 분석은 전용 탭에서 확인할 수 있습니다.
+            최신 배치 스냅샷 기준으로 {directionLabel} 전이를 요약합니다.
           </p>
         </div>
         <Link
@@ -89,43 +114,35 @@ export function SourceTransferPanel({ primaryScope, limit = 80 }: SourceTransfer
       {!isLoading && !error ? (
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] text-[var(--text-tertiary)]">{forwardLabel}</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{forwardOverlaps.length.toLocaleString()}</p>
+            <p className="text-[11px] text-[var(--text-tertiary)]">{sourceLeadLabel}</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              {summary?.forwardLeadCount.toLocaleString() ?? "0"}
+            </p>
           </article>
           <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] text-[var(--text-tertiary)]">{reverseLabel}</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{reverseOverlaps.length.toLocaleString()}</p>
+            <p className="text-[11px] text-[var(--text-tertiary)]">고유 전이쌍</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              {summary?.uniquePairs.toLocaleString() ?? "0"}
+            </p>
           </article>
           <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] text-[var(--text-tertiary)]">동시 감지(tie)</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{tieCount.toLocaleString()}</p>
+            <p className="text-[11px] text-[var(--text-tertiary)]">선행 비율</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              {formatRatio(summary?.forwardLeadShare)}
+            </p>
           </article>
         </div>
       ) : null}
 
-      {!isLoading && !error && latestForward ? (
+      {!isLoading && !error && latestPair ? (
         <div className="mt-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3 text-xs text-[var(--text-secondary)]">
           <p>
-            최근 {forwardLabel} 감지:{" "}
-            {getRegionById(latestForward.regionId)?.flagEmoji ?? "🌐"} {latestForward.regionId.toUpperCase()} ·{" "}
-            {formatDetectedAt(latestForward.detectedAt)} · 지연 {formatLagMinutes(latestForward.lagMinutes)}
+            최근 대표 전이: {latestRegion?.flagEmoji ?? ""} {latestPair.regionId.toUpperCase()} ·{" "}
+            {formatDetectedAt(latestPair.lastDetectedAt)} · lag{" "}
+            {formatLagMinutes(latestPair.latestLagMinutes ?? latestPair.avgLagMinutes)}
           </p>
-          <p className="mt-1 text-[var(--text-primary)]">
-            {getDisplayTopicName({
-              id: latestForward.communityTopic.id,
-              nameKo: latestForward.communityTopic.nameKo,
-              nameEn: latestForward.communityTopic.nameEn,
-              summaryKo: undefined,
-              summaryEn: undefined,
-            })}
-            {" ↔ "}
-            {getDisplayTopicName({
-              id: latestForward.newsTopic.id,
-              nameKo: latestForward.newsTopic.nameKo,
-              nameEn: latestForward.newsTopic.nameEn,
-              summaryKo: undefined,
-              summaryEn: undefined,
-            })}
+          <p className="mt-1 break-words text-[var(--text-primary)]">
+            {fromName} {"->"} {toName}
           </p>
         </div>
       ) : null}

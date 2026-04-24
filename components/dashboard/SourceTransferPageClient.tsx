@@ -6,13 +6,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getAllRegions, getRegionById } from "@global-pulse/shared";
 import {
   Bar,
-  BarChart,
   CartesianGrid,
-  Cell,
   ComposedChart,
   Line,
   ResponsiveContainer,
-  Sankey,
   Tooltip,
   XAxis,
   YAxis,
@@ -36,10 +33,7 @@ interface SourceTransferPageClientProps {
 }
 
 function parseDirection(value: string | null | undefined, fallback: SourceTransferDirection): SourceTransferDirection {
-  if (value === "news_to_community" || value === "both") {
-    return value;
-  }
-  if (value === "community_to_news") {
+  if (value === "news_to_community" || value === "both" || value === "community_to_news") {
     return value;
   }
   return fallback;
@@ -65,8 +59,7 @@ function parseOffset(value: string | null | undefined, fallback: number): number
 
 function parseRegion(value: string | null | undefined, fallback: string): string {
   const raw = (value ?? fallback).trim().toLowerCase();
-  if (!raw) return fallback;
-  if (raw === "all") return "all";
+  if (!raw || raw === "all") return "all";
   const regionIds = new Set(getAllRegions().map((region) => region.id));
   return regionIds.has(raw) ? raw : "all";
 }
@@ -89,24 +82,7 @@ function formatRatio(value: number | null | undefined): string {
   return `${(Number(value) * 100).toFixed(1)}%`;
 }
 
-function formatDetectedAt(value: string | null | undefined): string {
-  if (!value) {
-    return "-";
-  }
-  const parsed = new Date(value);
-  if (!Number.isFinite(parsed.getTime())) {
-    return "-";
-  }
-  return parsed.toLocaleString("ko-KR", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
-
-function formatPostAt(value: string | null | undefined): string {
+function formatDateTime(value: string | null | undefined): string {
   if (!value) {
     return "-";
   }
@@ -130,14 +106,37 @@ function formatCosine(value: number | null | undefined): string {
   return Number(value).toFixed(3);
 }
 
+function formatCosinePercent(value: number | null | undefined): string {
+  if (!Number.isFinite(value ?? Number.NaN)) {
+    return "-";
+  }
+  return `${Math.round(Number(value) * 100)}%`;
+}
+
 function directionLabel(direction: SourceTransferDirection): string {
   if (direction === "news_to_community") {
-    return "뉴스 → 커뮤니티";
+    return "뉴스 -> 커뮤니티";
   }
   if (direction === "both") {
     return "양방향";
   }
-  return "커뮤니티 → 뉴스";
+  return "커뮤니티 -> 뉴스";
+}
+
+function leaderLabel(leader: SourceTransferPairRow["leader"]): string {
+  if (leader === "news") {
+    return "뉴스 선행";
+  }
+  if (leader === "tie") {
+    return "동시 포착";
+  }
+  return "커뮤니티 선행";
+}
+
+function leaderToneClass(leader: SourceTransferPairRow["leader"]): string {
+  if (leader === "news") return "border-orange-400/40 bg-orange-500/10 text-orange-200";
+  if (leader === "tie") return "border-slate-400/40 bg-slate-500/10 text-slate-200";
+  return "border-cyan-400/40 bg-cyan-500/10 text-cyan-200";
 }
 
 function toTopicLabel(pair: SourceTransferPairRow, scope: "community" | "news"): string {
@@ -159,14 +158,6 @@ function toTopicLabel(pair: SourceTransferPairRow, scope: "community" | "news"):
   });
 }
 
-function truncateLabel(value: string, max = 34): string {
-  const normalized = value.trim();
-  if (normalized.length <= max) {
-    return normalized;
-  }
-  return `${normalized.slice(0, max - 1)}…`;
-}
-
 function buildNarrative(
   direction: SourceTransferDirection,
   hours: number,
@@ -182,11 +173,11 @@ function buildNarrative(
   }
 
   const region = topPair ? getRegionById(topPair.regionId)?.nameKo ?? topPair.regionId.toUpperCase() : "-";
-  const fromName = topPair ? toTopicLabel(topPair, "community") : "-";
-  const toName = topPair ? toTopicLabel(topPair, "news") : "-";
+  const fromName = topPair ? toTopicLabel(topPair, topPair.leader === "news" ? "news" : "community") : "-";
+  const toName = topPair ? toTopicLabel(topPair, topPair.leader === "news" ? "community" : "news") : "-";
   const lag = topPair ? formatLag(topPair.latestLagMinutes ?? topPair.avgLagMinutes) : "-";
 
-  return `최신 배치 스냅샷 기준 ${directionLabel(direction)} 전이 ${snapshotSummary.totalEvents.toLocaleString()}건, 고유 전이쌍 ${snapshotSummary.uniquePairs.toLocaleString()}건입니다. 대표 전이는 ${region} "${fromName}" → "${toName}"이며 실제 lag는 ${lag}입니다. 별도 ${hours}h 이력 집계는 ${historySummary?.totalEvents?.toLocaleString() ?? "0"}건입니다.`;
+  return `최신 배치 기준 ${directionLabel(direction)} 전이 ${snapshotSummary.totalEvents.toLocaleString()}건, 고유 전이쌍 ${snapshotSummary.uniquePairs.toLocaleString()}건입니다. 대표 전이는 ${region} "${fromName}" -> "${toName}"이며 실제 lag는 ${lag}입니다. 별도 ${hours}h 이력 집계는 ${historySummary?.totalEvents?.toLocaleString() ?? "0"}건입니다.`;
 }
 
 export function SourceTransferPageClient({
@@ -208,16 +199,8 @@ export function SourceTransferPageClient({
   const offset = parseOffset(searchParams.get("offset"), initialOffset);
 
   const { data, isLoading, error } = useSourceTransfer(
-    {
-      direction,
-      hours,
-      region,
-      limit,
-      offset,
-    },
-    {
-      fallbackData: initialData,
-    },
+    { direction, hours, region, limit, offset },
+    { fallbackData: initialData },
   );
 
   const applyQuery = (next: Partial<Record<"direction" | "hours" | "region" | "limit" | "offset", string>>) => {
@@ -243,16 +226,18 @@ export function SourceTransferPageClient({
     [data?.trendHourly],
   );
 
-  const sankeyData = useMemo(() => {
-    const nodes = (data?.sankey.nodes ?? []).map((node) => ({
-      ...node,
-      name: node.label,
-    }));
-    const links = data?.sankey.links ?? [];
-    return { nodes, links };
-  }, [data?.sankey.links, data?.sankey.nodes]);
-
   const pairs = useMemo(() => data?.pairs ?? [], [data?.pairs]);
+  const topTransferCards = useMemo(
+    () =>
+      [...pairs]
+        .sort((left, right) => {
+          const cosineDelta = (right.avgCosine ?? -1) - (left.avgCosine ?? -1);
+          if (cosineDelta !== 0) return cosineDelta;
+          return (right.eventCount ?? 0) - (left.eventCount ?? 0);
+        })
+        .slice(0, 8),
+    [pairs],
+  );
   const snapshotSummary = data?.snapshotSummary ?? data?.summary;
   const historySummary = data?.historySummary ?? data?.summary;
   const latestAnalyzerRunAt = data?.latestAnalyzerRunAt ?? null;
@@ -263,40 +248,12 @@ export function SourceTransferPageClient({
   const canPrev = offset > 0;
   const canNext = offset + returnedPairs < totalPairs;
 
-  const topTransferData = useMemo(() => {
-    return [...pairs]
-      .sort((left, right) => {
-        const leftCosine = left.avgCosine ?? -1;
-        const rightCosine = right.avgCosine ?? -1;
-        if (leftCosine !== rightCosine) {
-          return rightCosine - leftCosine;
-        }
-        const leftLag = Math.abs(left.latestLagMinutes ?? left.avgLagMinutes ?? Number.POSITIVE_INFINITY);
-        const rightLag = Math.abs(right.latestLagMinutes ?? right.avgLagMinutes ?? Number.POSITIVE_INFINITY);
-        return leftLag - rightLag;
-      })
-      .slice(0, 12)
-      .map((row) => {
-        const community = toTopicLabel(row, "community");
-        const news = toTopicLabel(row, "news");
-        const score = Math.max(0, Number(((row.avgCosine ?? 0) * 100).toFixed(1)));
-        const regionName = getRegionById(row.regionId)?.nameKo ?? row.regionId.toUpperCase();
-        return {
-          pairKey: row.pairKey,
-          label: `${community} → ${news}`,
-          cosineScore: score,
-          lagMinutes: row.latestLagMinutes ?? row.avgLagMinutes,
-          regionName,
-        };
-      });
-  }, [pairs]);
-
   return (
     <main className="page-shell">
       <section className="card-panel p-4">
         <h1 className="section-title">소스 전이</h1>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          기준을 분리해 보여줍니다. 상단 KPI와 전이쌍은 최신 배치 스냅샷 기준, 시간대 추이는 {hours}h 이력 기준입니다.
+          최신 배치 스냅샷의 커뮤니티-뉴스 연결성과 {hours}h 이력 추이를 분리해 확인합니다.
         </p>
       </section>
 
@@ -309,8 +266,8 @@ export function SourceTransferPageClient({
               onChange={(event) => applyQuery({ direction: event.target.value })}
               className="mt-1 w-full rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-2 text-sm text-[var(--text-primary)]"
             >
-              <option value="community_to_news">커뮤니티 → 뉴스</option>
-              <option value="news_to_community">뉴스 → 커뮤니티</option>
+              <option value="community_to_news">{"커뮤니티 -> 뉴스"}</option>
+              <option value="news_to_community">{"뉴스 -> 커뮤니티"}</option>
               <option value="both">양방향</option>
             </select>
           </label>
@@ -375,40 +332,19 @@ export function SourceTransferPageClient({
           </span>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">events</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-              {snapshotSummary?.totalEvents.toLocaleString() ?? "-"}
-            </p>
-          </article>
-          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">pairs</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-              {snapshotSummary?.uniquePairs.toLocaleString() ?? "-"}
-            </p>
-          </article>
-          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">lead share</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-              {formatRatio(snapshotSummary?.forwardLeadShare)}
-            </p>
-          </article>
-          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">median lag</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-              {formatLag(snapshotSummary?.medianLagMinutes)}
-            </p>
-          </article>
-          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">p90 lag</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-              {formatLag(snapshotSummary?.p90LagMinutes)}
-            </p>
-          </article>
-          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">latest run</p>
-            <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{formatDetectedAt(latestAnalyzerRunAt)}</p>
-          </article>
+          {[
+            ["events", snapshotSummary?.totalEvents.toLocaleString() ?? "-"],
+            ["pairs", snapshotSummary?.uniquePairs.toLocaleString() ?? "-"],
+            ["lead share", formatRatio(snapshotSummary?.forwardLeadShare)],
+            ["median lag", formatLag(snapshotSummary?.medianLagMinutes)],
+            ["p90 lag", formatLag(snapshotSummary?.p90LagMinutes)],
+            ["latest run", formatDateTime(latestAnalyzerRunAt)],
+          ].map(([label, value]) => (
+            <article key={label} className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{label}</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{value}</p>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -420,36 +356,18 @@ export function SourceTransferPageClient({
           </span>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">events</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-              {historySummary?.totalEvents.toLocaleString() ?? "-"}
-            </p>
-          </article>
-          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">pairs</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-              {historySummary?.uniquePairs.toLocaleString() ?? "-"}
-            </p>
-          </article>
-          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">lead share</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-              {formatRatio(historySummary?.forwardLeadShare)}
-            </p>
-          </article>
-          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">median lag</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-              {formatLag(historySummary?.medianLagMinutes)}
-            </p>
-          </article>
-          <article className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">latest detect</p>
-            <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
-              {formatDetectedAt(historySummary?.latestDetectedAt)}
-            </p>
-          </article>
+          {[
+            ["events", historySummary?.totalEvents.toLocaleString() ?? "-"],
+            ["pairs", historySummary?.uniquePairs.toLocaleString() ?? "-"],
+            ["lead share", formatRatio(historySummary?.forwardLeadShare)],
+            ["median lag", formatLag(historySummary?.medianLagMinutes)],
+            ["latest detect", formatDateTime(historySummary?.latestDetectedAt)],
+          ].map(([label, value]) => (
+            <article key={label} className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{label}</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{value}</p>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -459,113 +377,74 @@ export function SourceTransferPageClient({
         </p>
       </section>
 
-      <section className="grid gap-3 xl:grid-cols-[1.5fr_1fr]">
-        <article className="card-panel p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="section-title">Top 전이 막대 차트</h2>
-            <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
-              snapshot
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">상위 전이쌍 유사도(값)와 실제 lag를 함께 확인합니다.</p>
-          <div className="mt-3 h-[420px] w-full">
-            {topTransferData.length === 0 ? (
-              <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 text-xs text-[var(--text-secondary)]">
-                표시할 스냅샷 전이쌍이 없습니다.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topTransferData} layout="vertical" margin={{ top: 8, right: 20, bottom: 8, left: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" horizontal={false} />
-                  <XAxis
-                    type="number"
-                    domain={[0, 100]}
-                    tickFormatter={(value) => `${Math.round(value)}%`}
-                    tick={{ fill: "#94a3b8", fontSize: 11 }}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="label"
-                    width={260}
-                    tickFormatter={(value) => truncateLabel(String(value))}
-                    tick={{ fill: "#cbd5e1", fontSize: 11 }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#0f172a",
-                      border: "1px solid #334155",
-                      borderRadius: "8px",
-                      color: "#e2e8f0",
-                    }}
-                    formatter={(value, name) => {
-                      if (name === "cosineScore") {
-                        return [`${Number(value).toFixed(1)}%`, "유사도"];
-                      }
-                      return [value as string, name];
-                    }}
-                    labelFormatter={(_, payload) => {
-                      const row = payload?.[0]?.payload as
-                        | {
-                            label: string;
-                            regionName: string;
-                            lagMinutes: number | null;
-                          }
-                        | undefined;
-                      if (!row) {
-                        return "";
-                      }
-                      return `${row.regionName} | ${row.label} | lag ${formatLag(row.lagMinutes)}`;
-                    }}
-                  />
-                  <Bar dataKey="cosineScore" name="cosineScore" radius={[0, 6, 6, 0]}>
-                    {topTransferData.map((entry, index) => (
-                      <Cell
-                        key={entry.pairKey}
-                        fill={index % 2 === 0 ? "rgba(56, 189, 248, 0.8)" : "rgba(251, 146, 60, 0.8)"}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </article>
+      <section className="card-panel p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="section-title">상위 전이 카드</h2>
+          <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
+            snapshot
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">
+          커뮤니티 최초 포착과 뉴스 최초 포착 시간을 나란히 놓고 실제 연결성과 지연을 확인합니다.
+        </p>
 
-        <article className="card-panel p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="section-title">보조 Sankey</h2>
-            <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
-              snapshot
-            </span>
+        {topTransferCards.length === 0 ? (
+          <p className="mt-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3 text-xs text-[var(--text-secondary)]">
+            표시할 스냅샷 전이쌍이 없습니다.
+          </p>
+        ) : (
+          <div className="mt-3 grid gap-3 xl:grid-cols-2">
+            {topTransferCards.map((row) => {
+              const regionInfo = getRegionById(row.regionId);
+              const communityName = toTopicLabel(row, "community");
+              const newsName = toTopicLabel(row, "news");
+              return (
+                <article key={row.pairKey} className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[11px] text-[var(--text-tertiary)]">
+                        {regionInfo ? `${regionInfo.flagEmoji} ${regionInfo.nameKo}` : row.regionId.toUpperCase()}
+                      </p>
+                      <p className="mt-1 break-words text-sm font-semibold text-[var(--text-primary)]">{communityName}</p>
+                      <p className="mt-1 break-words text-sm text-orange-200">{newsName}</p>
+                    </div>
+                    <span className={`rounded-full border px-2 py-1 text-[11px] ${leaderToneClass(row.leader)}`}>
+                      {leaderLabel(row.leader)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid gap-2 text-[11px] text-[var(--text-secondary)] sm:grid-cols-3">
+                    <span>유사도 {formatCosinePercent(row.avgCosine)}</span>
+                    <span>lag {formatLag(row.latestLagMinutes ?? row.avgLagMinutes)}</span>
+                    <span>감지 {row.eventCount.toLocaleString()}회</span>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="relative h-8">
+                      <div className="absolute left-3 right-3 top-1/2 h-px -translate-y-1/2 bg-[var(--border-default)]" />
+                      <div className="absolute left-0 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                        <span className="h-3 w-3 rounded-full bg-cyan-300" />
+                        <span className="rounded-full border border-cyan-300/40 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-100">
+                          커뮤니티 최초
+                        </span>
+                      </div>
+                      <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                        <span className="rounded-full border border-orange-300/40 bg-orange-500/10 px-2 py-0.5 text-[10px] text-orange-100">
+                          뉴스 최초
+                        </span>
+                        <span className="h-3 w-3 rounded-full bg-orange-300" />
+                      </div>
+                    </div>
+                    <div className="mt-2 grid gap-2 text-[11px] text-[var(--text-secondary)] sm:grid-cols-2">
+                      <span>커뮤니티 {formatDateTime(row.communityFirstPostAt)}</span>
+                      <span className="sm:text-right">뉴스 {formatDateTime(row.newsFirstPostAt)}</span>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">상위 링크 8개만 축약해 전이 흐름 방향을 빠르게 확인합니다.</p>
-          <div className="mt-3 h-[420px] w-full">
-            {sankeyData.links.length === 0 ? (
-              <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-4 text-xs text-[var(--text-secondary)]">
-                표시할 전이 흐름이 없습니다.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <Sankey
-                  data={sankeyData}
-                  nodePadding={26}
-                  nodeWidth={14}
-                  linkCurvature={0.35}
-                  margin={{ top: 12, right: 12, bottom: 12, left: 12 }}
-                >
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#0f172a",
-                      border: "1px solid #334155",
-                      borderRadius: "8px",
-                      color: "#e2e8f0",
-                    }}
-                  />
-                </Sankey>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </article>
+        )}
       </section>
 
       <section className="card-panel p-4">
@@ -575,7 +454,7 @@ export function SourceTransferPageClient({
             {hours}h history
           </span>
         </div>
-        <p className="mt-1 text-xs text-[var(--text-secondary)]">시간별 전이 이벤트 수와 평균 지연(24h 이력 분석)을 보여줍니다.</p>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">시간별 전이 이벤트 수와 평균 지연을 보여줍니다.</p>
         <div className="mt-3 h-[340px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={trendData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
@@ -666,9 +545,9 @@ export function SourceTransferPageClient({
                   <th className="px-2 py-2">뉴스 토픽</th>
                   <th className="px-2 py-2">유사도</th>
                   <th className="px-2 py-2">실제 lag</th>
-                  <th className="px-2 py-2">커뮤니티 최초 게시</th>
-                  <th className="px-2 py-2">뉴스 최초 게시</th>
-                  <th className="px-2 py-2">감지(보조)</th>
+                  <th className="px-2 py-2">커뮤니티 최초</th>
+                  <th className="px-2 py-2">뉴스 최초</th>
+                  <th className="px-2 py-2">감지</th>
                 </tr>
               </thead>
               <tbody>
@@ -703,10 +582,10 @@ export function SourceTransferPageClient({
                       <td className="px-2 py-2 text-[var(--text-primary)]">
                         {formatLag(row.latestLagMinutes ?? row.avgLagMinutes)}
                       </td>
-                      <td className="px-2 py-2 text-[var(--text-primary)]">{formatPostAt(row.communityFirstPostAt)}</td>
-                      <td className="px-2 py-2 text-[var(--text-primary)]">{formatPostAt(row.newsFirstPostAt)}</td>
+                      <td className="px-2 py-2 text-[var(--text-primary)]">{formatDateTime(row.communityFirstPostAt)}</td>
+                      <td className="px-2 py-2 text-[var(--text-primary)]">{formatDateTime(row.newsFirstPostAt)}</td>
                       <td className="px-2 py-2 text-[var(--text-secondary)]">
-                        {formatDetectedAt(row.firstDetectedAt)} / {formatDetectedAt(row.lastDetectedAt)}
+                        {formatDateTime(row.firstDetectedAt)} / {formatDateTime(row.lastDetectedAt)}
                       </td>
                     </tr>
                   );
