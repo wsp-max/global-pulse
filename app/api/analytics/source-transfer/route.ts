@@ -455,6 +455,9 @@ function buildCandidatePairs(
             (canonicalMatch ? 0.22 : 0),
         ).toFixed(4),
       );
+      if (matchScore < 0.45 && !canonicalMatch) {
+        continue;
+      }
       const detectedAt = new Date(Math.max(new Date(communityTime).getTime(), new Date(newsTime).getTime())).toISOString();
 
       candidates.push({
