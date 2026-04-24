@@ -71,6 +71,7 @@ const REPORT_TABLES = [
   { table: "region_snapshots", tsColumn: "snapshot_at" },
   { table: "collector_runs", tsColumn: "started_at" },
   { table: "issue_overlaps", tsColumn: "detected_at" },
+  { table: "issue_overlap_events", tsColumn: "detected_at" },
 ] as const;
 
 function parseReportMode(): ReportMode {

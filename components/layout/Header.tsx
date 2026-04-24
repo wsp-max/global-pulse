@@ -16,6 +16,7 @@ export function Header() {
     { href: "/", label: t("nav.dashboard") },
     { href: "/global-issues", label: t("nav.globalIssues") },
     { href: "/propagation", label: t("nav.propagation") },
+    { href: "/source-transfer", label: t("nav.sourceTransfer") },
     { href: "/timeline", label: t("nav.timeline") },
     { href: "/search", label: t("nav.search") },
     { href: "/compare", label: t("nav.compare") },

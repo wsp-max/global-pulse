@@ -156,7 +156,7 @@ export function PropagationPageClient({
 
       <div className="border-t border-white/5" />
 
-      <SourceTransferPanel primaryScope={activeScope} onTopicSelect={(topicId) => setSelectedTopicId(topicId)} />
+      <SourceTransferPanel primaryScope={activeScope} />
 
       <div className="border-t border-white/5" />
 

@@ -172,6 +172,86 @@ export interface IssueOverlapsApiResponse {
   lastUpdated?: string;
 }
 
+export type SourceTransferDirection = "community_to_news" | "news_to_community" | "both";
+
+export interface SourceTransferSummary {
+  totalEvents: number;
+  uniquePairs: number;
+  communityLeadCount: number;
+  newsLeadCount: number;
+  tieCount: number;
+  forwardLeadCount: number;
+  forwardLeadShare: number | null;
+  medianLagMinutes: number | null;
+  p90LagMinutes: number | null;
+  latestDetectedAt: string | null;
+}
+
+export interface SourceTransferSankeyNode {
+  id: string;
+  label: string;
+  scope: "community" | "news";
+  topicId: number;
+}
+
+export interface SourceTransferSankeyLink {
+  source: number;
+  target: number;
+  value: number;
+  avgLagMinutes: number | null;
+  pairKey: string;
+  leader: "community" | "news" | "tie";
+}
+
+export interface SourceTransferTrendPoint {
+  hour: string;
+  eventCount: number;
+  avgLagMinutes: number | null;
+  communityLeadCount: number;
+  newsLeadCount: number;
+  tieCount: number;
+}
+
+export interface SourceTransferPairRow {
+  pairKey: string;
+  regionId: string;
+  leader: "community" | "news" | "tie";
+  communityTopicId: number;
+  communityTopicNameKo: string;
+  communityTopicNameEn: string;
+  newsTopicId: number;
+  newsTopicNameKo: string;
+  newsTopicNameEn: string;
+  eventCount: number;
+  firstDetectedAt: string;
+  lastDetectedAt: string;
+  avgLagMinutes: number | null;
+  latestLagMinutes: number | null;
+  avgCosine: number | null;
+}
+
+export interface SourceTransferApiResponse {
+  summary: SourceTransferSummary;
+  sankey: {
+    nodes: SourceTransferSankeyNode[];
+    links: SourceTransferSankeyLink[];
+  };
+  trendHourly: SourceTransferTrendPoint[];
+  pairs: SourceTransferPairRow[];
+  meta: {
+    direction: SourceTransferDirection;
+    hours: number;
+    region: string;
+    limit: number;
+    offset: number;
+    totalPairs: number;
+    returnedPairs: number;
+  };
+  configured?: boolean;
+  provider?: "postgres" | "none";
+  lastUpdated?: string;
+}
+
 export interface PropagationMatrixCell {
   fromRegion: string;
   toRegion: string;

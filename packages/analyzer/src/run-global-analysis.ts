@@ -73,6 +73,25 @@ interface GlobalTopicInsertRow {
   expires_at: string;
 }
 
+interface IssueOverlapSnapshotRow {
+  community_topic_id: number;
+  news_topic_id: number;
+  canonical_key: string | null;
+  cosine: number;
+  lag_minutes: number;
+  leader: "community" | "news" | "tie";
+  detected_at: string;
+}
+
+interface IssueOverlapEventRow extends IssueOverlapSnapshotRow {
+  analyzer_run_at: string;
+  region_id: string;
+  community_topic_name_ko: string;
+  community_topic_name_en: string;
+  news_topic_name_ko: string;
+  news_topic_name_en: string;
+}
+
 interface GlobalAnalysisStorage {
   mode: "postgres";
   fetchTopics(periodStartIso: string, scope: AnalysisScope): Promise<TopicRow[]>;
@@ -80,17 +99,8 @@ interface GlobalAnalysisStorage {
   fetchRecentGlobalTopicHistory(historyHours: number, scope: AnalysisScope): Promise<GlobalTopicHistoryPoint[]>;
   expireActiveGlobalTopics(nowIso: string, scope: AnalysisScope): Promise<void>;
   insertGlobalTopics(rows: GlobalTopicInsertRow[]): Promise<void>;
-  upsertIssueOverlaps(
-    rows: Array<{
-      community_topic_id: number;
-      news_topic_id: number;
-      canonical_key: string | null;
-      cosine: number;
-      lag_minutes: number;
-      leader: "community" | "news" | "tie";
-      detected_at: string;
-    }>,
-  ): Promise<void>;
+  upsertIssueOverlaps(rows: IssueOverlapSnapshotRow[]): Promise<void>;
+  appendIssueOverlapEvents(rows: IssueOverlapEventRow[]): Promise<void>;
 }
 
 function log(message: string): void {
@@ -602,6 +612,50 @@ function createPostgresStorage(pool: Pool): GlobalAnalysisStorage {
         values,
       );
     },
+    async appendIssueOverlapEvents(rows) {
+      if (rows.length === 0) {
+        return;
+      }
+
+      const values: unknown[] = [];
+      const tuples: string[] = [];
+      const columns = [
+        "analyzer_run_at",
+        "detected_at",
+        "region_id",
+        "leader",
+        "lag_minutes",
+        "cosine",
+        "canonical_key",
+        "community_topic_id",
+        "news_topic_id",
+        "community_topic_name_ko",
+        "community_topic_name_en",
+        "news_topic_name_ko",
+        "news_topic_name_en",
+      ] as const;
+
+      for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+        const row = rows[rowIndex];
+        const placeholders: string[] = [];
+        for (let columnIndex = 0; columnIndex < columns.length; columnIndex += 1) {
+          const valueIndex = rowIndex * columns.length + columnIndex + 1;
+          placeholders.push(`$${valueIndex}`);
+          values.push(row[columns[columnIndex]]);
+        }
+        tuples.push(`(${placeholders.join(",")})`);
+      }
+
+      await pool.query(
+        `
+        insert into issue_overlap_events (${columns.join(",")})
+        values ${tuples.join(",")}
+        on conflict (analyzer_run_at, community_topic_id, news_topic_id)
+        do nothing
+        `,
+        values,
+      );
+    },
   };
 }
 
@@ -631,6 +685,8 @@ async function runGlobalAnalysis(): Promise<void> {
   if (!storage) {
     return;
   }
+
+  const analyzerRunAtIso = new Date().toISOString();
   const scopes: AnalysisScope[] = scopeArg
     ? [scopeArg]
     : FEATURE_NEWS_PIPELINE
@@ -727,56 +783,110 @@ async function runGlobalAnalysis(): Promise<void> {
     });
 
     await storage.insertGlobalTopics(payload);
-
-    const [communityCandidates, newsCandidates] = await Promise.all([
-      storage.fetchTopics(periodStartIso, "community"),
-      storage.fetchTopics(periodStartIso, "news"),
-    ]);
-
-    const normalizedCommunityTopics = communityCandidates
-      .map(toTopic)
-      .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
-    const normalizedNewsTopics = newsCandidates
-      .map(toTopic)
-      .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
-
-    const overlapTopicIds = [
-      ...new Set(
-        [...normalizedCommunityTopics, ...normalizedNewsTopics]
-          .map((topic) => topic.id ?? 0)
-          .filter((id) => id > 0),
-      ),
-    ];
-    const overlapFirstPostRows = await storage.fetchTopicFirstPostMoments(overlapTopicIds);
-    const overlapFirstPostByTopicId = new Map<number, TopicFirstPostRow>(
-      overlapFirstPostRows.map((row) => [toNumber(row.topic_id), row]),
-    );
-
-    const overlaps = detectScopeOverlaps(
-      normalizedCommunityTopics.map((topic) => ({
-        ...topic,
-        firstPostAt: overlapFirstPostByTopicId.get(topic.id ?? 0)?.first_post_at ?? topic.periodStart,
-      })),
-      normalizedNewsTopics.map((topic) => ({
-        ...topic,
-        firstPostAt: overlapFirstPostByTopicId.get(topic.id ?? 0)?.first_post_at ?? topic.periodStart,
-      })),
-    );
-
-    await storage.upsertIssueOverlaps(
-      overlaps.map((item) => ({
-        community_topic_id: item.communityTopicId,
-        news_topic_id: item.newsTopicId,
-        canonical_key: item.canonicalKey,
-        cosine: Number(item.cosine.toFixed(6)),
-        lag_minutes: item.lagMinutes,
-        leader: item.leader,
-        detected_at: nowIso,
-      })),
-    );
-
-    log(`[${scope}] global analysis completed. generated=${metricsApplied.length} overlaps=${overlaps.length}`);
+    log(`[${scope}] global analysis completed. generated=${metricsApplied.length}`);
   }
+
+  const overlapNow = new Date();
+  const overlapNowIso = overlapNow.toISOString();
+  const overlapPeriodStartIso = new Date(overlapNow.getTime() - windowHours * 60 * 60 * 1000).toISOString();
+
+  const [communityCandidates, newsCandidates] = await Promise.all([
+    storage.fetchTopics(overlapPeriodStartIso, "community"),
+    storage.fetchTopics(overlapPeriodStartIso, "news"),
+  ]);
+
+  const normalizedCommunityTopics = communityCandidates
+    .map(toTopic)
+    .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
+  const normalizedNewsTopics = newsCandidates
+    .map(toTopic)
+    .filter((topic) => hasRegionSourceOverlap(topic.regionId, topic.sourceIds));
+
+  if (normalizedCommunityTopics.length === 0 || normalizedNewsTopics.length === 0) {
+    log(`[overlap] skipped. community_topics=${normalizedCommunityTopics.length} news_topics=${normalizedNewsTopics.length}`);
+    return;
+  }
+
+  const overlapTopicIds = [
+    ...new Set(
+      [...normalizedCommunityTopics, ...normalizedNewsTopics]
+        .map((topic) => topic.id ?? 0)
+        .filter((id) => id > 0),
+    ),
+  ];
+  const overlapFirstPostRows = await storage.fetchTopicFirstPostMoments(overlapTopicIds);
+  const overlapFirstPostByTopicId = new Map<number, TopicFirstPostRow>(
+    overlapFirstPostRows.map((row) => [toNumber(row.topic_id), row]),
+  );
+
+  const overlaps = detectScopeOverlaps(
+    normalizedCommunityTopics.map((topic) => ({
+      ...topic,
+      firstPostAt: overlapFirstPostByTopicId.get(topic.id ?? 0)?.first_post_at ?? topic.periodStart,
+    })),
+    normalizedNewsTopics.map((topic) => ({
+      ...topic,
+      firstPostAt: overlapFirstPostByTopicId.get(topic.id ?? 0)?.first_post_at ?? topic.periodStart,
+    })),
+  );
+
+  const communityTopicById = new Map<number, Topic>(
+    normalizedCommunityTopics
+      .filter((topic) => (topic.id ?? 0) > 0)
+      .map((topic) => [topic.id ?? 0, topic]),
+  );
+  const newsTopicById = new Map<number, Topic>(
+    normalizedNewsTopics
+      .filter((topic) => (topic.id ?? 0) > 0)
+      .map((topic) => [topic.id ?? 0, topic]),
+  );
+
+  const snapshotRows: IssueOverlapSnapshotRow[] = [];
+  const eventRows: IssueOverlapEventRow[] = [];
+
+  for (const item of overlaps) {
+    const communityTopic = communityTopicById.get(item.communityTopicId);
+    const newsTopic = newsTopicById.get(item.newsTopicId);
+    const regionId = communityTopic?.regionId ?? newsTopic?.regionId;
+
+    if (!regionId) {
+      continue;
+    }
+
+    const snapshotRow: IssueOverlapSnapshotRow = {
+      community_topic_id: item.communityTopicId,
+      news_topic_id: item.newsTopicId,
+      canonical_key: item.canonicalKey,
+      cosine: Number(item.cosine.toFixed(6)),
+      lag_minutes: item.lagMinutes,
+      leader: item.leader,
+      detected_at: overlapNowIso,
+    };
+    snapshotRows.push(snapshotRow);
+
+    eventRows.push({
+      analyzer_run_at: analyzerRunAtIso,
+      detected_at: overlapNowIso,
+      region_id: regionId,
+      leader: item.leader,
+      lag_minutes: item.lagMinutes,
+      cosine: Number(item.cosine.toFixed(6)),
+      canonical_key: item.canonicalKey,
+      community_topic_id: item.communityTopicId,
+      news_topic_id: item.newsTopicId,
+      community_topic_name_ko: communityTopic?.nameKo ?? "",
+      community_topic_name_en: communityTopic?.nameEn ?? "",
+      news_topic_name_ko: newsTopic?.nameKo ?? "",
+      news_topic_name_en: newsTopic?.nameEn ?? "",
+    });
+  }
+
+  await storage.upsertIssueOverlaps(snapshotRows);
+  await storage.appendIssueOverlapEvents(eventRows);
+
+  log(
+    `[overlap] completed. snapshots=${snapshotRows.length} events=${eventRows.length} analyzer_run_at=${analyzerRunAtIso}`,
+  );
 }
 
 runGlobalAnalysis().catch((error) => {

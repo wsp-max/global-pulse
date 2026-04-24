@@ -4,7 +4,7 @@ import type { Pool } from "pg";
 
 const logger = getLogger("cleanup");
 
-type TableName = "raw_posts" | "topics" | "global_topics" | "heat_history";
+type TableName = "raw_posts" | "topics" | "global_topics" | "heat_history" | "issue_overlap_events";
 
 function log(message: string): void {
   logger.info(message);
@@ -64,6 +64,7 @@ async function main(): Promise<void> {
   const nowIso = now.toISOString();
   const rawPostsCutoffIso = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const heatHistoryCutoffIso = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const overlapEventsCutoffIso = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
   if (!hasPostgresConfig()) {
     log("PostgreSQL configuration missing. Skipping cleanup.");
@@ -82,11 +83,19 @@ async function main(): Promise<void> {
   );
   await deleteBeforePostgres(pool, "heat_history", "recorded_at", heatHistoryCutoffIso);
 
+  const overlapEventsToDelete = await countBeforePostgres(
+    pool,
+    "issue_overlap_events",
+    "detected_at",
+    overlapEventsCutoffIso,
+  );
+  await deleteBeforePostgres(pool, "issue_overlap_events", "detected_at", overlapEventsCutoffIso);
+
   const expiredTopics = await deleteExpiredPostgres(pool, "topics", nowIso);
   const expiredGlobalTopics = await deleteExpiredPostgres(pool, "global_topics", nowIso);
 
   log(
-    `Cleanup complete. db=postgres raw_posts=${rawPostsToDelete}, heat_history=${heatHistoryToDelete}, topics=${expiredTopics}, global_topics=${expiredGlobalTopics}`,
+    `Cleanup complete. db=postgres raw_posts=${rawPostsToDelete}, heat_history=${heatHistoryToDelete}, issue_overlap_events=${overlapEventsToDelete}, topics=${expiredTopics}, global_topics=${expiredGlobalTopics}`,
   );
 }
 

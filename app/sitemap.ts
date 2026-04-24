@@ -36,6 +36,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
     },
     {
+      url: withBase("/source-transfer"),
+      changeFrequency: "hourly",
+      priority: 0.8,
+      lastModified: new Date(),
+    },
+    {
       url: withBase("/timeline"),
       changeFrequency: "hourly",
       priority: 0.8,

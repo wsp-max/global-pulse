@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, GitCompareArrows, Globe2, Home, Search, Share2 } from "lucide-react";
+import { ArrowLeftRight, BarChart3, GitCompareArrows, Globe2, Home, Search, Share2 } from "lucide-react";
 import type { ComponentType } from "react";
 import { useLanguage } from "@/lib/i18n/use-language";
 
@@ -37,6 +37,12 @@ export function MobileBottomNav() {
       match: (currentPathname) => currentPathname.startsWith("/propagation"),
     },
     {
+      href: "/source-transfer",
+      label: t("nav.sourceTransfer"),
+      icon: ArrowLeftRight,
+      match: (currentPathname) => currentPathname.startsWith("/source-transfer"),
+    },
+    {
       href: "/timeline",
       label: t("nav.timeline"),
       icon: BarChart3,
@@ -58,7 +64,7 @@ export function MobileBottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--border-default)] bg-[rgba(10,14,23,0.95)] pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 backdrop-blur md:hidden">
-      <ul className="mx-auto grid max-w-xl grid-cols-6 gap-1 px-2">
+      <ul className="mx-auto grid max-w-xl grid-cols-7 gap-1 px-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = item.match(pathname);

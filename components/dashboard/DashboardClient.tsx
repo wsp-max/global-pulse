@@ -381,7 +381,7 @@ export function DashboardClient({
         onChange={(nextScope) => applyQuery({ scope: nextScope === "news" ? "news" : "community" })}
       />
 
-      <SourceTransferPanel primaryScope={activeScope} onTopicSelect={(topicId) => setSelectedTopicId(topicId)} />
+      <SourceTransferPanel primaryScope={activeScope} />
 
       <section>
         <div className="mb-2 px-1">
