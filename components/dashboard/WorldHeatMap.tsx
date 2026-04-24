@@ -49,6 +49,7 @@ interface ProjectedMarker {
   fill: string;
   band: number;
   isFlowActive: boolean;
+  needsCoreCommunitySource: boolean;
   targetTopicId: number | null;
 }
 
@@ -280,7 +281,9 @@ function FlowOverlay({
   const markers = useMemo<ProjectedMarker[]>(() => {
     return regions
       .map((region) => {
-        if (region.totalHeatScore <= 0) {
+        const needsCoreCommunitySource =
+          variant === "community" && Boolean(region.sourceHealth?.missingCoreCommunitySources);
+        if (region.totalHeatScore <= 0 && !needsCoreCommunitySource) {
           return null;
         }
 
@@ -296,8 +299,8 @@ function FlowOverlay({
 
         const [x, y] = point;
         const band = toHeatBand(region.totalHeatScore, maxHeat);
-        const fill = getTierColorByBand(band);
-        const radius = 5 + band * 16;
+        const fill = needsCoreCommunitySource ? "#94a3b8" : getTierColorByBand(band);
+        const radius = needsCoreCommunitySource ? 8 : 5 + band * 16;
         const targetTopicId = region.topTopics
           .map((topic) => topic.id)
           .find((topicId): topicId is number => typeof topicId === "number") ?? null;
@@ -311,11 +314,12 @@ function FlowOverlay({
           fill,
           band,
           isFlowActive: activeFlowRegionIds.has(region.id),
+          needsCoreCommunitySource,
           targetTopicId,
         };
       })
       .filter((marker): marker is ProjectedMarker => Boolean(marker));
-  }, [activeFlowRegionIds, maxHeat, projection, regions]);
+  }, [activeFlowRegionIds, maxHeat, projection, regions, variant]);
 
   return (
     <g>
@@ -432,13 +436,14 @@ function FlowOverlay({
             <circle
               r={marker.radius}
               fill={marker.fill}
-              fillOpacity={0.18 + marker.band * 0.32}
+              fillOpacity={marker.needsCoreCommunitySource ? 0.12 : 0.18 + marker.band * 0.32}
               stroke={marker.region.color}
-              strokeWidth={marker.isFlowActive ? 2.2 : 1.4}
+              strokeDasharray={marker.needsCoreCommunitySource ? "3 3" : undefined}
+              strokeWidth={marker.isFlowActive || marker.needsCoreCommunitySource ? 2.2 : 1.4}
             />
             <circle r={marker.isFlowActive ? 4.2 : 3.4} fill={marker.fill} />
             <text y={-(marker.radius + 10)} textAnchor="middle" fontSize="11" fontWeight="600" fill="#e2e8f0">
-              {marker.region.flagEmoji} {Math.round(marker.region.totalHeatScore)}
+              {marker.region.flagEmoji} {marker.needsCoreCommunitySource ? "소스 필요" : Math.round(marker.region.totalHeatScore)}
             </text>
           </g>
         );

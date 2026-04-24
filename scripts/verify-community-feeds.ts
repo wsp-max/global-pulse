@@ -190,6 +190,7 @@ async function applyActivation(results: VerifyResult[]): Promise<void> {
 async function main(): Promise<void> {
   const regionFilter = parseArg("--region");
   const sourceIds = parseListArg("--source", "--sources");
+  const minItems = Math.max(1, Number(parseArg("--min-items") ?? 5));
   const apply = process.argv.includes("--apply");
 
   const sources = SOURCES.filter((source) => {
@@ -214,24 +215,31 @@ async function main(): Promise<void> {
 
   const sorted = [...results].sort((a, b) => a.regionId.localeCompare(b.regionId) || a.sourceId.localeCompare(b.sourceId));
 
+  const strictResults = sorted.map((result) => ({
+    ...result,
+    ok: result.ok && result.itemCount >= minItems,
+    reason: result.ok && result.itemCount < minItems ? "insufficient_items" : result.reason,
+  }));
+
   if (apply) {
-    await applyActivation(sorted);
+    await applyActivation(strictResults);
   }
 
   const summary = {
-    total: sorted.length,
+    total: strictResults.length,
     region: regionFilter ?? "all",
     sources: sourceIds,
-    connected: sorted.filter((result) => result.ok).length,
-    degraded: sorted.filter((result) => !result.ok).length,
-    activated: apply ? sorted.filter((result) => result.ok).length : 0,
+    minItems,
+    connected: strictResults.filter((result) => result.ok).length,
+    degraded: strictResults.filter((result) => !result.ok).length,
+    activated: apply ? strictResults.filter((result) => result.ok).length : 0,
     timestamp: new Date().toISOString(),
   };
 
   logger.info(
     `community_feed_verification total=${summary.total} connected=${summary.connected} degraded=${summary.degraded} apply=${apply}`,
   );
-  process.stdout.write(`${JSON.stringify({ summary, results: sorted }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ summary, results: strictResults }, null, 2)}\n`);
 }
 
 main().catch((error) => {

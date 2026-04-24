@@ -400,6 +400,7 @@ export function summarizeRegionSourceHealth(
   }
 
   const collectedSources24h = activeCore.filter((record) => record.recentCount24h > 0).length;
+  const optionalCollectedSources24h = optionalRecords.filter((record) => record.recentCount24h > 0).length;
   const degradedActiveSources = activeCore.filter((record) => record.status === "degraded").length;
   const autoDisabledSources = coreRecords.filter((record) => record.status === "auto_disabled").length;
   const disabledSources = coreRecords.filter(
@@ -416,6 +417,8 @@ export function summarizeRegionSourceHealth(
     regionId,
     activeSources: activeCore.length,
     collectedSources24h,
+    coreActiveSources: activeCore.length,
+    coreCollectedSources24h: collectedSources24h,
     topicSources: topicSourceIdSet.size,
     collectionCoveragePct: toRoundedPercent(collectedSources24h, activeCore.length),
     topicCoveragePct: toRoundedPercent(topicSourceIdSet.size, activeCore.length),
@@ -423,8 +426,11 @@ export function summarizeRegionSourceHealth(
     disabledSources,
     autoDisabledSources,
     optionalSources: optionalRecords.length,
+    optionalCollectedSources24h,
     optionalHealthySources,
     optionalBlockedSources,
+    missingCoreCommunitySources: activeCore.length === 0,
+    optionalOnlyCommunity: activeCore.length === 0 && optionalRecords.length > 0,
   };
 }
 

@@ -349,7 +349,11 @@ export function detectScopeOverlaps(
       const lexical = computeLexicalMetrics(communityEvidence, newsEvidence);
       const passesCanonicalMatch =
         canonicalMatch && (lexical.nameSharedTokens >= 1 || lexical.keywordSharedTokens >= 1);
-      const passesNameMatch = lexical.nameSharedTokens >= 2;
+      const hasSupportingLexicalEvidence =
+        lexical.keywordSharedTokens >= 1 ||
+        lexical.entitySharedTokens >= 1 ||
+        lexical.hasExactKeywordPhrase;
+      const passesNameMatch = lexical.nameSharedTokens >= 2 && hasSupportingLexicalEvidence;
       const passesEntityMatch = lexical.entitySharedTokens >= 1;
       const passesKeywordPhraseMatch = lexical.hasExactKeywordPhrase;
       const passesAssistedCosine =

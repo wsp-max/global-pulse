@@ -82,6 +82,17 @@ interface CandidateEvidence {
   entityTokens: Set<string>;
 }
 
+type PairTopicDetailsRow = TopicCandidateRow;
+
+interface MatchEvaluation {
+  similarityScore: number;
+  similarityTier: "high" | "medium" | "low";
+  matchReasons: string[];
+  evidenceClassCount: number;
+  hasExactEvidence: boolean;
+  isVisible: boolean;
+}
+
 function toNumber(value: unknown, fallback = 0): number {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -244,6 +255,77 @@ function intersection(left: Set<string>, right: Set<string>): string[] {
   return values;
 }
 
+function limitedReasons(label: string, tokens: string[], limit: number): string[] {
+  return tokens.slice(0, limit).map((token) => `${label}: ${token}`);
+}
+
+function evaluateMatch(
+  communityEvidence: CandidateEvidence | null,
+  newsEvidence: CandidateEvidence | null,
+  avgCosine: number | null | undefined,
+): MatchEvaluation {
+  const cosine = Number.isFinite(avgCosine ?? Number.NaN) ? Math.max(0, Number(avgCosine)) : 0;
+  if (!communityEvidence || !newsEvidence) {
+    const score = Number(Math.min(1, cosine).toFixed(4));
+    return {
+      similarityScore: score,
+      similarityTier: score >= 0.72 ? "high" : score >= 0.45 ? "medium" : "low",
+      matchReasons: cosine >= 0.72 ? [`embedding cosine ${cosine.toFixed(3)}`] : [],
+      evidenceClassCount: cosine >= 0.72 ? 1 : 0,
+      hasExactEvidence: false,
+      isVisible: cosine >= 0.72,
+    };
+  }
+
+  const sharedNameTokens = intersection(communityEvidence.nameTokens, newsEvidence.nameTokens);
+  const sharedKeywordTokens = intersection(communityEvidence.keywordTokens, newsEvidence.keywordTokens);
+  const sharedEntityTokens = intersection(communityEvidence.entityTokens, newsEvidence.entityTokens);
+  const sharedKeywordPhrases = intersection(communityEvidence.keywordPhrases, newsEvidence.keywordPhrases);
+  const canonicalMatch =
+    Boolean(communityEvidence.canonical) && communityEvidence.canonical === newsEvidence.canonical;
+
+  const evidenceClassCount =
+    (sharedNameTokens.length > 0 ? 1 : 0) +
+    (sharedKeywordTokens.length > 0 ? 1 : 0) +
+    (sharedEntityTokens.length > 0 ? 1 : 0) +
+    (sharedKeywordPhrases.length > 0 ? 1 : 0) +
+    (canonicalMatch ? 1 : 0);
+  const hasExactEvidence = canonicalMatch || sharedEntityTokens.length > 0 || sharedKeywordPhrases.length > 0;
+  const lexicalScore = Math.min(
+    1,
+    sharedNameTokens.length * 0.16 +
+      sharedKeywordTokens.length * 0.12 +
+      sharedEntityTokens.length * 0.22 +
+      sharedKeywordPhrases.length * 0.24 +
+      (canonicalMatch ? 0.26 : 0),
+  );
+  const similarityScore = Number(Math.max(cosine, lexicalScore).toFixed(4));
+  const matchReasons = [
+    ...limitedReasons("이름 토큰", sharedNameTokens, 3),
+    ...limitedReasons("키워드 토큰", sharedKeywordTokens, 3),
+    ...limitedReasons("엔티티", sharedEntityTokens, 2),
+    ...limitedReasons("키워드 phrase", sharedKeywordPhrases, 2),
+    ...(canonicalMatch ? ["의미 있는 canonical 일치"] : []),
+  ];
+  if (cosine >= 0.72) {
+    matchReasons.unshift(`embedding cosine ${cosine.toFixed(3)}`);
+  }
+
+  const isVisible =
+    cosine >= 0.72 ||
+    hasExactEvidence ||
+    (similarityScore >= 0.45 && evidenceClassCount >= 2);
+
+  return {
+    similarityScore,
+    similarityTier: similarityScore >= 0.72 ? "high" : similarityScore >= 0.45 ? "medium" : "low",
+    matchReasons,
+    evidenceClassCount,
+    hasExactEvidence,
+    isVisible,
+  };
+}
+
 function topicTimestamp(row: TopicCandidateRow): string {
   return row.period_start;
 }
@@ -393,6 +475,8 @@ function buildCandidatePairs(
         avgLagMinutes: Math.abs(lagMinutes),
         latestLagMinutes: lagMinutes,
         avgCosine: null,
+        similarityScore: matchScore,
+        similarityTier: matchScore >= 0.72 ? "high" : matchScore >= 0.45 ? "medium" : "low",
         confidence: "candidate",
         matchReasons,
         matchScore,
@@ -778,10 +862,9 @@ export async function GET(request: Request) {
              and l.community_topic_id = s.community_topic_id
              and l.news_topic_id = s.news_topic_id
             order by coalesce(s.avg_cosine, 0) desc, abs(coalesce(l.latest_lag_minutes, 0)) asc, s.last_detected_at desc
-            offset $4
-            limit $5
+            limit 500
             `,
-            [...snapshotParams, offset, limit],
+            snapshotParams,
           ),
           postgres.query<PairRow>(
             `
@@ -857,10 +940,58 @@ export async function GET(request: Request) {
 
     const snapshotSummary = toSummary(snapshotSummaryResult, snapshotLeadCountsResult, direction);
     const historySummary = toSummary(historySummaryResult.rows[0], historyLeadCountsResult.rows[0], direction);
+    const topicIdsForPairs = [
+      ...new Set(
+        [...pairRows, ...sankeyRows]
+          .flatMap((row) => [toNumber(row.community_topic_id), toNumber(row.news_topic_id)])
+          .filter((topicId) => topicId > 0),
+      ),
+    ];
+    const topicDetailsById = new Map<number, PairTopicDetailsRow>();
+    if (topicIdsForPairs.length > 0) {
+      const topicDetailsResult = await postgres.query<PairTopicDetailsRow>(
+        `
+        select
+          id,
+          region_id,
+          scope,
+          name_ko,
+          name_en,
+          summary_ko,
+          summary_en,
+          sample_titles,
+          keywords,
+          entities,
+          aliases,
+          canonical_key,
+          heat_score,
+          post_count,
+          period_start::text as period_start
+        from topics
+        where id = any($1::int[])
+          and scope in ('community', 'news')
+        `,
+        [topicIdsForPairs],
+      );
+      for (const row of topicDetailsResult.rows) {
+        topicDetailsById.set(toNumber(row.id), row);
+      }
+    }
 
-    const pairs = pairRows.map((row) => {
+    const maxVisibleLagMinutes = 7 * 24 * 60;
+    let hiddenLowSimilarityPairs = 0;
+    let hiddenStaleLagPairs = 0;
+    const visiblePairs = pairRows.map((row) => {
       const communityTopicId = toNumber(row.community_topic_id);
       const newsTopicId = toNumber(row.news_topic_id);
+      const communityDetails = topicDetailsById.get(communityTopicId);
+      const newsDetails = topicDetailsById.get(newsTopicId);
+      const avgCosine = toNullableNumber(row.avg_cosine);
+      const match = evaluateMatch(
+        communityDetails ? buildCandidateEvidence(communityDetails) : null,
+        newsDetails ? buildCandidateEvidence(newsDetails) : null,
+        avgCosine,
+      );
       return {
         pairKey: buildPairKey(row.region_id, communityTopicId, newsTopicId),
         regionId: row.region_id,
@@ -876,11 +1007,37 @@ export async function GET(request: Request) {
         lastDetectedAt: row.last_detected_at,
         avgLagMinutes: toNullableNumber(row.avg_lag_minutes),
         latestLagMinutes: toNullableNumber(row.latest_lag_minutes),
-        avgCosine: toNullableNumber(row.avg_cosine),
+        avgCosine,
+        similarityScore: match.similarityScore,
+        similarityTier: match.similarityTier,
+        matchReasons: match.matchReasons,
         communityFirstPostAt: row.community_first_post_at ?? null,
         newsFirstPostAt: row.news_first_post_at ?? null,
+        _isVisible: match.isVisible,
       };
+    }).filter((pair) => {
+      const staleLag = Math.abs(pair.latestLagMinutes ?? pair.avgLagMinutes ?? 0) > maxVisibleLagMinutes;
+      if (staleLag) {
+        hiddenStaleLagPairs += 1;
+        return false;
+      }
+      if (!pair._isVisible) {
+        hiddenLowSimilarityPairs += 1;
+        return false;
+      }
+      return true;
+    }).sort((left, right) => {
+      const scoreDelta = (right.similarityScore ?? -1) - (left.similarityScore ?? -1);
+      if (scoreDelta !== 0) return scoreDelta;
+      const cosineDelta = (right.avgCosine ?? -1) - (left.avgCosine ?? -1);
+      if (cosineDelta !== 0) return cosineDelta;
+      return Math.abs(left.latestLagMinutes ?? 0) - Math.abs(right.latestLagMinutes ?? 0);
+    }).map((pair) => {
+      const output = { ...pair };
+      Reflect.deleteProperty(output, "_isVisible");
+      return output;
     });
+    const pairs = visiblePairs.slice(offset, offset + limit);
 
     let candidatePairs: SourceTransferCandidatePairRow[] = [];
     let candidateSummary: SourceTransferCandidateSummary = {
@@ -888,7 +1045,7 @@ export async function GET(request: Request) {
       returnedCandidates: 0,
     };
 
-    if (offset === 0 && totalPairs < Math.min(3, limit)) {
+    if (offset === 0 && visiblePairs.length < Math.min(8, limit)) {
       const candidateTopicsResult = await postgres.query<TopicCandidateRow>(
         `
         with ranked as (
@@ -938,7 +1095,10 @@ export async function GET(request: Request) {
         `,
         [hours, region],
       );
-      const candidateResult = buildCandidatePairs(candidateTopicsResult.rows, pairs, direction, Math.min(limit, 30));
+      const officialPairKeys = pairRows.map((row) => ({
+        pairKey: buildPairKey(row.region_id, toNumber(row.community_topic_id), toNumber(row.news_topic_id)),
+      })) as SourceTransferPairRow[];
+      const candidateResult = buildCandidatePairs(candidateTopicsResult.rows, officialPairKeys, direction, Math.min(limit, 30));
       candidatePairs = candidateResult.pairs;
       candidateSummary = candidateResult.summary;
     }
@@ -1024,8 +1184,11 @@ export async function GET(request: Request) {
         region,
         limit,
         offset,
-        totalPairs,
+        totalPairs: visiblePairs.length,
         returnedPairs: pairs.length,
+        rawTotalPairs: totalPairs,
+        hiddenLowSimilarityPairs,
+        hiddenStaleLagPairs,
       },
       configured: true,
       provider: "postgres",

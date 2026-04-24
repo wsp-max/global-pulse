@@ -49,6 +49,7 @@
     "ops:source-verify": "tsx scripts/run-source-verify.ts",
     "ops:source-recovery": "tsx scripts/run-source-recovery.ts",
     "ops:community:verify-feeds": "tsx scripts/verify-community-feeds.ts",
+    "ops:community:verify-candidates": "tsx scripts/verify-community-feeds.ts --min-items 10",
     "ops:news:verify-feeds": "tsx scripts/verify-news-feeds.ts",
     "ops:gemini:verify": "tsx scripts/verify-gemini-pipeline.ts",
     "ops:topics:backfill": "tsx scripts/backfill-recent-topic-enrichment.ts",

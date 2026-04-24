@@ -70,6 +70,8 @@ export interface RegionSourceHealthSummary {
   regionId: string;
   activeSources: number;
   collectedSources24h: number;
+  coreActiveSources: number;
+  coreCollectedSources24h: number;
   topicSources: number;
   collectionCoveragePct: number;
   topicCoveragePct: number;
@@ -77,8 +79,11 @@ export interface RegionSourceHealthSummary {
   disabledSources: number;
   autoDisabledSources: number;
   optionalSources: number;
+  optionalCollectedSources24h: number;
   optionalHealthySources: number;
   optionalBlockedSources: number;
+  missingCoreCommunitySources: boolean;
+  optionalOnlyCommunity: boolean;
 }
 
 export interface RegionsApiResponse {
@@ -273,6 +278,9 @@ export interface SourceTransferPairRow {
   avgLagMinutes: number | null;
   latestLagMinutes: number | null;
   avgCosine: number | null;
+  similarityScore?: number | null;
+  similarityTier?: "high" | "medium" | "low";
+  matchReasons?: string[];
 }
 
 export interface SourceTransferCandidatePairRow extends SourceTransferPairRow {
@@ -307,6 +315,9 @@ export interface SourceTransferApiResponse {
     offset: number;
     totalPairs: number;
     returnedPairs: number;
+    rawTotalPairs?: number;
+    hiddenLowSimilarityPairs?: number;
+    hiddenStaleLagPairs?: number;
   };
   configured?: boolean;
   provider?: "postgres" | "none";

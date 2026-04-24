@@ -119,6 +119,31 @@ test("detectScopeOverlaps rejects matches supported only by noisy tokens", () =>
   assert.equal(overlaps.length, 0);
 });
 
+test("detectScopeOverlaps rejects name-only lexical matches without support", () => {
+  const overlaps = detectScopeOverlaps(
+    [
+      buildTopic({
+        id: 7,
+        scope: "community",
+        nameEn: "Nintendo Switch launch discussion",
+        keywords: ["gaming"],
+        embedding: [],
+      }),
+    ],
+    [
+      buildTopic({
+        id: 8,
+        scope: "news",
+        nameEn: "Nintendo Switch launch timing",
+        keywords: ["console"],
+        embedding: [],
+      }),
+    ],
+  );
+
+  assert.equal(overlaps.length, 0);
+});
+
 test("detectScopeOverlaps rejects low-cosine pairs without lexical evidence", () => {
   const overlaps = detectScopeOverlaps(
     [
@@ -204,14 +229,14 @@ test("detectScopeOverlaps accepts meaningful canonical matches without embedding
   assert.equal(overlaps[0]?.newsTopicId, 26);
 });
 
-test("detectScopeOverlaps accepts strong shared name tokens without embeddings", () => {
+test("detectScopeOverlaps accepts strong shared name tokens with keyword support without embeddings", () => {
   const overlaps = detectScopeOverlaps(
     [
       buildTopic({
         id: 27,
         scope: "community",
         nameEn: "Nintendo Switch launch discussion",
-        keywords: ["gaming"],
+        keywords: ["nintendo switch"],
         embedding: [],
       }),
     ],
@@ -220,7 +245,7 @@ test("detectScopeOverlaps accepts strong shared name tokens without embeddings",
         id: 28,
         scope: "news",
         nameEn: "Nintendo Switch launch timing",
-        keywords: ["console"],
+        keywords: ["nintendo switch"],
         embedding: [],
       }),
     ],

@@ -88,6 +88,26 @@ function resolveCoverage(coveragePct: number): { label: "Low" | "Mid" | "High"; 
   };
 }
 
+function sourceStatusLabel(input: {
+  scope: DashboardScope;
+  activeSources: number;
+  collectedSources: number;
+  optionalSources: number;
+  optionalCollectedSources: number;
+  optionalOnlyCommunity: boolean;
+  missingCoreCommunitySources: boolean;
+}): string {
+  if (input.scope === "community" && input.missingCoreCommunitySources) {
+    if (input.optionalOnlyCommunity) {
+      return `커뮤니티 소스 없음 · 선택 신호 ${input.optionalCollectedSources}/${input.optionalSources}`;
+    }
+    return "커뮤니티 소스 없음";
+  }
+
+  const prefix = input.scope === "news" ? "뉴스 수집" : "수집";
+  return `${prefix} ${input.collectedSources}/${input.activeSources}`;
+}
+
 export function RegionCard({
   region,
   scope = "community",
@@ -111,11 +131,25 @@ export function RegionCard({
   const activeSources = region.sourceHealth?.activeSources ?? region.sourcesTotal;
   const topicSources = region.sourceHealth?.topicSources ?? 0;
   const disabledSources = region.sourceHealth?.disabledSources ?? 0;
+  const optionalSources = region.sourceHealth?.optionalSources ?? 0;
+  const optionalCollectedSources = region.sourceHealth?.optionalCollectedSources24h ?? 0;
   const optionalBlockedSources = region.sourceHealth?.optionalBlockedSources ?? 0;
+  const missingCoreCommunitySources =
+    scope === "community" && Boolean(region.sourceHealth?.missingCoreCommunitySources);
+  const optionalOnlyCommunity = scope === "community" && Boolean(region.sourceHealth?.optionalOnlyCommunity);
   const collectionCoveragePct =
     region.sourceHealth?.collectionCoveragePct ??
     (activeSources > 0 ? Number(((collectedSources / activeSources) * 100).toFixed(1)) : 0);
   const coverage = resolveCoverage(collectionCoveragePct);
+  const sourceStatus = sourceStatusLabel({
+    scope,
+    activeSources,
+    collectedSources,
+    optionalSources,
+    optionalCollectedSources,
+    optionalOnlyCommunity,
+    missingCoreCommunitySources,
+  });
 
   return (
     <article
@@ -144,11 +178,17 @@ export function RegionCard({
         </div>
         <div className="flex items-center gap-2">
           <HeatBadge score={heatScore} />
-          <span
-            className={`rounded-full border px-1.5 py-0.5 text-[10px] ${coverage.className}`}
-          >
-            Coverage: {coverage.label}
-          </span>
+          {missingCoreCommunitySources ? (
+            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-200">
+              소스 필요
+            </span>
+          ) : (
+            <span
+              className={`rounded-full border px-1.5 py-0.5 text-[10px] ${coverage.className}`}
+            >
+              Coverage: {coverage.label}
+            </span>
+          )}
         </div>
       </div>
 
@@ -279,12 +319,19 @@ export function RegionCard({
       </div>
       <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--text-tertiary)]">
         <span>활성 토픽 {region.activeTopics}</span>
-        <span>수집 {collectedSources}/{activeSources}</span>
+        <span>{sourceStatus}</span>
       </div>
       <div className="mt-1 flex items-center justify-between text-[11px] text-[var(--text-tertiary)]">
-        <span>토픽 반영 {topicSources}/{activeSources}</span>
+        <span>
+          {missingCoreCommunitySources ? "토픽 반영 -/-" : `토픽 반영 ${topicSources}/${activeSources}`}
+        </span>
         <span>비활성 {disabledSources}</span>
       </div>
+      {optionalOnlyCommunity ? (
+        <div className="mt-2 inline-flex rounded-full border border-slate-500/40 bg-slate-500/10 px-2 py-0.5 text-[10px] text-slate-300">
+          Reddit optional 제외됨
+        </div>
+      ) : null}
       {optionalBlockedSources > 0 ? (
         <div className="mt-2 inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">
           Reddit 선택 신호 blocked {optionalBlockedSources}

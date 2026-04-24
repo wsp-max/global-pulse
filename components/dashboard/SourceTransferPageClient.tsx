@@ -34,63 +34,48 @@ interface SourceTransferPageClientProps {
 }
 
 function parseDirection(value: string | null | undefined, fallback: SourceTransferDirection): SourceTransferDirection {
-  if (value === "news_to_community" || value === "both" || value === "community_to_news") {
-    return value;
-  }
+  if (value === "news_to_community" || value === "both" || value === "community_to_news") return value;
   return fallback;
 }
 
 function parseHours(value: string | null | undefined, fallback: number): number {
   const parsed = Number(value ?? fallback);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.max(1, Math.min(Math.trunc(parsed), 168));
+  return Number.isFinite(parsed) ? Math.max(1, Math.min(Math.trunc(parsed), 168)) : fallback;
 }
 
 function parseLimit(value: string | null | undefined, fallback: number): number {
   const parsed = Number(value ?? fallback);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.max(1, Math.min(Math.trunc(parsed), 200));
+  return Number.isFinite(parsed) ? Math.max(1, Math.min(Math.trunc(parsed), 200)) : fallback;
 }
 
 function parseOffset(value: string | null | undefined, fallback: number): number {
   const parsed = Number(value ?? fallback);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.max(0, Math.trunc(parsed));
+  return Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : fallback;
 }
 
 function parseRegion(value: string | null | undefined, fallback: string): string {
   const raw = (value ?? fallback).trim().toLowerCase();
   if (!raw || raw === "all") return "all";
-  const regionIds = new Set(getAllRegions().map((region) => region.id));
-  return regionIds.has(raw) ? raw : "all";
+  return new Set(getAllRegions().map((region) => region.id)).has(raw) ? raw : "all";
 }
 
 function formatLag(value: number | null | undefined): string {
-  if (!Number.isFinite(value ?? Number.NaN)) {
-    return "-";
-  }
+  if (!Number.isFinite(value ?? Number.NaN)) return "-";
   const safe = Math.abs(Number(value));
-  if (safe < 60) {
-    return `${Math.max(1, Math.round(safe))}분`;
-  }
-  return `${(safe / 60).toFixed(1)}시간`;
+  if (safe < 60) return `${Math.max(1, Math.round(safe))}분`;
+  if (safe < 60 * 24) return `${(safe / 60).toFixed(1)}시간`;
+  return `${(safe / 1440).toFixed(1)}일`;
 }
 
 function formatRatio(value: number | null | undefined): string {
-  if (!Number.isFinite(value ?? Number.NaN)) {
-    return "-";
-  }
+  if (!Number.isFinite(value ?? Number.NaN)) return "-";
   return `${(Number(value) * 100).toFixed(1)}%`;
 }
 
 function formatDateTime(value: string | null | undefined): string {
-  if (!value) {
-    return "-";
-  }
+  if (!value) return "-";
   const parsed = new Date(value);
-  if (!Number.isFinite(parsed.getTime())) {
-    return "-";
-  }
+  if (!Number.isFinite(parsed.getTime())) return "-";
   return parsed.toLocaleString("ko-KR", {
     month: "2-digit",
     day: "2-digit",
@@ -100,37 +85,20 @@ function formatDateTime(value: string | null | undefined): string {
   });
 }
 
-function formatCosine(value: number | null | undefined): string {
-  if (!Number.isFinite(value ?? Number.NaN)) {
-    return "-";
-  }
-  return Number(value).toFixed(3);
-}
-
-function formatCosinePercent(value: number | null | undefined): string {
-  if (!Number.isFinite(value ?? Number.NaN)) {
-    return "-";
-  }
+function formatScore(value: number | null | undefined): string {
+  if (!Number.isFinite(value ?? Number.NaN)) return "-";
   return `${Math.round(Number(value) * 100)}%`;
 }
 
 function directionLabel(direction: SourceTransferDirection): string {
-  if (direction === "news_to_community") {
-    return "뉴스 -> 커뮤니티";
-  }
-  if (direction === "both") {
-    return "양방향";
-  }
+  if (direction === "news_to_community") return "뉴스 -> 커뮤니티";
+  if (direction === "both") return "양방향";
   return "커뮤니티 -> 뉴스";
 }
 
 function leaderLabel(leader: SourceTransferPairRow["leader"]): string {
-  if (leader === "news") {
-    return "뉴스 선행";
-  }
-  if (leader === "tie") {
-    return "동시 포착";
-  }
+  if (leader === "news") return "뉴스 선행";
+  if (leader === "tie") return "동시 확산";
   return "커뮤니티 선행";
 }
 
@@ -138,6 +106,12 @@ function leaderToneClass(leader: SourceTransferPairRow["leader"]): string {
   if (leader === "news") return "border-orange-400/40 bg-orange-500/10 text-orange-200";
   if (leader === "tie") return "border-slate-400/40 bg-slate-500/10 text-slate-200";
   return "border-cyan-400/40 bg-cyan-500/10 text-cyan-200";
+}
+
+function tierToneClass(tier: SourceTransferPairRow["similarityTier"]): string {
+  if (tier === "high") return "border-emerald-400/40 bg-emerald-500/10 text-emerald-100";
+  if (tier === "medium") return "border-sky-400/40 bg-sky-500/10 text-sky-100";
+  return "border-slate-400/40 bg-slate-500/10 text-slate-200";
 }
 
 function toTopicLabel(pair: SourceTransferPairRow, scope: "community" | "news"): string {
@@ -159,6 +133,16 @@ function toTopicLabel(pair: SourceTransferPairRow, scope: "community" | "news"):
   });
 }
 
+function sortTransferRows<T extends SourceTransferPairRow>(rows: T[]): T[] {
+  return [...rows].sort((left, right) => {
+    const scoreDelta = (right.similarityScore ?? -1) - (left.similarityScore ?? -1);
+    if (scoreDelta !== 0) return scoreDelta;
+    const cosineDelta = (right.avgCosine ?? -1) - (left.avgCosine ?? -1);
+    if (cosineDelta !== 0) return cosineDelta;
+    return Math.abs(left.latestLagMinutes ?? 0) - Math.abs(right.latestLagMinutes ?? 0);
+  });
+}
+
 function buildNarrative(
   direction: SourceTransferDirection,
   hours: number,
@@ -166,19 +150,86 @@ function buildNarrative(
   historySummary: SourceTransferApiResponse["summary"] | undefined,
   topPair: SourceTransferPairRow | undefined,
 ): string {
-  if (!snapshotSummary) {
-    return "소스 전이 스냅샷 데이터를 불러오는 중입니다.";
-  }
-  if (snapshotSummary.totalEvents <= 0) {
-    return `최신 배치 스냅샷에서 ${directionLabel(direction)} 전이가 감지되지 않았습니다. ${hours}h 이력에서는 ${historySummary?.totalEvents?.toLocaleString() ?? "0"}건이 관측되었습니다.`;
+  if (!snapshotSummary) return "소스 전이 데이터를 불러오는 중입니다.";
+  if (snapshotSummary.totalEvents <= 0 || !topPair) {
+    return `최신 배치에서 ${directionLabel(direction)} 공식 전이는 표시 기준을 통과하지 못했습니다. 최근 ${hours}h 이력 이벤트는 ${historySummary?.totalEvents?.toLocaleString() ?? "0"}건입니다.`;
   }
 
-  const region = topPair ? getRegionById(topPair.regionId)?.nameKo ?? topPair.regionId.toUpperCase() : "-";
-  const fromName = topPair ? toTopicLabel(topPair, topPair.leader === "news" ? "news" : "community") : "-";
-  const toName = topPair ? toTopicLabel(topPair, topPair.leader === "news" ? "community" : "news") : "-";
-  const lag = topPair ? formatLag(topPair.latestLagMinutes ?? topPair.avgLagMinutes) : "-";
+  const region = getRegionById(topPair.regionId)?.nameKo ?? topPair.regionId.toUpperCase();
+  const fromName = toTopicLabel(topPair, topPair.leader === "news" ? "news" : "community");
+  const toName = toTopicLabel(topPair, topPair.leader === "news" ? "community" : "news");
+  return `최신 배치 기준 ${directionLabel(direction)} 공식 전이는 ${snapshotSummary.totalEvents.toLocaleString()}건입니다. 표시 기준을 통과한 대표 전이는 ${region} "${fromName}" -> "${toName}"이며, 유사도는 ${formatScore(topPair.similarityScore ?? topPair.avgCosine)}이고 lag는 ${formatLag(topPair.latestLagMinutes ?? topPair.avgLagMinutes)}입니다.`;
+}
 
-  return `최신 배치 기준 ${directionLabel(direction)} 전이 ${snapshotSummary.totalEvents.toLocaleString()}건, 고유 전이쌍 ${snapshotSummary.uniquePairs.toLocaleString()}건입니다. 대표 전이는 ${region} "${fromName}" -> "${toName}"이며 실제 lag는 ${lag}입니다. 별도 ${hours}h 이력 집계는 ${historySummary?.totalEvents?.toLocaleString() ?? "0"}건입니다.`;
+function TransferCard({ row, candidate = false }: { row: SourceTransferPairRow; candidate?: boolean }) {
+  const regionInfo = getRegionById(row.regionId);
+  const communityName = toTopicLabel(row, "community");
+  const newsName = toTopicLabel(row, "news");
+  const reasons = row.matchReasons ?? [];
+
+  return (
+    <article className={`rounded-lg border p-4 ${candidate ? "border-amber-400/25 bg-amber-500/5" : "border-[var(--border-default)] bg-[var(--bg-primary)]"}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[11px] text-[var(--text-tertiary)]">
+            {regionInfo ? `${regionInfo.flagEmoji} ${regionInfo.nameKo}` : row.regionId.toUpperCase()}
+          </p>
+          <p className="mt-1 break-words text-sm font-semibold text-[var(--text-primary)]">{communityName}</p>
+          <p className="mt-1 break-words text-sm text-orange-200">{newsName}</p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          {candidate ? (
+            <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-100">
+              정식 전이 아님
+            </span>
+          ) : null}
+          <span className={`rounded-full border px-2 py-1 text-[11px] ${leaderToneClass(row.leader)}`}>
+            {leaderLabel(row.leader)}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-2 text-[11px] text-[var(--text-secondary)] sm:grid-cols-3">
+        <span className={`rounded-full border px-2 py-0.5 ${tierToneClass(row.similarityTier)}`}>
+          유사도 {formatScore(row.similarityScore ?? row.avgCosine)}
+        </span>
+        <span>lag {formatLag(row.latestLagMinutes ?? row.avgLagMinutes)}</span>
+        <span>{candidate ? `근거 ${reasons.length.toLocaleString()}개` : `감지 ${row.eventCount.toLocaleString()}건`}</span>
+      </div>
+
+      {reasons.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-1">
+          {reasons.slice(0, 4).map((reason) => (
+            <span key={reason} className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-0.5 text-[10px] text-[var(--text-secondary)]">
+              {reason}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="mt-4">
+        <div className="relative h-8">
+          <div className="absolute left-3 right-3 top-1/2 h-px -translate-y-1/2 bg-[var(--border-default)]" />
+          <div className="absolute left-0 top-1/2 flex -translate-y-1/2 items-center gap-1">
+            <span className="h-3 w-3 rounded-full bg-cyan-300" />
+            <span className="rounded-full border border-cyan-300/40 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-100">
+              커뮤니티 최초
+            </span>
+          </div>
+          <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-1">
+            <span className="rounded-full border border-orange-300/40 bg-orange-500/10 px-2 py-0.5 text-[10px] text-orange-100">
+              뉴스 최초
+            </span>
+            <span className="h-3 w-3 rounded-full bg-orange-300" />
+          </div>
+        </div>
+        <div className="mt-2 grid gap-2 text-[11px] text-[var(--text-secondary)] sm:grid-cols-2">
+          <span>커뮤니티 {formatDateTime(row.communityFirstPostAt)}</span>
+          <span className="sm:text-right">뉴스 {formatDateTime(row.newsFirstPostAt)}</span>
+        </div>
+      </div>
+    </article>
+  );
 }
 
 export function SourceTransferPageClient({
@@ -227,29 +278,13 @@ export function SourceTransferPageClient({
     [data?.trendHourly],
   );
 
-  const pairs = useMemo(() => data?.pairs ?? [], [data?.pairs]);
-  const candidatePairs = useMemo(() => data?.candidatePairs ?? [], [data?.candidatePairs]);
-  const topTransferCards = useMemo(
-    () =>
-      [...pairs]
-        .sort((left, right) => {
-          const cosineDelta = (right.avgCosine ?? -1) - (left.avgCosine ?? -1);
-          if (cosineDelta !== 0) return cosineDelta;
-          return (right.eventCount ?? 0) - (left.eventCount ?? 0);
-        })
-        .slice(0, 8),
-    [pairs],
+  const pairs = useMemo(() => sortTransferRows(data?.pairs ?? []), [data?.pairs]);
+  const candidatePairs = useMemo(
+    () => sortTransferRows(data?.candidatePairs ?? []) as SourceTransferCandidatePairRow[],
+    [data?.candidatePairs],
   );
-  const topCandidateCards = useMemo(
-    () =>
-      [...candidatePairs]
-        .sort((left, right) => {
-          if (right.matchScore !== left.matchScore) return right.matchScore - left.matchScore;
-          return Math.abs(left.latestLagMinutes ?? 0) - Math.abs(right.latestLagMinutes ?? 0);
-        })
-        .slice(0, 8),
-    [candidatePairs],
-  );
+  const topTransferCards = pairs.slice(0, 8);
+  const topCandidateCards = candidatePairs.slice(0, 8);
   const showCandidateCards = topTransferCards.length === 0 && topCandidateCards.length > 0;
   const snapshotSummary = data?.snapshotSummary ?? data?.summary;
   const historySummary = data?.historySummary ?? data?.summary;
@@ -260,13 +295,15 @@ export function SourceTransferPageClient({
   const totalPages = Math.max(1, Math.ceil(totalPairs / Math.max(1, limit)));
   const canPrev = offset > 0;
   const canNext = offset + returnedPairs < totalPairs;
+  const hiddenLow = data?.meta.hiddenLowSimilarityPairs ?? 0;
+  const hiddenLag = data?.meta.hiddenStaleLagPairs ?? 0;
 
   return (
     <main className="page-shell">
       <section className="card-panel p-4">
         <h1 className="section-title">소스 전이</h1>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          최신 배치 스냅샷의 커뮤니티-뉴스 연결성과 {hours}h 이력 추이를 분리해 확인합니다.
+          최신 배치의 커뮤니티-뉴스 전이와 최근 {hours}h 이력을 분리해 확인합니다.
         </p>
       </section>
 
@@ -274,11 +311,7 @@ export function SourceTransferPageClient({
         <div className="grid gap-3 lg:grid-cols-4">
           <label className="text-xs text-[var(--text-secondary)]">
             방향
-            <select
-              value={direction}
-              onChange={(event) => applyQuery({ direction: event.target.value })}
-              className="mt-1 w-full rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-2 text-sm text-[var(--text-primary)]"
-            >
+            <select value={direction} onChange={(event) => applyQuery({ direction: event.target.value })} className="mt-1 w-full rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-2 text-sm text-[var(--text-primary)]">
               <option value="community_to_news">{"커뮤니티 -> 뉴스"}</option>
               <option value="news_to_community">{"뉴스 -> 커뮤니티"}</option>
               <option value="both">양방향</option>
@@ -286,44 +319,26 @@ export function SourceTransferPageClient({
           </label>
           <label className="text-xs text-[var(--text-secondary)]">
             시간 창
-            <select
-              value={hours}
-              onChange={(event) => applyQuery({ hours: event.target.value })}
-              className="mt-1 w-full rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-2 text-sm text-[var(--text-primary)]"
-            >
+            <select value={hours} onChange={(event) => applyQuery({ hours: event.target.value })} className="mt-1 w-full rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-2 text-sm text-[var(--text-primary)]">
               {[6, 12, 24, 48, 72, 168].map((item) => (
-                <option key={item} value={item}>
-                  최근 {item}h
-                </option>
+                <option key={item} value={item}>최근 {item}h</option>
               ))}
             </select>
           </label>
           <label className="text-xs text-[var(--text-secondary)]">
             지역
-            <select
-              value={region}
-              onChange={(event) => applyQuery({ region: event.target.value })}
-              className="mt-1 w-full rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-2 text-sm text-[var(--text-primary)]"
-            >
+            <select value={region} onChange={(event) => applyQuery({ region: event.target.value })} className="mt-1 w-full rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-2 text-sm text-[var(--text-primary)]">
               <option value="all">전체 지역</option>
               {getAllRegions().map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.flagEmoji} {item.nameKo}
-                </option>
+                <option key={item.id} value={item.id}>{item.flagEmoji} {item.nameKo}</option>
               ))}
             </select>
           </label>
           <label className="text-xs text-[var(--text-secondary)]">
             목록 건수
-            <select
-              value={limit}
-              onChange={(event) => applyQuery({ limit: event.target.value })}
-              className="mt-1 w-full rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-2 text-sm text-[var(--text-primary)]"
-            >
+            <select value={limit} onChange={(event) => applyQuery({ limit: event.target.value })} className="mt-1 w-full rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-2 text-sm text-[var(--text-primary)]">
               {[20, 30, 50, 80, 120].map((item) => (
-                <option key={item} value={item}>
-                  {item}건
-                </option>
+                <option key={item} value={item}>{item}건</option>
               ))}
             </select>
           </label>
@@ -340,17 +355,15 @@ export function SourceTransferPageClient({
       <section className="card-panel p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="section-title">최신 배치 스냅샷</h2>
-          <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
-            snapshot
-          </span>
+          <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">snapshot</span>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           {[
             ["events", snapshotSummary?.totalEvents.toLocaleString() ?? "-"],
-            ["pairs", snapshotSummary?.uniquePairs.toLocaleString() ?? "-"],
+            ["visible pairs", totalPairs.toLocaleString()],
             ["lead share", formatRatio(snapshotSummary?.forwardLeadShare)],
             ["median lag", formatLag(snapshotSummary?.medianLagMinutes)],
-            ["p90 lag", formatLag(snapshotSummary?.p90LagMinutes)],
+            ["hidden", `${(hiddenLow + hiddenLag).toLocaleString()}건`],
             ["latest run", formatDateTime(latestAnalyzerRunAt)],
           ].map(([label, value]) => (
             <article key={label} className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3">
@@ -359,14 +372,17 @@ export function SourceTransferPageClient({
             </article>
           ))}
         </div>
+        {hiddenLow + hiddenLag > 0 ? (
+          <p className="mt-3 text-xs text-[var(--text-secondary)]">
+            낮은 유사도 숨김 {hiddenLow.toLocaleString()}건 · 오래된 lag 숨김 {hiddenLag.toLocaleString()}건
+          </p>
+        ) : null}
       </section>
 
       <section className="card-panel p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="section-title">{hours}h 이력</h2>
-          <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
-            history
-          </span>
+          <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">history</span>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           {[
@@ -393,69 +409,19 @@ export function SourceTransferPageClient({
       <section className="card-panel p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="section-title">상위 전이 카드</h2>
-          <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
-            snapshot
-          </span>
+          <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">similarity filtered</span>
         </div>
         <p className="mt-1 text-xs text-[var(--text-secondary)]">
-          커뮤니티 최초 포착과 뉴스 최초 포착 시간을 나란히 놓고 실제 연결성과 지연을 확인합니다.
+          표시용 유사도와 근거가 충분한 공식 전이만 보여줍니다.
         </p>
 
         {topTransferCards.length === 0 ? (
           <p className="mt-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3 text-xs text-[var(--text-secondary)]">
-            표시할 스냅샷 전이쌍이 없습니다.
+            표시 기준을 통과한 공식 전이쌍이 없습니다.
           </p>
         ) : (
           <div className="mt-3 grid gap-3 xl:grid-cols-2">
-            {topTransferCards.map((row) => {
-              const regionInfo = getRegionById(row.regionId);
-              const communityName = toTopicLabel(row, "community");
-              const newsName = toTopicLabel(row, "news");
-              return (
-                <article key={row.pairKey} className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-[11px] text-[var(--text-tertiary)]">
-                        {regionInfo ? `${regionInfo.flagEmoji} ${regionInfo.nameKo}` : row.regionId.toUpperCase()}
-                      </p>
-                      <p className="mt-1 break-words text-sm font-semibold text-[var(--text-primary)]">{communityName}</p>
-                      <p className="mt-1 break-words text-sm text-orange-200">{newsName}</p>
-                    </div>
-                    <span className={`rounded-full border px-2 py-1 text-[11px] ${leaderToneClass(row.leader)}`}>
-                      {leaderLabel(row.leader)}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 grid gap-2 text-[11px] text-[var(--text-secondary)] sm:grid-cols-3">
-                    <span>유사도 {formatCosinePercent(row.avgCosine)}</span>
-                    <span>lag {formatLag(row.latestLagMinutes ?? row.avgLagMinutes)}</span>
-                    <span>감지 {row.eventCount.toLocaleString()}회</span>
-                  </div>
-
-                  <div className="mt-4">
-                    <div className="relative h-8">
-                      <div className="absolute left-3 right-3 top-1/2 h-px -translate-y-1/2 bg-[var(--border-default)]" />
-                      <div className="absolute left-0 top-1/2 flex -translate-y-1/2 items-center gap-1">
-                        <span className="h-3 w-3 rounded-full bg-cyan-300" />
-                        <span className="rounded-full border border-cyan-300/40 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-100">
-                          커뮤니티 최초
-                        </span>
-                      </div>
-                      <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-1">
-                        <span className="rounded-full border border-orange-300/40 bg-orange-500/10 px-2 py-0.5 text-[10px] text-orange-100">
-                          뉴스 최초
-                        </span>
-                        <span className="h-3 w-3 rounded-full bg-orange-300" />
-                      </div>
-                    </div>
-                    <div className="mt-2 grid gap-2 text-[11px] text-[var(--text-secondary)] sm:grid-cols-2">
-                      <span>커뮤니티 {formatDateTime(row.communityFirstPostAt)}</span>
-                      <span className="sm:text-right">뉴스 {formatDateTime(row.newsFirstPostAt)}</span>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
+            {topTransferCards.map((row) => <TransferCard key={row.pairKey} row={row} />)}
           </div>
         )}
 
@@ -465,7 +431,7 @@ export function SourceTransferPageClient({
               <div>
                 <h3 className="text-sm font-semibold text-amber-100">검토 후보</h3>
                 <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                  정식 전이 기준은 통과하지 않았지만 이름/키워드 근거가 있는 후보입니다. KPI에는 포함하지 않습니다.
+                  공식 전이 기준에는 포함하지 않는 참고 후보입니다. KPI와 trend에는 섞지 않습니다.
                 </p>
               </div>
               <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-100">
@@ -473,76 +439,7 @@ export function SourceTransferPageClient({
               </span>
             </div>
             <div className="mt-3 grid gap-3 xl:grid-cols-2">
-              {topCandidateCards.map((row: SourceTransferCandidatePairRow) => {
-                const regionInfo = getRegionById(row.regionId);
-                const communityName = toTopicLabel(row, "community");
-                const newsName = toTopicLabel(row, "news");
-                return (
-                  <article
-                    key={row.pairKey}
-                    className="rounded-lg border border-amber-400/25 bg-amber-500/5 p-4"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[11px] text-[var(--text-tertiary)]">
-                          {regionInfo ? `${regionInfo.flagEmoji} ${regionInfo.nameKo}` : row.regionId.toUpperCase()}
-                        </p>
-                        <p className="mt-1 break-words text-sm font-semibold text-[var(--text-primary)]">
-                          {communityName}
-                        </p>
-                        <p className="mt-1 break-words text-sm text-orange-200">{newsName}</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-100">
-                          정식 전이 아님
-                        </span>
-                        <span className={`rounded-full border px-2 py-1 text-[11px] ${leaderToneClass(row.leader)}`}>
-                          {leaderLabel(row.leader)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid gap-2 text-[11px] text-[var(--text-secondary)] sm:grid-cols-3">
-                      <span>후보 점수 {Math.round(row.matchScore * 100)}%</span>
-                      <span>lag {formatLag(row.latestLagMinutes ?? row.avgLagMinutes)}</span>
-                      <span>근거 {row.matchReasons.length.toLocaleString()}개</span>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {row.matchReasons.slice(0, 4).map((reason) => (
-                        <span
-                          key={reason}
-                          className="rounded-full border border-amber-400/25 bg-[var(--bg-primary)] px-2 py-0.5 text-[10px] text-amber-100"
-                        >
-                          {reason}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="mt-4">
-                      <div className="relative h-8">
-                        <div className="absolute left-3 right-3 top-1/2 h-px -translate-y-1/2 bg-amber-400/25" />
-                        <div className="absolute left-0 top-1/2 flex -translate-y-1/2 items-center gap-1">
-                          <span className="h-3 w-3 rounded-full bg-cyan-300" />
-                          <span className="rounded-full border border-cyan-300/40 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-100">
-                            커뮤니티 최초
-                          </span>
-                        </div>
-                        <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-1">
-                          <span className="rounded-full border border-orange-300/40 bg-orange-500/10 px-2 py-0.5 text-[10px] text-orange-100">
-                            뉴스 최초
-                          </span>
-                          <span className="h-3 w-3 rounded-full bg-orange-300" />
-                        </div>
-                      </div>
-                      <div className="mt-2 grid gap-2 text-[11px] text-[var(--text-secondary)] sm:grid-cols-2">
-                        <span>커뮤니티 {formatDateTime(row.communityFirstPostAt)}</span>
-                        <span className="sm:text-right">뉴스 {formatDateTime(row.newsFirstPostAt)}</span>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+              {topCandidateCards.map((row) => <TransferCard key={row.pairKey} row={row} candidate />)}
             </div>
           </div>
         ) : null}
@@ -551,56 +448,27 @@ export function SourceTransferPageClient({
       <section className="card-panel p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="section-title">시간대 추이</h2>
-          <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">
-            {hours}h history
-          </span>
+          <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] px-2 py-1 text-[11px] text-[var(--text-secondary)]">{hours}h history</span>
         </div>
-        <p className="mt-1 text-xs text-[var(--text-secondary)]">시간별 전이 이벤트 수와 평균 지연을 보여줍니다.</p>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">시간별 전이 이벤트 수와 평균 lag를 보여줍니다.</p>
         <div className="mt-3 h-[340px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={trendData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
               <XAxis dataKey="label" minTickGap={22} tick={{ fill: "#94a3b8", fontSize: 11 }} />
-              <YAxis
-                yAxisId="events"
-                tick={{ fill: "#94a3b8", fontSize: 11 }}
-                axisLine={{ stroke: "#334155" }}
-                tickLine={{ stroke: "#334155" }}
-                width={38}
-              />
-              <YAxis
-                yAxisId="lag"
-                orientation="right"
-                tick={{ fill: "#94a3b8", fontSize: 11 }}
-                axisLine={{ stroke: "#334155" }}
-                tickLine={{ stroke: "#334155" }}
-                width={44}
-              />
+              <YAxis yAxisId="events" tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={{ stroke: "#334155" }} tickLine={{ stroke: "#334155" }} width={38} />
+              <YAxis yAxisId="lag" orientation="right" tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={{ stroke: "#334155" }} tickLine={{ stroke: "#334155" }} width={44} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: "#0f172a",
-                  border: "1px solid #334155",
-                  borderRadius: "8px",
-                  color: "#e2e8f0",
-                }}
+                contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: "8px", color: "#e2e8f0" }}
                 formatter={(value, name) => {
                   const numeric = typeof value === "number" ? value : Number(value ?? 0);
                   if (name === "eventCount") return [numeric.toLocaleString(), "이벤트"];
-                  if (name === "avgLagMinutes") return [formatLag(numeric), "평균 지연"];
+                  if (name === "avgLagMinutes") return [formatLag(numeric), "평균 lag"];
                   return [numeric, String(name)];
                 }}
               />
               <Bar yAxisId="events" dataKey="eventCount" name="eventCount" fill="#38bdf8" radius={[4, 4, 0, 0]} />
-              <Line
-                yAxisId="lag"
-                type="monotone"
-                dataKey="avgLagMinutes"
-                name="avgLagMinutes"
-                stroke="#f97316"
-                strokeWidth={2}
-                dot={false}
-                connectNulls
-              />
+              <Line yAxisId="lag" type="monotone" dataKey="avgLagMinutes" name="avgLagMinutes" stroke="#f97316" strokeWidth={2} dot={false} connectNulls />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -610,23 +478,11 @@ export function SourceTransferPageClient({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="section-title">전이쌍 상세</h2>
           <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-            <button
-              type="button"
-              disabled={!canPrev}
-              onClick={() => applyQuery({ offset: String(Math.max(0, offset - limit)) })}
-              className="rounded-md border border-[var(--border-default)] px-2 py-1 disabled:opacity-40"
-            >
+            <button type="button" disabled={!canPrev} onClick={() => applyQuery({ offset: String(Math.max(0, offset - limit)) })} className="rounded-md border border-[var(--border-default)] px-2 py-1 disabled:opacity-40">
               이전
             </button>
-            <span>
-              {currentPage}/{totalPages}
-            </span>
-            <button
-              type="button"
-              disabled={!canNext}
-              onClick={() => applyQuery({ offset: String(offset + limit) })}
-              className="rounded-md border border-[var(--border-default)] px-2 py-1 disabled:opacity-40"
-            >
+            <span>{currentPage}/{totalPages}</span>
+            <button type="button" disabled={!canNext} onClick={() => applyQuery({ offset: String(offset + limit) })} className="rounded-md border border-[var(--border-default)] px-2 py-1 disabled:opacity-40">
               다음
             </button>
           </div>
@@ -634,7 +490,7 @@ export function SourceTransferPageClient({
 
         {pairs.length === 0 ? (
           <p className="mt-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] p-3 text-xs text-[var(--text-secondary)]">
-            조건에 맞는 전이쌍이 없습니다.
+            조건에 맞는 표시 가능 전이쌍이 없습니다.
           </p>
         ) : (
           <div className="mt-3 overflow-x-auto">
@@ -645,7 +501,8 @@ export function SourceTransferPageClient({
                   <th className="px-2 py-2">커뮤니티 토픽</th>
                   <th className="px-2 py-2">뉴스 토픽</th>
                   <th className="px-2 py-2">유사도</th>
-                  <th className="px-2 py-2">실제 lag</th>
+                  <th className="px-2 py-2">cosine</th>
+                  <th className="px-2 py-2">lag</th>
                   <th className="px-2 py-2">커뮤니티 최초</th>
                   <th className="px-2 py-2">뉴스 최초</th>
                   <th className="px-2 py-2">감지</th>
@@ -658,36 +515,19 @@ export function SourceTransferPageClient({
                   const newsName = toTopicLabel(row, "news");
                   return (
                     <tr key={row.pairKey} className="border-b border-[var(--border-default)]/60">
-                      <td className="px-2 py-2 text-[var(--text-primary)]">
-                        {regionInfo ? `${regionInfo.flagEmoji} ${regionInfo.nameKo}` : row.regionId.toUpperCase()}
+                      <td className="px-2 py-2 text-[var(--text-primary)]">{regionInfo ? `${regionInfo.flagEmoji} ${regionInfo.nameKo}` : row.regionId.toUpperCase()}</td>
+                      <td className="px-2 py-2">
+                        {row.communityTopicId > 0 ? <Link href={`/topic/${row.communityTopicId}`} className="text-sky-300 hover:underline">{communityName}</Link> : <span className="text-[var(--text-primary)]">{communityName}</span>}
                       </td>
                       <td className="px-2 py-2">
-                        {row.communityTopicId > 0 ? (
-                          <Link href={`/topic/${row.communityTopicId}`} className="text-sky-300 hover:underline">
-                            {communityName}
-                          </Link>
-                        ) : (
-                          <span className="text-[var(--text-primary)]">{communityName}</span>
-                        )}
+                        {row.newsTopicId > 0 ? <Link href={`/topic/${row.newsTopicId}`} className="text-orange-300 hover:underline">{newsName}</Link> : <span className="text-[var(--text-primary)]">{newsName}</span>}
                       </td>
-                      <td className="px-2 py-2">
-                        {row.newsTopicId > 0 ? (
-                          <Link href={`/topic/${row.newsTopicId}`} className="text-orange-300 hover:underline">
-                            {newsName}
-                          </Link>
-                        ) : (
-                          <span className="text-[var(--text-primary)]">{newsName}</span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 font-mono text-[var(--text-primary)]">{formatCosine(row.avgCosine)}</td>
-                      <td className="px-2 py-2 text-[var(--text-primary)]">
-                        {formatLag(row.latestLagMinutes ?? row.avgLagMinutes)}
-                      </td>
+                      <td className="px-2 py-2 font-mono text-[var(--text-primary)]">{formatScore(row.similarityScore)}</td>
+                      <td className="px-2 py-2 font-mono text-[var(--text-primary)]">{Number.isFinite(row.avgCosine ?? Number.NaN) ? Number(row.avgCosine).toFixed(3) : "-"}</td>
+                      <td className="px-2 py-2 text-[var(--text-primary)]">{formatLag(row.latestLagMinutes ?? row.avgLagMinutes)}</td>
                       <td className="px-2 py-2 text-[var(--text-primary)]">{formatDateTime(row.communityFirstPostAt)}</td>
                       <td className="px-2 py-2 text-[var(--text-primary)]">{formatDateTime(row.newsFirstPostAt)}</td>
-                      <td className="px-2 py-2 text-[var(--text-secondary)]">
-                        {formatDateTime(row.firstDetectedAt)} / {formatDateTime(row.lastDetectedAt)}
-                      </td>
+                      <td className="px-2 py-2 text-[var(--text-secondary)]">{formatDateTime(row.firstDetectedAt)} / {formatDateTime(row.lastDetectedAt)}</td>
                     </tr>
                   );
                 })}

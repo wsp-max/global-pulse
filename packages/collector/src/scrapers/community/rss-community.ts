@@ -64,9 +64,9 @@ export class RssCommunityScraper extends BaseScraper {
     const response = await fetchWithRetry<string>(this.source.scrapeUrl, {
       responseType: "text",
       headers: {
-        Accept: "application/rss+xml, application/atom+xml, text/xml;q=0.9, application/xml;q=0.8,*/*;q=0.5",
+        Accept: "*/*",
       },
-      timeout: 20_000,
+      timeout: 30_000,
     });
 
     const { load } = await import("cheerio");

@@ -345,6 +345,8 @@ async function getRegions(request: Request) {
         regionId: region.id,
         activeSources: 0,
         collectedSources24h: 0,
+        coreActiveSources: 0,
+        coreCollectedSources24h: 0,
         topicSources: 0,
         collectionCoveragePct: 0,
         topicCoveragePct: 0,
@@ -352,8 +354,11 @@ async function getRegions(request: Request) {
         disabledSources: 0,
         autoDisabledSources: 0,
         optionalSources: 0,
+        optionalCollectedSources24h: 0,
         optionalHealthySources: 0,
         optionalBlockedSources: 0,
+        missingCoreCommunitySources: true,
+        optionalOnlyCommunity: false,
       },
       scope,
       topTopics: [],
@@ -364,4 +369,3 @@ async function getRegions(request: Request) {
     lastUpdated: new Date().toISOString(),
   });
 }
-
